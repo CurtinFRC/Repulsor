@@ -195,3 +195,4 @@ repulsor-profiler
 # exclude all .venv folders anywhere in project
 **/.venv/
 **/__pycache__/
+*.ndjson
