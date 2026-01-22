@@ -57,7 +57,6 @@ import org.curtinfrc.frc2026.subsystems.hoodedshooter.ShooterIOSim;
 import org.curtinfrc.frc2026.util.FieldConstants;
 import org.curtinfrc.frc2026.util.GameState;
 import org.curtinfrc.frc2026.util.PhoenixUtil;
-import org.curtinfrc.frc2026.util.Repulsor.Commands.GateTelemetry;
 import org.curtinfrc.frc2026.util.Repulsor.Commands.Triggers;
 import org.curtinfrc.frc2026.util.Repulsor.Fallback;
 import org.curtinfrc.frc2026.util.Repulsor.Fallback.PID;
@@ -102,7 +101,7 @@ public class Robot extends LoggedRobot {
   private final Alert controllerDisconnected =
       new Alert("Driver controller disconnected!", AlertType.kError);
 
-  GateTelemetry telem = new GateTelemetry("/robot/gates");
+  // GateTelemetry telem = new GateTelemetry("/robot/gates");
 
   VisionSimTest visionSim = new VisionSimTest();
   RepulsorSetpoint goal = new RepulsorSetpoint(Rebuilt2026.HUB_SHOOT, HeightSetpoint.L2);
@@ -118,7 +117,7 @@ public class Robot extends LoggedRobot {
     // simHasPiece = true;
 
     var pg = Triggers.localParallelGate(Tag.SCORING);
-    telem.registerParallel("repulsor_tags", pg);
+    // telem.registerParallel("repulsor_tags", pg);
 
     repulsor =
         new Repulsor(drive, Constants.ROBOT_X, Constants.ROBOT_Y, 0.55, 0.22, () -> simHasPiece)
@@ -239,7 +238,7 @@ public class Robot extends LoggedRobot {
                   new ModuleIOSim(TunerConstants.BackLeft),
                   new ModuleIOSim(TunerConstants.BackRight));
 
-          drive.setPose(new Pose2d(15, 5, new Rotation2d()));
+          drive.setPose(new Pose2d(14, 4, new Rotation2d()));
 
           vision =
               new Vision(
@@ -501,7 +500,7 @@ public class Robot extends LoggedRobot {
       simHasPiece = false;
       Logger.recordOutput("simHasPiece", simHasPiece);
     }
-    telem.poll();
+    // telem.poll();
   }
 
   /** This function is called once when the robot is disabled. */
