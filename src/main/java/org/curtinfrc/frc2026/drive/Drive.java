@@ -6,11 +6,8 @@ import edu.wpi.first.hal.FRCNetComm.tInstances;
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.hal.HAL;
 import edu.wpi.first.math.Matrix;
-<<<<<<< HEAD
 import edu.wpi.first.math.controller.ProfiledPIDController;
-=======
 import edu.wpi.first.math.controller.PIDController;
->>>>>>> a482839 (update)
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -29,11 +26,8 @@ import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
-<<<<<<< HEAD
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-=======
->>>>>>> a482839 (update)
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BooleanSupplier;
@@ -112,16 +106,11 @@ public class Drive extends DriveRepulsor {
     modules[2] = new Module(blModuleIO, 2, TunerConstants.BackLeft);
     modules[3] = new Module(brModuleIO, 3, TunerConstants.BackRight);
 
-<<<<<<< HEAD
     // setting minimum and maximum angle in values in radians.
     hubHeadingController.enableContinuousInput(-Math.PI, Math.PI);
 
     // setting error tolerance when turning to an angle and the speed tolerance
     hubHeadingController.setTolerance(0.02, 0.1);
-=======
-    headingController.setTolerance(0.02);
-    headingController.enableContinuousInput(-Math.PI, Math.PI);
->>>>>>> a482839 (update)
 
     // Usage reporting for swerve template
     HAL.report(tResourceType.kResourceType_RobotDrive, tInstances.kRobotDriveSwerve_AdvantageKit);
