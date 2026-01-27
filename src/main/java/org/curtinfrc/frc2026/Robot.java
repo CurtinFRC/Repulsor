@@ -58,6 +58,8 @@ import org.curtinfrc.frc2026.util.FieldConstants;
 import org.curtinfrc.frc2026.util.GameState;
 import org.curtinfrc.frc2026.util.PhoenixUtil;
 import org.curtinfrc.frc2026.util.Repulsor.Commands.Triggers;
+import org.curtinfrc.frc2026.util.Repulsor.DriverStation.RepulsorDriverStation;
+import org.curtinfrc.frc2026.util.Repulsor.DriverStation.RepulsorDriverStationBootstrap;
 import org.curtinfrc.frc2026.util.Repulsor.Fallback;
 import org.curtinfrc.frc2026.util.Repulsor.Fallback.PID;
 import org.curtinfrc.frc2026.util.Repulsor.Profiler.Profiler;
@@ -467,6 +469,7 @@ public class Robot extends LoggedRobot {
         .whileTrue(hoodedShooter.setHoodedShooterPositionAndVelocity(-0.1, 0)) // in front of hub
         // .whileTrue(hoodedShooter.setHoodedShooterPositionAndVelocity(0.4, 23))
         .onFalse(hoodedShooter.stopHoodedShooter());
+    RepulsorDriverStationBootstrap.useDefaultNt();
   }
 
   /** This function is called periodically during all modes. */
@@ -480,10 +483,6 @@ public class Robot extends LoggedRobot {
     controllerDisconnected.set(!controller.isConnected());
     logRunningCommands();
     logRequiredSubsystems();
-    Logger.recordOutput(
-        "LoggedRobot/MemoryUsageMb",
-        (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1e6);
-    Threads.setCurrentThreadPriority(false, 10);
 
     if (this.repulsor != null) {
       repulsor.update();
@@ -500,6 +499,14 @@ public class Robot extends LoggedRobot {
       simHasPiece = false;
       Logger.recordOutput("simHasPiece", simHasPiece);
     }
+
+    RepulsorDriverStation.getInstance().tick();
+
+    Logger.recordOutput(
+        "LoggedRobot/MemoryUsageMb",
+        (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1e6);
+    Threads.setCurrentThreadPriority(false, 10);
+
     // telem.poll();
   }
 
