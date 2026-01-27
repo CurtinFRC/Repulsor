@@ -19,6 +19,7 @@ import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -58,6 +59,7 @@ import org.curtinfrc.frc2026.util.FieldConstants;
 import org.curtinfrc.frc2026.util.GameState;
 import org.curtinfrc.frc2026.util.PhoenixUtil;
 import org.curtinfrc.frc2026.util.Repulsor.Commands.Triggers;
+import org.curtinfrc.frc2026.util.Repulsor.DriverStation.NtRepulsorDriverStation;
 import org.curtinfrc.frc2026.util.Repulsor.DriverStation.RepulsorDriverStation;
 import org.curtinfrc.frc2026.util.Repulsor.DriverStation.RepulsorDriverStationBootstrap;
 import org.curtinfrc.frc2026.util.Repulsor.Fallback;
@@ -281,16 +283,20 @@ public class Robot extends LoggedRobot {
 
     WebServer.start(5800, Filesystem.getDeployDirectory().getPath());
 
-    drive.setDefaultCommand(
-        Commands.parallel(
-            drive.joystickDrive(
-                () -> -controller.getLeftY(),
-                () -> -controller.getLeftX(),
-                () -> -controller.getRightX())
-            // intake.RawControlConsume(1.0),
-            // mag.store(0.7),
-            // Commands.defer(() -> mag.holdIndexerCommand(), Set.of(mag))
-            ));
+    var dsBase = RepulsorDriverStation.getInstance();
+
+    if (dsBase instanceof NtRepulsorDriverStation ds) {
+      // new Trigger(() -> ds.getConfigBool("force_controller_override"))
+      //     .whileTrue(
+      //   Commands.parallel(
+      //             drive.joystickDrive(
+      //                 () -> -controller.getLeftY(),
+      //                 () -> -controller.getLeftX(),
+      //                 () -> -controller.getRightX())
+      //       // intake.RawControlConsume(1.0),
+      //       // mag.store(0.7),
+      //       // Commands.defer(() -> mag.holdIndexerCommand(), Set.of(mag))
+      //       ));
     Trigger automaticLocation =
         new Trigger(
             () -> {
@@ -423,12 +429,13 @@ public class Robot extends LoggedRobot {
                 () -> true,
                 () -> FieldConstants.ShuttlePoint.OppShuttlePointRight));
 
-    drive.locationHeadingjoyStickDrive(
+    drive.setDefaultCommand(drive.locationHeadingjoyStickDrive(
         () -> -controller.getLeftY(),
         () -> -controller.getLeftX(),
         () -> -controller.getRightX(),
         () -> true,
-        () -> FieldConstants.ShuttlePoint.OppShuttlePointLeft);
+        () -> FieldConstants.ShuttlePoint.OppShuttlePointLeft));
+    }
 
     controller
         .leftTrigger()
