@@ -297,8 +297,8 @@ public class Robot extends LoggedRobot {
 
     WebServer.start(5800, Filesystem.getDeployDirectory().getPath());
 
-    var dsBase = RepulsorDriverStation.getInstance();
-
+    RepulsorDriverStationBootstrap.useDefaultNt();
+    RepulsorDriverStation dsBase = RepulsorDriverStation.getInstance();
     if (dsBase instanceof NtRepulsorDriverStation ds) {
       // new Trigger(() -> ds.getConfigBool("force_controller_override"))
       //     .whileTrue(
