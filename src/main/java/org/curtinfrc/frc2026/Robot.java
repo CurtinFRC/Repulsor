@@ -454,7 +454,6 @@ public class Robot extends LoggedRobot {
     hoodedShooter.setDefaultCommand(
         hoodedShooter.setHoodedShooterPositionAndVelocity(shotAngle.get() / 360, shotSpeed.get()));
 
-    
     // controller
     //     .leftTrigger()
     //     .whileTrue(
