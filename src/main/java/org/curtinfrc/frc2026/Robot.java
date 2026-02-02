@@ -104,6 +104,13 @@ public class Robot extends LoggedRobot {
   private final CommandXboxController controller = new CommandXboxController(0);
   private final Alert controllerDisconnected =
       new Alert("Driver controller disconnected!", AlertType.kError);
+  private final NetworkTablesValue<Double> shotAngle =
+      NetworkTablesValue.ofDouble(
+          NetworkTableInstance.getDefault(), NetworkTablesValue.toAdvantageKit("/ShotAngle"), 0.0);
+
+  private final NetworkTablesValue<Double> shotSpeed =
+      NetworkTablesValue.ofDouble(
+          NetworkTableInstance.getDefault(), NetworkTablesValue.toAdvantageKit("/ShotSpeed"), 0.0);
 
   // GateTelemetry telem = new GateTelemetry("/robot/gates");
 
@@ -242,8 +249,6 @@ public class Robot extends LoggedRobot {
                   new ModuleIOSim(TunerConstants.BackLeft),
                   new ModuleIOSim(TunerConstants.BackRight));
 
-          drive.setPose(new Pose2d(14, 4, new Rotation2d()));
-
           vision =
               new Vision(
                   drive::addVisionMeasurement,
@@ -298,6 +303,7 @@ public class Robot extends LoggedRobot {
     WebServer.start(5800, Filesystem.getDeployDirectory().getPath());
 
     RepulsorDriverStationBootstrap.useDefaultNt();
+
     RepulsorDriverStation dsBase = RepulsorDriverStation.getInstance();
     if (dsBase instanceof NtRepulsorDriverStation ds) {
       // new Trigger(() -> ds.getConfigBool("force_controller_override"))
@@ -459,8 +465,20 @@ public class Robot extends LoggedRobot {
                 mag.store(0.7),
                 Commands.defer(() -> mag.holdIndexerCommand(), Set.of(mag))))
         .onFalse(Commands.parallel(intake.RawIdle(), mag.stop()));
+    hoodedShooter.setDefaultCommand(
+        hoodedShooter.setHoodedShooterPositionAndVelocity(shotAngle.get() / 360, shotSpeed.get()));
 
-    controller.rightTrigger().whileTrue(mag.moveAll(0.5)).onFalse(mag.stop());
+    
+    // controller
+    //     .leftTrigger()
+    //     .whileTrue(
+    //         Commands.parallel(
+    //             intake.RawControlConsume(1.0),
+    //             mag.store(0.7),
+    //             Commands.defer(() -> mag.holdIndexerCommand(), Set.of(mag))))
+    //     .onFalse(Commands.parallel(intake.RawIdle(), mag.stop()));
+
+    // controller.rightTrigger().whileTrue(mag.moveAll(0.5)).onFalse(mag.stop());
 
     controller
         .a()
