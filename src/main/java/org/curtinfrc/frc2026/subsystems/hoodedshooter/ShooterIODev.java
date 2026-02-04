@@ -42,6 +42,7 @@ public class ShooterIODev implements ShooterIO {
   private static final double KS = 0.24152;
   private static final double KV = 0.12173;
   private static final double KA = 0.015427;
+  private static final double EFFICIENCY = 0.8;
 
   protected final TalonFX leaderMotor = new TalonFX(ID1);
   protected final TalonFX followerMotor1 = new TalonFX(ID2);
@@ -130,7 +131,7 @@ public class ShooterIODev implements ShooterIO {
 
   @Override
   public void setVelocity(double velocity, BooleanSupplier f) {
-    double rps = convertVelocityToRPS(velocity);
+    double rps = convertVelocityToRPS(velocity / EFFICIENCY);
     int slot = f.getAsBoolean() ? 1 : 0;
     if (f.getAsBoolean()) {
       leaderMotor.setControl(
