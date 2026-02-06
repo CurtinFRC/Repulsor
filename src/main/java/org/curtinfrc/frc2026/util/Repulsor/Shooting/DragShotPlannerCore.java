@@ -24,20 +24,20 @@ import java.util.List;
 import java.util.Optional;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner;
 
-public final class DragShotPlanner {
-  private DragShotPlanner() {}
+final class DragShotPlannerCore {
+  private DragShotPlannerCore() {}
 
-  public static GamePiecePhysics loadGamePieceFromDeployYaml(String id) {
-    return DragShotPlannerCore.loadGamePieceFromDeployYaml(id);
+  static GamePiecePhysics loadGamePieceFromDeployYaml(String id) {
+    return DragShotPlannerGamePieceLoader.loadGamePieceFromDeployYaml(id);
   }
 
-  public static boolean isShooterPoseValid(
+  static boolean isShooterPoseValid(
       Translation2d shooterPos,
       Translation2d targetFieldPosition,
       double robotHalfLengthMeters,
       double robotHalfWidthMeters,
       List<? extends FieldPlanner.Obstacle> dynamicObstacles) {
-    return DragShotPlannerCore.isShooterPoseValid(
+    return DragShotPlannerObstacles.isShooterPoseValid(
         shooterPos,
         targetFieldPosition,
         robotHalfLengthMeters,
@@ -45,7 +45,7 @@ public final class DragShotPlanner {
         dynamicObstacles);
   }
 
-  public static Optional<ShotSolution> findBestShotFromLibrary(
+  static Optional<ShotSolution> findBestShotFromLibrary(
       ShotLibrary library,
       GamePiecePhysics gamePiece,
       Translation2d targetFieldPosition,
@@ -56,7 +56,7 @@ public final class DragShotPlanner {
       double robotHalfWidthMeters,
       List<? extends FieldPlanner.Obstacle> dynamicObstacles,
       Constraints constraints) {
-    return DragShotPlannerCore.findBestShotFromLibrary(
+    return DragShotPlannerLibrarySearch.findBestShotFromLibrary(
         library,
         gamePiece,
         targetFieldPosition,
@@ -69,7 +69,7 @@ public final class DragShotPlanner {
         constraints);
   }
 
-  public static Optional<ShotSolution> findBestShotAuto(
+  static Optional<ShotSolution> findBestShotAuto(
       GamePiecePhysics gamePiece,
       Translation2d targetFieldPosition,
       double targetHeightMeters,
@@ -79,7 +79,7 @@ public final class DragShotPlanner {
       double robotHalfWidthMeters,
       List<? extends FieldPlanner.Obstacle> dynamicObstacles,
       Constraints constraints) {
-    return DragShotPlannerCore.findBestShotAuto(
+    return DragShotPlannerAutoSearch.findBestShotAuto(
         gamePiece,
         targetFieldPosition,
         targetHeightMeters,
@@ -91,7 +91,7 @@ public final class DragShotPlanner {
         constraints);
   }
 
-  public static Optional<ShotSolution> findBestShotOnlineRefine(
+  static Optional<ShotSolution> findBestShotOnlineRefine(
       GamePiecePhysics gamePiece,
       Translation2d targetFieldPosition,
       double targetHeightMeters,
@@ -103,7 +103,7 @@ public final class DragShotPlanner {
       Constraints constraints,
       OnlineSearchState state,
       long budgetNanos) {
-    return DragShotPlannerCore.findBestShotOnlineRefine(
+    return DragShotPlannerOnlineSearch.findBestShotOnlineRefine(
         gamePiece,
         targetFieldPosition,
         targetHeightMeters,
