@@ -452,8 +452,7 @@ public class Robot extends LoggedRobot {
                 Commands.defer(() -> mag.holdIndexerCommand(), Set.of(mag))))
         .onFalse(Commands.parallel(intake.RawIdle(), mag.stop()));
     hoodedShooter.setDefaultCommand(
-        hoodedShooter.setHoodedShooterPositionAndVelocity(
-            shotAngle.get() / 360, shotSpeed.get(), () -> controller.a().getAsBoolean()));
+        hoodedShooter.setHoodedShooterPositionAndVelocity(shotAngle.get() / 360, shotSpeed.get()));
 
     // controller
     //     .leftTrigger()
