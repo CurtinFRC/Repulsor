@@ -10,6 +10,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.units.measure.MutAngle;
 import edu.wpi.first.units.measure.MutAngularVelocity;
 import edu.wpi.first.units.measure.MutVoltage;
@@ -19,6 +20,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import java.util.function.Supplier;
+import org.curtinfrc.frc2026.util.Repulsor.Simulation.NetworkTablesValue;
 // import org.curtinfrc.frc2026.sim.BallSim;
 // import org.curtinfrc.frc2026.util.FieldConstants;
 import org.littletonrobotics.junction.Logger;
@@ -56,6 +58,14 @@ public class HoodedShooter extends SubsystemBase {
 
   private final SysIdRoutine sysIdRoutineShooter;
   private final SysIdRoutine sysIdRoutineHood;
+
+  private final NetworkTablesValue<Double> shotAngle =
+      NetworkTablesValue.ofDouble(
+          NetworkTableInstance.getDefault(), NetworkTablesValue.toAdvantageKit("/ShotAngle"), 0.0);
+
+  private final NetworkTablesValue<Double> shotSpeed =
+      NetworkTablesValue.ofDouble(
+          NetworkTableInstance.getDefault(), NetworkTablesValue.toAdvantageKit("/ShotSpeed"), 0.0);
 
   private boolean hoodSoftLimitedForward() {
     return hoodInputs.positionRotations
@@ -201,8 +211,20 @@ public class HoodedShooter extends SubsystemBase {
       double positionDegrees, double velocityMetresPerSecond) {
     return run(
         () -> {
+          Logger.recordOutput("s", positionDegrees);
           hoodIO.setPosition(positionDegrees);
           shooterIO.setVelocity(velocityMetresPerSecond);
+        });
+  }
+
+  public Command run1() {
+    return run(
+        () -> {
+          hoodIO.setPosition(shotAngle.get() / 360);
+          shooterIO.setVelocity(shotSpeed.get());
+
+          Logger.recordOutput("s", shotAngle.get());
+          Logger.recordOutput("v", shotSpeed.get());
         });
   }
 
