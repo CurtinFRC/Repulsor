@@ -92,13 +92,6 @@ public class Robot extends LoggedRobot {
   private final CommandXboxController controller = new CommandXboxController(0);
   private final Alert controllerDisconnected =
       new Alert("Driver controller disconnected!", AlertType.kError);
-  private final NetworkTablesValue<Double> shotAngle =
-      NetworkTablesValue.ofDouble(
-          NetworkTableInstance.getDefault(), NetworkTablesValue.toAdvantageKit("/ShotAngle"), 0.0);
-
-  private final NetworkTablesValue<Double> shotSpeed =
-      NetworkTablesValue.ofDouble(
-          NetworkTableInstance.getDefault(), NetworkTablesValue.toAdvantageKit("/ShotSpeed"), 0.0);
 
   // GateTelemetry telem = new GateTelemetry("/robot/gates");
 
@@ -267,9 +260,7 @@ public class Robot extends LoggedRobot {
                   () -> -controller.getRightX()));
     }
 
-    hoodedShooter.setDefaultCommand(
-        hoodedShooter.setHoodedShooterPositionAndVelocity(shotAngle.get() / 360, shotSpeed.get()));
-
+    hoodedShooter.setDefaultCommand(hoodedShooter.run1());
     // controller
     //     .leftTrigger()
     //     .whileTrue(
