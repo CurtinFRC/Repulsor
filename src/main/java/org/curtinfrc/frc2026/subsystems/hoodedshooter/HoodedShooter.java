@@ -1,4 +1,3 @@
-
 package org.curtinfrc.frc2026.subsystems.hoodedshooter;
 
 import edu.wpi.first.math.geometry.Pose2d;
