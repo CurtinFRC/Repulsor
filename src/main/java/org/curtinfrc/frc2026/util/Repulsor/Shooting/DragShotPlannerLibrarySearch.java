@@ -64,6 +64,8 @@ final class DragShotPlannerLibrarySearch {
       double ry = robotCurrentPosition.getY();
       Constraints.ShotStyle shotStyle = constraints.shotStyle();
       double maxTravelSq = DragShotPlannerConstants.MAX_ROBOT_TRAVEL_METERS_SQ;
+      double acceptableError = DragShotPlannerConstants.FAST_ACCEPTABLE_VERTICAL_ERROR_METERS;
+      double nearEnoughSq = 0.25;
 
       int iter = 0;
       int rejectedTravel = 0;
@@ -102,6 +104,10 @@ final class DragShotPlannerLibrarySearch {
           }
         }
 
+        double err = e.verticalErrorMeters();
+        if (err < 0.0) {
+          err = -err;
+        }
         DragShotPlannerCandidate next =
             new DragShotPlannerCandidate(
                 shooterPos,
@@ -109,13 +115,17 @@ final class DragShotPlannerLibrarySearch {
                 e.launchSpeedMetersPerSecond(),
                 e.launchAngleRad(),
                 e.timeToPlaneSeconds(),
-                Math.abs(e.verticalErrorMeters()),
+                err,
                 robotDistanceSq);
 
         if (DragShotPlannerCandidate.isBetterCandidate(best, next, shotStyle)) {
           best = next;
         }
         accepted++;
+
+        if (best.verticalError <= acceptableError && best.robotDistanceSq <= nearEnoughSq) {
+          break;
+        }
       }
 
       Profiler.counterAdd("DragShotPlanner.library.loop_iter", iter);
@@ -126,6 +136,18 @@ final class DragShotPlannerLibrarySearch {
       if (best == null) {
         Profiler.counterAdd("DragShotPlanner.library.no_best", 1);
         return Optional.empty();
+      }
+
+      if (best.verticalError <= acceptableError) {
+        return Optional.of(
+            new ShotSolution(
+                best.shooterPosition,
+                Rotation2d.fromRadians(best.shooterYawRad),
+                best.speed,
+                Rotation2d.fromRadians(best.angleRad),
+                best.timeToPlane,
+                targetFieldPosition,
+                best.verticalError));
       }
 
       ShotSolution refined;
@@ -143,7 +165,7 @@ final class DragShotPlannerLibrarySearch {
                 constraints.minLaunchAngleDeg(),
                 constraints.maxLaunchAngleDeg(),
                 Math.abs(constraints.maxLaunchAngleDeg() - constraints.minLaunchAngleDeg()) < 1e-6,
-                DragShotPlannerConstants.ACCEPTABLE_VERTICAL_ERROR_METERS,
+                acceptableError,
                 best.speed,
                 best.angleRad);
       } finally {

@@ -39,6 +39,14 @@ final class DragShotPlannerOnlineSearch {
         {-0.7071067811865476, 0.7071067811865476},
         {-0.7071067811865476, -0.7071067811865476}
       };
+  private static final double[][] ONLINE_OFFS_FAST =
+      new double[][] {
+        {0.0, 0.0},
+        {1.0, 0.0},
+        {-1.0, 0.0},
+        {0.0, 1.0},
+        {0.0, -1.0}
+      };
 
   private DragShotPlannerOnlineSearch() {}
 
@@ -75,6 +83,9 @@ final class DragShotPlannerOnlineSearch {
       boolean fixedAngle = Math.abs(maxAngleDeg - minAngleDeg) < 1e-6;
       Constraints.ShotStyle shotStyle = constraints.shotStyle();
       double maxTravelSq = DragShotPlannerConstants.MAX_ROBOT_TRAVEL_METERS_SQ;
+      double acceptableError = DragShotPlannerConstants.FAST_ACCEPTABLE_VERTICAL_ERROR_METERS;
+      boolean fastMode =
+          acceptableError >= DragShotPlannerConstants.FAST_ACCEPTABLE_VERTICAL_ERROR_METERS - 1e-9;
 
       if (minSpeed <= 0.0 || maxSpeed <= minSpeed) {
         Profiler.counterAdd("DragShotPlanner.online.bad_speed_range", 1);
@@ -88,15 +99,64 @@ final class DragShotPlannerOnlineSearch {
       Translation2d robotPos = robotPose.getTranslation();
       double robotX = robotPos.getX();
       double robotY = robotPos.getY();
+      double targetX = targetFieldPosition.getX();
+      double targetY = targetFieldPosition.getY();
+      int robotXmm = (int) Math.round(robotX * 1000.0);
+      int robotYmm = (int) Math.round(robotY * 1000.0);
+      int targetXmm = (int) Math.round(targetX * 1000.0);
+      int targetYmm = (int) Math.round(targetY * 1000.0);
+      int obsHash = obstaclesStableHash(dynamicObstacles);
+
+      ShotSolution cached = state.lastSolution();
+      if (cached != null) {
+        int dtx = Math.abs(targetXmm - state.lastTargetXmm());
+        int dty = Math.abs(targetYmm - state.lastTargetYmm());
+        if (dtx <= 20 && dty <= 20 && obsHash == state.lastObsHash()) {
+          Translation2d sp = cached.shooterPosition();
+          double dxr = robotX - sp.getX();
+          double dyr = robotY - sp.getY();
+          double distSq = dxr * dxr + dyr * dyr;
+          if (distSq <= maxTravelSq + 1e-6) {
+            double err = cached.verticalErrorMeters();
+            if (err < 0.0) err = -err;
+            if (err <= acceptableError) {
+              boolean ok;
+              AutoCloseable _pCached =
+                  Profiler.section("DragShotPlanner.isShooterPoseValid.cached");
+              try {
+                ok =
+                    DragShotPlannerObstacles.isShooterPoseValidInternal(
+                        sp,
+                        targetFieldPosition,
+                        robotHalfLengthMeters,
+                        robotHalfWidthMeters,
+                        dynamicObstacles);
+              } finally {
+                DragShotPlannerUtil.closeQuietly(_pCached);
+              }
+              if (ok) {
+                state.setLastSolution(cached, robotXmm, robotYmm, targetXmm, targetYmm, obsHash);
+                return Optional.of(cached);
+              }
+            }
+          }
+        }
+      }
 
       Translation2d seed = state.seed();
       if (seed == null) {
-        seed = projectToValidRing(robotPos, targetFieldPosition);
+        seed = projectToValidRing(robotX, robotY, targetX, targetY);
         state.seed(seed);
       }
 
-      double speedStep = Math.max(0.22, (maxSpeed - minSpeed) / 70.0);
-      double angleStep = fixedAngle ? 1.0 : Math.max(0.40, (maxAngleDeg - minAngleDeg) / 70.0);
+      double speedStep = Math.max(0.35, (maxSpeed - minSpeed) / 55.0);
+      double angleStep = fixedAngle ? 1.0 : Math.max(0.65, (maxAngleDeg - minAngleDeg) / 55.0);
+      if (fastMode) {
+        speedStep = Math.max(speedStep, 0.8);
+        if (!fixedAngle) {
+          angleStep = Math.max(angleStep, 1.2);
+        }
+      }
 
       DragShotPlannerCandidate best = null;
 
@@ -115,7 +175,7 @@ final class DragShotPlannerOnlineSearch {
                 minAngleDeg,
                 maxAngleDeg,
                 fixedAngle,
-                DragShotPlannerConstants.ACCEPTABLE_VERTICAL_ERROR_METERS,
+                acceptableError,
                 shotStyle,
                 speedStep,
                 angleStep);
@@ -142,6 +202,23 @@ final class DragShotPlannerOnlineSearch {
           double dy = robotY - seedSol.shooterPosition().getY();
           double distSq = dx * dx + dy * dy;
           if (distSq <= maxTravelSq + 1e-6) {
+            double errSeed = seedSol.verticalErrorMeters();
+            if (errSeed < 0.0) {
+              errSeed = -errSeed;
+            }
+            if (errSeed <= acceptableError) {
+              ShotSolution out =
+                  new ShotSolution(
+                      seedSol.shooterPosition(),
+                      seedSol.shooterYaw(),
+                      seedSol.launchSpeedMetersPerSecond(),
+                      seedSol.launchAngle(),
+                      seedSol.timeToPlaneSeconds(),
+                      targetFieldPosition,
+                      errSeed);
+              state.setLastSolution(out, robotXmm, robotYmm, targetXmm, targetYmm, obsHash);
+              return Optional.of(out);
+            }
             best =
                 new DragShotPlannerCandidate(
                     seedSol.shooterPosition(),
@@ -149,7 +226,7 @@ final class DragShotPlannerOnlineSearch {
                     seedSol.launchSpeedMetersPerSecond(),
                     seedSol.launchAngle().getRadians(),
                     seedSol.timeToPlaneSeconds(),
-                    Math.abs(seedSol.verticalErrorMeters()),
+                    errSeed,
                     distSq);
           }
         }
@@ -166,6 +243,7 @@ final class DragShotPlannerOnlineSearch {
       int rejectedNoSol = 0;
       int improvedCount = 0;
 
+      double[][] offsets = fastMode ? ONLINE_OFFS_FAST : ONLINE_OFFS;
       while ((System.nanoTime() - start) < budgetNanos) {
         outer++;
         boolean improved = false;
@@ -173,13 +251,16 @@ final class DragShotPlannerOnlineSearch {
         double cx = current.getX();
         double cy = current.getY();
 
-        for (double[] o : ONLINE_OFFS) {
+        for (double[] o : offsets) {
           inner++;
-          Translation2d p = new Translation2d(cx + o[0] * step, cy + o[1] * step);
-          Translation2d clipped = clipToRingAndField(p, targetFieldPosition);
+          double px = cx + o[0] * step;
+          double py = cy + o[1] * step;
+          Translation2d clipped = clipToRingAndField(px, py, targetX, targetY);
 
-          double dxr = robotX - clipped.getX();
-          double dyr = robotY - clipped.getY();
+          double clippedX = clipped.getX();
+          double clippedY = clipped.getY();
+          double dxr = robotX - clippedX;
+          double dyr = robotY - clippedY;
           double distSq = dxr * dxr + dyr * dyr;
           if (distSq > maxTravelSq) {
             rejectedTravel++;
@@ -219,7 +300,7 @@ final class DragShotPlannerOnlineSearch {
                     minAngleDeg,
                     maxAngleDeg,
                     fixedAngle,
-                    DragShotPlannerConstants.ACCEPTABLE_VERTICAL_ERROR_METERS,
+                    acceptableError,
                     shotStyle,
                     speedStep,
                     angleStep);
@@ -236,6 +317,10 @@ final class DragShotPlannerOnlineSearch {
           double dy2 = robotY - sol.shooterPosition().getY();
           double distSq2 = dx2 * dx2 + dy2 * dy2;
 
+          double errSol = sol.verticalErrorMeters();
+          if (errSol < 0.0) {
+            errSol = -errSol;
+          }
           DragShotPlannerCandidate cand =
               new DragShotPlannerCandidate(
                   sol.shooterPosition(),
@@ -243,8 +328,22 @@ final class DragShotPlannerOnlineSearch {
                   sol.launchSpeedMetersPerSecond(),
                   sol.launchAngle().getRadians(),
                   sol.timeToPlaneSeconds(),
-                  Math.abs(sol.verticalErrorMeters()),
+                  errSol,
                   distSq2);
+
+          if (errSol <= acceptableError) {
+            ShotSolution out =
+                new ShotSolution(
+                    cand.shooterPosition,
+                    Rotation2d.fromRadians(cand.shooterYawRad),
+                    cand.speed,
+                    Rotation2d.fromRadians(cand.angleRad),
+                    cand.timeToPlane,
+                    targetFieldPosition,
+                    cand.verticalError);
+            state.setLastSolution(out, robotXmm, robotYmm, targetXmm, targetYmm, obsHash);
+            return Optional.of(out);
+          }
 
           if (DragShotPlannerCandidate.isBetterCandidate(best, cand, shotStyle)) {
             best = cand;
@@ -255,8 +354,8 @@ final class DragShotPlannerOnlineSearch {
         }
 
         if (!improved) {
-          step *= 0.58;
-          if (step < 0.075) {
+          step *= fastMode ? 0.5 : 0.58;
+          if (step < (fastMode ? 0.12 : 0.075)) {
             break;
           }
         }
@@ -273,6 +372,20 @@ final class DragShotPlannerOnlineSearch {
       if (best == null) {
         Profiler.counterAdd("DragShotPlanner.online.no_best", 1);
         return Optional.empty();
+      }
+
+      if (best.verticalError <= acceptableError) {
+        ShotSolution out =
+            new ShotSolution(
+                best.shooterPosition,
+                Rotation2d.fromRadians(best.shooterYawRad),
+                best.speed,
+                Rotation2d.fromRadians(best.angleRad),
+                best.timeToPlane,
+                targetFieldPosition,
+                best.verticalError);
+        state.setLastSolution(out, robotXmm, robotYmm, targetXmm, targetYmm, obsHash);
+        return Optional.of(out);
       }
 
       state.seed(best.shooterPosition);
@@ -294,7 +407,7 @@ final class DragShotPlannerOnlineSearch {
                 minAngleDeg,
                 maxAngleDeg,
                 fixedAngle,
-                DragShotPlannerConstants.ACCEPTABLE_VERTICAL_ERROR_METERS,
+                acceptableError,
                 best.speed,
                 best.angleRad);
       } finally {
@@ -302,10 +415,11 @@ final class DragShotPlannerOnlineSearch {
       }
 
       if (refined != null) {
+        state.setLastSolution(refined, robotXmm, robotYmm, targetXmm, targetYmm, obsHash);
         return Optional.of(refined);
       }
 
-      return Optional.of(
+      ShotSolution out =
           new ShotSolution(
               best.shooterPosition,
               Rotation2d.fromRadians(best.shooterYawRad),
@@ -313,24 +427,23 @@ final class DragShotPlannerOnlineSearch {
               Rotation2d.fromRadians(best.angleRad),
               best.timeToPlane,
               targetFieldPosition,
-              best.verticalError));
+              best.verticalError);
+      state.setLastSolution(out, robotXmm, robotYmm, targetXmm, targetYmm, obsHash);
+      return Optional.of(out);
     } finally {
       DragShotPlannerUtil.closeQuietly(_p);
     }
   }
 
-  private static Translation2d projectToValidRing(Translation2d point, Translation2d target) {
+  private static Translation2d projectToValidRing(
+      double px, double py, double targetX, double targetY) {
     AutoCloseable _p = Profiler.section("DragShotPlanner.projectToValidRing");
     try {
-      double px = point.getX();
-      double py = point.getY();
-      double tx = target.getX();
-      double ty = target.getY();
-      double dx = px - tx;
-      double dy = py - ty;
+      double dx = px - targetX;
+      double dy = py - targetY;
       double r2 = dx * dx + dy * dy;
       if (r2 < 1e-12) {
-        return new Translation2d(tx - 3.0, ty);
+        return new Translation2d(targetX - 3.0, targetY);
       }
       double r = Math.sqrt(r2);
       double clamped =
@@ -338,24 +451,30 @@ final class DragShotPlannerOnlineSearch {
               DragShotPlannerConstants.MIN_RANGE_METERS,
               Math.min(DragShotPlannerConstants.MAX_RANGE_METERS, r));
       double scale = clamped / r;
-      return new Translation2d(tx + dx * scale, ty + dy * scale);
+      return new Translation2d(targetX + dx * scale, targetY + dy * scale);
     } finally {
       DragShotPlannerUtil.closeQuietly(_p);
     }
   }
 
-  private static Translation2d clipToRingAndField(Translation2d p, Translation2d target) {
+  private static Translation2d clipToRingAndField(
+      double px, double py, double targetX, double targetY) {
     AutoCloseable _p0 = Profiler.section("DragShotPlanner.clipToRingAndField");
     try {
-      Translation2d ring = projectToValidRing(p, target);
+      Translation2d ring = projectToValidRing(px, py, targetX, targetY);
       double x = ring.getX();
       double y = ring.getY();
       if (!Double.isFinite(x) || !Double.isFinite(y)) {
-        return new Translation2d(target.getX() - 3.0, target.getY());
+        return new Translation2d(targetX - 3.0, targetY);
       }
       return ring;
     } finally {
       DragShotPlannerUtil.closeQuietly(_p0);
     }
+  }
+
+  private static int obstaclesStableHash(List<? extends FieldPlanner.Obstacle> obs) {
+    if (obs == null || obs.isEmpty()) return 0;
+    return (System.identityHashCode(obs) * 31) ^ obs.size();
   }
 }
