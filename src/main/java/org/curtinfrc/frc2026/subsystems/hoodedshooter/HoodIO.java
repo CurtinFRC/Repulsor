@@ -9,8 +9,7 @@ public interface HoodIO {
     public boolean motorConnected;
     public double motorTemperature;
     public double positionRotations;
-    public double hoodPositionDegrees;
-    public double encoderPositionRotations;
+    public double absolutePositionRotations;
     public double angularVelocityRotationsPerSecond;
     public double currentAmps;
     public double appliedVolts;
@@ -22,5 +21,5 @@ public interface HoodIO {
 
   public default void setVoltageV(Voltage voltage) {}
 
-  public default void setPosition(double positionRotations) {}
+  public default void setPosition(double position) {}
 }

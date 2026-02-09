@@ -67,16 +67,6 @@ public class HoodedShooter extends SubsystemBase {
       NetworkTablesValue.ofDouble(
           NetworkTableInstance.getDefault(), NetworkTablesValue.toAdvantageKit("/ShotSpeed"), 0.0);
 
-  private boolean hoodSoftLimitedForward() {
-    return hoodInputs.positionRotations
-        > HoodIODev.FORWARD_LIMIT_ROTATIONS - HoodIODev.LIMIT_BUFFER_ROTATIONS;
-  }
-
-  private boolean hoodSoftLimitedReverse() {
-    return hoodInputs.positionRotations
-        < HoodIODev.REVERSE_LIMIT_ROTATIONS + HoodIODev.LIMIT_BUFFER_ROTATIONS;
-  }
-
   // public BallSim ballSim = new BallSim(0.0, new Rotation2d(0.0), new Pose3d());
 
   public HoodedShooter(ShooterIO shooterIO, HoodIO hoodIO, Supplier<Pose2d> robotPose) {
@@ -253,27 +243,4 @@ public class HoodedShooter extends SubsystemBase {
   }
 
   // do not use
-  public Command hoodSysIdQuasistaticForward() {
-    return sysIdRoutineHood
-        .quasistatic(SysIdRoutine.Direction.kForward)
-        .until(() -> hoodSoftLimitedForward());
-  }
-
-  public Command hoodSysIdQuasistaticBackward() {
-    return sysIdRoutineHood
-        .quasistatic(SysIdRoutine.Direction.kReverse)
-        .until(() -> hoodSoftLimitedReverse());
-  }
-
-  public Command hoodSysIdDynamicForward() {
-    return sysIdRoutineHood
-        .dynamic(SysIdRoutine.Direction.kForward)
-        .until(() -> hoodSoftLimitedForward());
-  }
-
-  public Command hoodSysIdDynamicBackward() {
-    return sysIdRoutineHood
-        .dynamic(SysIdRoutine.Direction.kReverse)
-        .until(() -> hoodSoftLimitedReverse());
-  }
 }
