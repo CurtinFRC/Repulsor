@@ -97,7 +97,6 @@ public class Robot extends LoggedRobot {
   // GateTelemetry telem = new GateTelemetry("/robot/gates");
 
   // VisionSimTest visionSim = new VisionSimTest();
-  RepulsorSetpoint goal = new RepulsorSetpoint(Rebuilt2026.HUB_SHOOT, HeightSetpoint.L2);
 
   private boolean simHasPiece = false;
   private NetworkTablesValue<Long> pieceCount =
@@ -290,7 +289,9 @@ public class Robot extends LoggedRobot {
     // hub
     //     // .whileTrue(hoodedShooter.setHoodedShooterPositionAndVelocity(0.4, 23))
     //     .onFalse(hoodedShooter.stopHoodedShooter());
-    wireRepulsor();
+    // wireRepulsor();
+
+    System.out.println("Robot initialized.");
   }
 
   /** This function is called periodically during all modes. */
@@ -303,10 +304,6 @@ public class Robot extends LoggedRobot {
     controllerDisconnected.set(!controller.isConnected());
     logRunningCommands();
     logRequiredSubsystems();
-
-    if (this.repulsor != null) {
-      repulsor.update();
-    }
 
     // VisionSimTest.setSelfPose(drive.getPose());
 
@@ -361,11 +358,16 @@ public class Robot extends LoggedRobot {
   /** This function is called once when teleop is enabled. */
   @Override
   public void teleopInit() {
+    wireRepulsor();
   }
 
   /** This function is called periodically during operator control. */
   @Override
-  public void teleopPeriodic() {}
+  public void teleopPeriodic() {
+    if (this.repulsor != null) {
+      repulsor.update();
+    }
+  }
 
   /** This function is called once when test mode is enabled. */
   @Override
