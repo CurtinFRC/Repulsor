@@ -46,6 +46,8 @@ import org.curtinfrc.frc2026.util.Repulsor.Commands.Triggers;
 import org.curtinfrc.frc2026.util.Repulsor.DriverStation.NtRepulsorDriverStation;
 import org.curtinfrc.frc2026.util.Repulsor.DriverStation.RepulsorDriverStation;
 import org.curtinfrc.frc2026.util.Repulsor.Fallback.PlannerFallback;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.RepulsorSample;
 import org.curtinfrc.frc2026.util.Repulsor.FieldTracker.FieldVision;
 import org.curtinfrc.frc2026.util.Repulsor.FieldTracker.GameElement;
@@ -308,7 +310,7 @@ public class Repulsor {
     if (m_usageType != UsageType.kFullAuto) return;
   }
 
-  private SetpointContext ctxFor(Pose2d robotPose, List<? extends FieldPlanner.Obstacle> dyn) {
+  private SetpointContext ctxFor(Pose2d robotPose, List<? extends Obstacle> dyn) {
     double len = Math.max(0.0, robot_x) * 2.0;
     double wid = Math.max(0.0, robot_y) * 2.0;
     double release =
@@ -341,7 +343,7 @@ public class Repulsor {
                   m_currentGoal = effective;
 
                   Pose2d robotPose = m_drive.getPose();
-                  List<? extends FieldPlanner.Obstacle> dyn = m_visionPlanner.getObstacles();
+                  List<? extends Obstacle> dyn = m_visionPlanner.getObstacles();
                   Pose2d goalPose = effective.get(ctxFor(robotPose, dyn));
                   m_planner.setRequestedGoal(goalPose);
 

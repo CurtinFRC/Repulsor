@@ -24,8 +24,11 @@ import edu.wpi.first.math.geometry.Translation2d;
 import java.util.Arrays;
 import java.util.List;
 import org.curtinfrc.frc2026.util.Repulsor.Constants;
-import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.DiagonalWallObstacle;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.HorizontalObstacle;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.TeardropObstacle;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.VerticalObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldTracker;
 import org.curtinfrc.frc2026.util.Repulsor.FieldTracker.GameElement;
 import org.curtinfrc.frc2026.util.Repulsor.FieldTracker.GameElement.Alliance;
@@ -41,33 +44,31 @@ public final class Reefscape2025 implements FieldDefinition {
 
   private static final List<Obstacle> FIELD_OBSTACLES =
       List.of(
-          new FieldPlanner.TeardropObstacle(
-              new Translation2d(4.49, 4.00), 1.2, 2.2, 1.03, 3.0, 2.0),
-          new FieldPlanner.TeardropObstacle(
-              new Translation2d(13.08, 4.00), 1.2, 2.2, 1.03, 3.0, 2.0));
+          new TeardropObstacle(new Translation2d(4.49, 4.00), 1.2, 2.2, 1.03, 3.0, 2.0),
+          new TeardropObstacle(new Translation2d(13.08, 4.00), 1.2, 2.2, 1.03, 3.0, 2.0));
 
   private static final List<Obstacle> WALLS =
       List.of(
-          new FieldPlanner.HorizontalObstacle(0.0, 2.0, true),
-          new FieldPlanner.HorizontalObstacle(Constants.FIELD_WIDTH, 1.4, false),
-          new FieldPlanner.VerticalObstacle(0.0, 2.0, true),
-          new FieldPlanner.VerticalObstacle(Constants.FIELD_LENGTH, 1.4, false),
-          new FieldPlanner.DiagonalWallObstacle(
+          new HorizontalObstacle(0.0, 2.0, true),
+          new HorizontalObstacle(Constants.FIELD_WIDTH, 1.4, false),
+          new VerticalObstacle(0.0, 2.0, true),
+          new VerticalObstacle(Constants.FIELD_LENGTH, 1.4, false),
+          new DiagonalWallObstacle(
               new Translation2d(0.0, CORNER_CHAMFER),
               new Translation2d(CORNER_CHAMFER, 0.0),
               2.0,
               2.0),
-          new FieldPlanner.DiagonalWallObstacle(
+          new DiagonalWallObstacle(
               new Translation2d(Constants.FIELD_LENGTH - CORNER_CHAMFER, 0.0),
               new Translation2d(Constants.FIELD_LENGTH, CORNER_CHAMFER),
               2.0,
               2.0),
-          new FieldPlanner.DiagonalWallObstacle(
+          new DiagonalWallObstacle(
               new Translation2d(0.0, Constants.FIELD_WIDTH - CORNER_CHAMFER),
               new Translation2d(CORNER_CHAMFER, Constants.FIELD_WIDTH),
               2.0,
               2.0),
-          new FieldPlanner.DiagonalWallObstacle(
+          new DiagonalWallObstacle(
               new Translation2d(Constants.FIELD_LENGTH - CORNER_CHAMFER, Constants.FIELD_WIDTH),
               new Translation2d(Constants.FIELD_LENGTH, Constants.FIELD_WIDTH - CORNER_CHAMFER),
               2.0,
