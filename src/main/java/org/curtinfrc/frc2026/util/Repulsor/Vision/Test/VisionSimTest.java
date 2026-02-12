@@ -32,7 +32,8 @@ import java.util.Collections;
 import java.util.Optional;
 import java.util.Random;
 import org.curtinfrc.frc2026.Constants;
-import org.curtinfrc.frc2026.util.Repulsor.Setpoints;
+import org.curtinfrc.frc2026.util.Repulsor.Setpoints.GameSetpoint;
+import org.curtinfrc.frc2026.util.Repulsor.Setpoints.Setpoints;
 import org.curtinfrc.frc2026.util.Repulsor.Vision.RepulsorVision;
 
 public class VisionSimTest implements RepulsorVision {
@@ -57,7 +58,7 @@ public class VisionSimTest implements RepulsorVision {
 
   @SuppressWarnings("unchecked")
   public VisionSimTest() {
-    ArrayList<Setpoints.GameSetpoint> scoreTargets = new ArrayList<>();
+    ArrayList<GameSetpoint> scoreTargets = new ArrayList<>();
     scoreTargets.add(Setpoints.Rebuilt2026.HUB_SHOOT);
 
     if (USE_CONTROLLER) {
