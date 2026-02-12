@@ -483,14 +483,13 @@ public class Robot extends LoggedRobot {
     //     .onFalse(hoodedShooter.stopHoodedShooter());
     // wireRepulsor();
 
-        wireRepulsor();
+    wireRepulsor();
 
     System.out.println("Robot initialized.");
   }
 
   @Override
-  public void robotInit() {
-  }
+  public void robotInit() {}
 
   /** This function is called periodically during all modes. */
   @Override
