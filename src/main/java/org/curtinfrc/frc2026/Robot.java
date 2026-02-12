@@ -485,6 +485,25 @@ public class Robot extends LoggedRobot {
         // .whileTrue(hoodedShooter.setHoodedShooterPositionAndVelocity(0.4, 23))
         .onFalse(hoodedShooter.stopHoodedShooter());
     RepulsorDriverStationBootstrap.useDefaultNt();
+    // controller
+    //     .rightBumper()
+    //     .whileTrue(hoodedShooter.setHoodedShooterPositionAndVelocity(1.5, 21))
+    //     .onFalse(hoodedShooter.stopHoodedShooter());
+    // controller
+    //     .leftBumper()
+    //     .whileTrue(hoodedShooter.setHoodedShooterPositionAndVelocity(0.40, 18.2)) // in front of
+    // hub
+    //     // .whileTrue(hoodedShooter.setHoodedShooterPositionAndVelocity(0.4, 23))
+    //     .onFalse(hoodedShooter.stopHoodedShooter());
+    // wireRepulsor();
+
+        wireRepulsor();
+
+    System.out.println("Robot initialized.");
+  }
+
+  @Override
+  public void robotInit() {
   }
 
   /** This function is called periodically during all modes. */
@@ -552,7 +571,7 @@ public class Robot extends LoggedRobot {
   /** This function is called once when teleop is enabled. */
   @Override
   public void teleopInit() {
-    wireRepulsor();
+    // wireRepulsor();
   }
 
   /** This function is called periodically during operator control. */
