@@ -60,6 +60,7 @@ import org.curtinfrc.frc2026.util.Repulsor.DriverStation.RepulsorDriverStationBo
 import org.curtinfrc.frc2026.util.Repulsor.Fallback;
 import org.curtinfrc.frc2026.util.Repulsor.Fallback.PID;
 import org.curtinfrc.frc2026.util.Repulsor.IntakeFootprint;
+import org.curtinfrc.frc2026.util.Repulsor.Offload.RepulsorOffloadRuntime;
 import org.curtinfrc.frc2026.util.Repulsor.Profiler.Profiler;
 import org.curtinfrc.frc2026.util.Repulsor.Reasoning.Rebuilt2026Reasoner;
 import org.curtinfrc.frc2026.util.Repulsor.Repulsor;
@@ -196,6 +197,16 @@ public class Robot extends LoggedRobot {
     }
 
     Logger.start();
+    if (Constants.getMode() != Constants.Mode.REPLAY) {
+      try {
+        RepulsorOffloadRuntime.ensureInitialized();
+      } catch (Exception ex) {
+        DriverStation.reportWarning(
+            "Offload runtime initialization failed, using local fallback: " + ex.getMessage(),
+            false);
+      }
+    }
+
     if (Constants.getMode() != Constants.Mode.REPLAY) {
       switch (Constants.robotType) {
         case COMP -> {
@@ -432,6 +443,7 @@ public class Robot extends LoggedRobot {
   public void endCompetition() {
     Profiler.shutdown();
     System.out.println("Profiler shut down.");
+    RepulsorOffloadRuntime.shutdown();
     super.endCompetition();
   }
 
