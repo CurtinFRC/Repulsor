@@ -36,13 +36,15 @@ final class DragShotPlannerCore {
       Translation2d targetFieldPosition,
       double robotHalfLengthMeters,
       double robotHalfWidthMeters,
-      List<? extends Obstacle> dynamicObstacles) {
+      List<? extends Obstacle> dynamicObstacles,
+      boolean checkBounds) {
     return DragShotPlannerObstacles.isShooterPoseValid(
         shooterPos,
         targetFieldPosition,
         robotHalfLengthMeters,
         robotHalfWidthMeters,
-        dynamicObstacles);
+        dynamicObstacles,
+        checkBounds);
   }
 
   static Optional<ShotSolution> findBestShotFromLibrary(
@@ -115,5 +117,21 @@ final class DragShotPlannerCore {
         constraints,
         state,
         budgetNanos);
+  }
+
+  static Optional<ShotSolution> calculateStaticShotAngleAndSpeed(
+      GamePiecePhysics gamePiece,
+      Translation2d shooterFieldPosition,
+      Translation2d targetFieldPosition,
+      double targetHeightMeters,
+      double shooterReleaseHeightMeters,
+      Constraints constraints) {
+    return DragShotPlannerStaticPositionSearch.calculateShotAngleAndSpeedFromStaticPosition(
+        gamePiece,
+        shooterFieldPosition,
+        targetFieldPosition,
+        targetHeightMeters,
+        shooterReleaseHeightMeters,
+        constraints);
   }
 }

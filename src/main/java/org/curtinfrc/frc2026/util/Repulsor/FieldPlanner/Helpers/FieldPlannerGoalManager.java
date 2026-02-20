@@ -37,14 +37,25 @@ public final class FieldPlannerGoalManager {
   private static final double STAGED_REACH_ENTER_M = 0.35;
   private static final double STAGED_REACH_EXIT_M = 0.55;
   private static final int STAGED_REACH_TICKS = 3;
+  private static final int STAGED_GATE_CLEAR_TICKS = 2;
 
   private static final int STAGED_MAX_TICKS = 40;
 
   private static final double STAGED_LANE_WEIGHT = 2.0;
   private static final double STAGED_PREF_GATE_PENALTY = 2.0;
+  private static final double STAGED_LANE_LOCK_WEIGHT = 2.5;
+  private static final double STAGED_LANE_LOCK_MAX_DELTA_M = 3.0;
 
   private static final double STAGED_GATE_PAD_M = 0.25;
   private static final double STAGED_PASSED_X_HYST_M = 0.35;
+  private static final double STAGED_GOAL_SIDE_PROJ_M = 0.05;
+  private static final double STAGED_DEEP_CENTER_BAND_M = 1.40;
+  private static final double STAGED_CENTER_RETURN_STAGE_TRIGGER_M = 2.2;
+  private static final double STAGED_CENTER_RETURN_INTERSECTION_TRIGGER_M = 3.0;
+  private static final double STAGED_CENTER_RETURN_EXIT_MIN_M = 0.70;
+  private static final double STAGED_CENTER_RETURN_EXIT_MAX_M = 2.40;
+  private static final double STAGED_CENTER_RETURN_GATE_MIN_OFFSET_M = 2.0;
+  private static final double STAGED_FIELD_EDGE_MARGIN_M = 0.35;
 
   private Pose2d goal = Pose2d.kZero;
   private Pose2d requestedGoal = Pose2d.kZero;
@@ -55,8 +66,13 @@ public final class FieldPlannerGoalManager {
   private int stagedReachTicks = 0;
   private int stagedModeTicks = 0;
   private boolean stagedGatePassed = false;
+  private int stagedGateClearTicks = 0;
   private Translation2d stagedLatchedPull = null;
   private boolean stagedUsingBypass = false;
+  private Double stagedLaneY = null;
+  private boolean stagedCenterReturn = false;
+  private boolean stagedExitPhase = false;
+  private Translation2d stagedExitPoint = null;
 
   private final List<GatedAttractorObstacle> gatedAttractors;
 
@@ -80,6 +96,10 @@ public final class FieldPlannerGoalManager {
       this.stagedAttractor = null;
       this.lastStagedPoint = null;
       this.stagedComplete = false;
+      this.stagedLaneY = null;
+      this.stagedCenterReturn = false;
+      this.stagedExitPhase = false;
+      this.stagedExitPoint = null;
     }
   }
 
@@ -99,13 +119,20 @@ public final class FieldPlannerGoalManager {
       stagedComplete = false;
       stagedReachTicks = 0;
       stagedModeTicks = 0;
+      stagedGateClearTicks = 0;
+      stagedLaneY = null;
+      stagedCenterReturn = false;
+      stagedExitPhase = false;
+      stagedExitPoint = null;
       return true;
     }
 
     Translation2d reqT = requestedGoal.getTranslation();
     GatedAttractorObstacle firstBlock = firstOccludingGateAlongSegment(curPos, reqT, obstacles);
 
-    boolean shouldStage = shouldStageThroughAttractor(curPos, reqT) || (firstBlock != null);
+    boolean stageForOccludingGate =
+        firstBlock != null && !shouldDeferCenterReturnStage(curPos, reqT, firstBlock);
+    boolean shouldStage = shouldStageThroughAttractor(curPos, reqT) || stageForOccludingGate;
     if (stagedComplete && lastStagedPoint != null) {
       double d = curPos.getDistance(lastStagedPoint);
       if (d < STAGED_RESTAGE_DIST_M) {
@@ -123,6 +150,12 @@ public final class FieldPlannerGoalManager {
       if (gateToUse != null) {
         stagedGate = gateToUse;
         stagedLatchedPull = null;
+        if (stagedGate.center != null) stagedLaneY = stagedGate.center.getY();
+        stagedCenterReturn =
+            isCenterReturnTransition(curPos, reqT) && isCorridorSideGate(stagedGate);
+        stagedExitPhase = false;
+        stagedExitPoint =
+            stagedCenterReturn ? computeCenterReturnExitPoint(stagedGate, reqT) : null;
 
         stagedUsingBypass =
             (stagedGate.gatePoly != null && stagedGate.bypassPoint != null)
@@ -131,12 +164,17 @@ public final class FieldPlannerGoalManager {
 
         Translation2d pick = stagingPullPoint(stagedGate, curPos, reqT);
 
-        if (pick != null && curPos.getDistance(pick) > STAGED_REACH_EXIT_M) {
+        boolean mustStageForOccludingGate = stageForOccludingGate;
+        if (pick != null
+            && (mustStageForOccludingGate
+                || shouldStage
+                || curPos.getDistance(pick) > STAGED_REACH_EXIT_M)) {
           stagedAttractor = pick;
           lastStagedPoint = pick;
           stagedReachTicks = 0;
           stagedModeTicks = 0;
           stagedGatePassed = false;
+          stagedGateClearTicks = 0;
           stagedComplete = false;
 
           Pose2d staged = new Pose2d(pick, requestedGoal.getRotation());
@@ -150,6 +188,10 @@ public final class FieldPlannerGoalManager {
           stagedLatchedPull = null;
           stagedReachTicks = 0;
           stagedModeTicks = 0;
+          stagedGateClearTicks = 0;
+          stagedCenterReturn = false;
+          stagedExitPhase = false;
+          stagedExitPoint = null;
         }
       }
     }
@@ -169,10 +211,24 @@ public final class FieldPlannerGoalManager {
       boolean reached = stagedReachTicks >= STAGED_REACH_TICKS;
 
       if (stagedGate != null) {
-        stagedGatePassed = stagedGatePassed || gateIsBehind(curPos, reqT, stagedGate);
+        boolean gateOccludingNow =
+            stagedGate.gatePoly != null
+                && FieldPlannerGeometry.segmentIntersectsPolygonOuter(
+                    curPos, reqT, expandPoly(stagedGate.gatePoly, STAGED_GATE_PAD_M));
+        stagedGatePassed =
+            stagedGatePassed
+                || gateIsBehind(curPos, reqT, stagedGate)
+                || gateOnGoalSide(curPos, reqT, stagedGate)
+                || !gateOccludingNow;
       }
 
-      boolean gateCleared = stagedGatePassed;
+      boolean gateCleared = (stagedGate == null) || stagedGatePassed;
+      if (gateCleared) stagedGateClearTicks++;
+      else stagedGateClearTicks = 0;
+
+      if (!reached && stagedGate != null && stagedGateClearTicks >= STAGED_GATE_CLEAR_TICKS)
+        reached = true;
+      if (!reached && stagedGate != null && gateCleared && d <= STAGED_REACH_EXIT_M) reached = true;
 
       if (stagedModeTicks >= STAGED_MAX_TICKS) {
         GatedAttractorObstacle nowFirst = firstOccludingGateAlongSegment(curPos, reqT, obstacles);
@@ -195,6 +251,7 @@ public final class FieldPlannerGoalManager {
             stagedReachTicks = 0;
             stagedModeTicks = 0;
             stagedGatePassed = false;
+            stagedGateClearTicks = 0;
             goal = new Pose2d(stagedAttractor, requestedGoal.getRotation());
             return false;
           }
@@ -202,16 +259,34 @@ public final class FieldPlannerGoalManager {
       }
 
       if (reached && gateCleared) {
+        if (stagedCenterReturn && !stagedExitPhase && stagedExitPoint != null) {
+          stagedExitPhase = true;
+          stagedAttractor = stagedExitPoint;
+          lastStagedPoint = stagedExitPoint;
+          stagedGate = null;
+          stagedUsingBypass = false;
+          stagedGatePassed = true;
+          stagedLatchedPull = null;
+          stagedReachTicks = 0;
+          stagedModeTicks = 0;
+          stagedGateClearTicks = 0;
+          goal = new Pose2d(stagedAttractor, requestedGoal.getRotation());
+          return false;
+        }
+
         lastStagedPoint = liveTarget != null ? liveTarget : stagedAttractor;
         stagedAttractor = null;
         stagedGate = null;
         stagedUsingBypass = false;
         stagedGatePassed = false;
         stagedLatchedPull = null;
-        lastStagedPoint = null;
         stagedReachTicks = 0;
         stagedModeTicks = 0;
+        stagedGateClearTicks = 0;
         stagedComplete = true;
+        stagedCenterReturn = false;
+        stagedExitPhase = false;
+        stagedExitPoint = null;
 
         goal = requestedGoal;
         return true;
@@ -321,13 +396,24 @@ public final class FieldPlannerGoalManager {
     return proj < -STAGED_PASSED_X_HYST_M;
   }
 
+  private static boolean gateOnGoalSide(
+      Translation2d pos, Translation2d goal, GatedAttractorObstacle gate) {
+    if (pos == null || goal == null || gate == null || gate.center == null) return false;
+    Translation2d gateToGoal = goal.minus(gate.center);
+    double n = gateToGoal.getNorm();
+    if (n <= 1e-6) return false;
+    Translation2d gateToPos = pos.minus(gate.center);
+    double proj = (gateToPos.getX() * gateToGoal.getX() + gateToPos.getY() * gateToGoal.getY()) / n;
+    return proj >= STAGED_GOAL_SIDE_PROJ_M;
+  }
+
   private GatedAttractorObstacle firstOccludingGateAlongSegment(
       Translation2d pos, Translation2d target, List<? extends Obstacle> obstacles) {
     if (gatedAttractors.isEmpty() || pos == null || target == null) return null;
 
     GatedAttractorObstacle best = null;
     double bestT = Double.POSITIVE_INFINITY;
-    double bestLane = Double.POSITIVE_INFINITY;
+    double bestLaneMetric = Double.POSITIVE_INFINITY;
     double laneY = 0.5 * (pos.getY() + target.getY());
     final double tieEps = 1e-6;
 
@@ -349,12 +435,12 @@ public final class FieldPlannerGoalManager {
       double t = firstIntersectionT(pos, target, poly);
       if (t < bestT - tieEps) {
         bestT = t;
-        bestLane = Math.abs(gate.center.getY() - laneY);
+        bestLaneMetric = laneDistanceMetric(gate, laneY);
         best = gate;
       } else if (Math.abs(t - bestT) <= tieEps) {
-        double lane = Math.abs(gate.center.getY() - laneY);
-        if (lane < bestLane) {
-          bestLane = lane;
+        double laneMetric = laneDistanceMetric(gate, laneY);
+        if (laneMetric < bestLaneMetric) {
+          bestLaneMetric = laneMetric;
           best = gate;
         }
       }
@@ -384,8 +470,77 @@ public final class FieldPlannerGoalManager {
     int goalSide = sideSignXBand(target.getX(), STAGED_CENTER_BAND_M);
     int robotSide = sideSignXBand(pos.getX(), STAGED_CENTER_BAND_M);
     if (goalSide == 0 && robotSide != 0) return true;
-    if (goalSide != 0 && robotSide == 0) return true;
+    // When exiting deep center toward an alliance side, avoid forced staging.
+    // This reduces stop/slow behavior in open corridor return paths.
+    if (goalSide != 0 && robotSide == 0) {
+      double mid = Constants.FIELD_LENGTH * 0.5;
+      boolean deepCenter = Math.abs(pos.getX() - mid) <= STAGED_DEEP_CENTER_BAND_M;
+      return !deepCenter;
+    }
     return goalSide != 0 && robotSide != 0 && goalSide != robotSide;
+  }
+
+  private boolean shouldDeferCenterReturnStage(
+      Translation2d pos, Translation2d target, GatedAttractorObstacle gate) {
+    if (pos == null || target == null || gate == null || gate.center == null) return false;
+
+    int goalSide = sideSignXBand(target.getX(), STAGED_CENTER_BAND_M);
+    int robotSide = sideSignXBand(pos.getX(), STAGED_CENTER_BAND_M);
+    if (!(goalSide != 0 && robotSide == 0)) return false;
+
+    double mid = Constants.FIELD_LENGTH * 0.5;
+    boolean deepCenter = Math.abs(pos.getX() - mid) <= STAGED_DEEP_CENTER_BAND_M;
+    if (!deepCenter) return false;
+
+    Translation2d[] poly = expandPoly(gate.gatePoly, STAGED_GATE_PAD_M);
+    double t = firstIntersectionT(pos, target, poly);
+    if (Double.isFinite(t) && t >= 0.0 && t <= 1.0) {
+      double segDist = pos.getDistance(target);
+      double hitDist = segDist * t;
+      return hitDist > STAGED_CENTER_RETURN_INTERSECTION_TRIGGER_M;
+    }
+
+    return pos.getDistance(gate.center) > STAGED_CENTER_RETURN_STAGE_TRIGGER_M;
+  }
+
+  private boolean isCenterReturnTransition(Translation2d pos, Translation2d target) {
+    int goalSide = sideSignXBand(target.getX(), STAGED_CENTER_BAND_M);
+    int robotSide = sideSignXBand(pos.getX(), STAGED_CENTER_BAND_M);
+    return goalSide != 0 && robotSide == 0;
+  }
+
+  private boolean isCorridorSideGate(GatedAttractorObstacle gate) {
+    if (gate == null || gate.center == null) return false;
+    double mid = Constants.FIELD_LENGTH * 0.5;
+    return Math.abs(gate.center.getX() - mid) >= STAGED_CENTER_RETURN_GATE_MIN_OFFSET_M;
+  }
+
+  private Translation2d computeCenterReturnExitPoint(
+      GatedAttractorObstacle gate, Translation2d target) {
+    if (gate == null || gate.center == null || target == null) return null;
+
+    double dx = target.getX() - gate.center.getX();
+    double sign = Math.signum(dx);
+    if (sign == 0.0) {
+      double mid = Constants.FIELD_LENGTH * 0.5;
+      sign = gate.center.getX() >= mid ? 1.0 : -1.0;
+    }
+
+    double advance =
+        MathUtil.clamp(
+            Math.abs(dx) * 0.45, STAGED_CENTER_RETURN_EXIT_MIN_M, STAGED_CENTER_RETURN_EXIT_MAX_M);
+
+    double x =
+        MathUtil.clamp(
+            gate.center.getX() + sign * advance,
+            STAGED_FIELD_EDGE_MARGIN_M,
+            Constants.FIELD_LENGTH - STAGED_FIELD_EDGE_MARGIN_M);
+    double yBase = stagedLaneY != null ? stagedLaneY.doubleValue() : gate.center.getY();
+    double y =
+        MathUtil.clamp(
+            yBase, STAGED_FIELD_EDGE_MARGIN_M, Constants.FIELD_WIDTH - STAGED_FIELD_EDGE_MARGIN_M);
+
+    return new Translation2d(x, y);
   }
 
   private Translation2d stagingPullPoint(
@@ -437,9 +592,14 @@ public final class FieldPlannerGoalManager {
       double prefPenalty =
           (preferredGate != null && gate != preferredGate) ? STAGED_PREF_GATE_PENALTY : 0.0;
       double lanePenalty = STAGED_LANE_WEIGHT * Math.abs(gate.center.getY() - laneY);
+      double laneLockPenalty = laneLockPenalty(gate);
 
       double score =
-          pos.getDistance(pullTo) + pullTo.getDistance(target) + prefPenalty + lanePenalty;
+          pos.getDistance(pullTo)
+              + pullTo.getDistance(target)
+              + prefPenalty
+              + lanePenalty
+              + laneLockPenalty;
 
       if (score < bestScore) {
         bestScore = score;
@@ -448,5 +608,18 @@ public final class FieldPlannerGoalManager {
     }
 
     return best;
+  }
+
+  private double laneDistanceMetric(GatedAttractorObstacle gate, double laneY) {
+    if (gate == null || gate.center == null) return Double.POSITIVE_INFINITY;
+    return Math.abs(gate.center.getY() - laneY) + laneLockPenalty(gate);
+  }
+
+  private double laneLockPenalty(GatedAttractorObstacle gate) {
+    if (stagedLaneY == null || gate == null || gate.center == null) return 0.0;
+    double dy = Math.abs(gate.center.getY() - stagedLaneY.doubleValue());
+    if (dy <= 1e-6) return 0.0;
+    double scaled = Math.min(dy, STAGED_LANE_LOCK_MAX_DELTA_M) / STAGED_LANE_LOCK_MAX_DELTA_M;
+    return STAGED_LANE_LOCK_WEIGHT * scaled;
   }
 }

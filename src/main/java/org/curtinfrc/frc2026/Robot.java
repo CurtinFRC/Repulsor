@@ -51,6 +51,7 @@ import org.curtinfrc.frc2026.util.PhoenixUtil;
 import org.curtinfrc.frc2026.util.Repulsor.Behaviours.AutoPathBehaviour;
 import org.curtinfrc.frc2026.util.Repulsor.Behaviours.DefenceBehaviour;
 import org.curtinfrc.frc2026.util.Repulsor.Behaviours.ShuttleBehaviour;
+import org.curtinfrc.frc2026.util.Repulsor.Behaviours.ShuttleRecoveryBehaviour;
 import org.curtinfrc.frc2026.util.Repulsor.Behaviours.TestBehaviour;
 import org.curtinfrc.frc2026.util.Repulsor.Commands.Triggers;
 import org.curtinfrc.frc2026.util.Repulsor.DriverStation.NtRepulsorDriverStation;
@@ -59,6 +60,7 @@ import org.curtinfrc.frc2026.util.Repulsor.DriverStation.RepulsorDriverStationBo
 import org.curtinfrc.frc2026.util.Repulsor.Fallback;
 import org.curtinfrc.frc2026.util.Repulsor.Fallback.PID;
 import org.curtinfrc.frc2026.util.Repulsor.IntakeFootprint;
+import org.curtinfrc.frc2026.util.Repulsor.Offload.RepulsorOffloadRuntime;
 import org.curtinfrc.frc2026.util.Repulsor.Profiler.Profiler;
 import org.curtinfrc.frc2026.util.Repulsor.Reasoning.Rebuilt2026Reasoner;
 import org.curtinfrc.frc2026.util.Repulsor.Repulsor;
@@ -142,8 +144,9 @@ public class Robot extends LoggedRobot {
         () -> new RepulsorSetpoint(Setpoints.Rebuilt2026.CENTER_COLLECT, HeightSetpoint.NONE);
 
     repulsor.addBehaviours(
-        new DefenceBehaviour(30, defenseGoalSup, () -> 2.8),
+        new DefenceBehaviour(30, defenseGoalSup, () -> 5.2),
         new ShuttleBehaviour(20, () -> simHasPiece, () -> 5.2),
+        new ShuttleRecoveryBehaviour(25, () -> simHasPiece, () -> 5.2),
         new TestBehaviour(),
         new AutoPathBehaviour(
             1000,
@@ -194,6 +197,16 @@ public class Robot extends LoggedRobot {
     }
 
     Logger.start();
+    if (Constants.getMode() != Constants.Mode.REPLAY) {
+      try {
+        RepulsorOffloadRuntime.ensureInitialized();
+      } catch (Exception ex) {
+        DriverStation.reportWarning(
+            "Offload runtime initialization failed, using local fallback: " + ex.getMessage(),
+            false);
+      }
+    }
+
     if (Constants.getMode() != Constants.Mode.REPLAY) {
       switch (Constants.robotType) {
         case COMP -> {
@@ -430,6 +443,7 @@ public class Robot extends LoggedRobot {
   public void endCompetition() {
     Profiler.shutdown();
     System.out.println("Profiler shut down.");
+    RepulsorOffloadRuntime.shutdown();
     super.endCompetition();
   }
 

@@ -43,6 +43,7 @@ public final class FieldTrackerCollectPassStickyStep {
       FieldTrackerCollectPassCandidateResult cand,
       int pass) {
     Translation2d bestCandidate = cand.bestCandidate();
+    Translation2d prevSticky = loop.collectStickyPoint;
 
     double distToCand = ctx.robotPos().getDistance(bestCandidate);
     double distToCur =
@@ -67,7 +68,6 @@ public final class FieldTrackerCollectPassStickyStep {
 
     final double keepMarginF = keepMargin;
     final boolean centerF = ctx.robotInCenterBand();
-    final int lockHalfF = ctx.lockHalf();
 
     ToDoubleBiFunction<Translation2d, Translation2d> transitionExtra =
         (from, to) -> {
@@ -78,7 +78,6 @@ public final class FieldTrackerCollectPassStickyStep {
           int q = sideSignXBand(to.getX(), 0.10);
 
           if (centerF && p != 0 && q != 0 && p != q) extra += keepMarginF * 0.90 + 0.18;
-          if (lockHalfF != 0 && q != 0 && q != lockHalfF) extra += keepMarginF * 0.55 + 0.10;
           if (from.getDistance(to) <= FieldTrackerCollectObjectiveLoop.COLLECT_SWITCH_CLOSE_M)
             extra += keepMarginF * 1.55 + 0.18;
 
@@ -86,30 +85,26 @@ public final class FieldTrackerCollectPassStickyStep {
         };
 
     Translation2d selectedResource;
+    boolean forcedFuelReplacement = false;
+    boolean stickyShouldYieldForFuel = false;
 
     if (pass == 0) {
-      selectedResource =
-          loop.collectStickySelector.update(
-              bestCandidate,
-              cand.scoreResource().apply(bestCandidate),
-              cand.scoreResource()::apply,
-              cand.collectValid(),
-              holdS,
-              keepMargin,
-              immediateDelta,
-              transitionExtra,
-              (p, q) -> p.getDistance(q),
-              FieldTrackerCollectObjectiveLoop.COLLECT_STICKY_SAME_M,
-              loop.collectStickyStillSec,
-              loop.collectStickyRobotFlickerSec);
+      // Follow the freshest best candidate immediately so collect can switch
+      // across field regions without sticky hysteresis pinning.
+      if (bestCandidate != null && cand.collectValid().test(bestCandidate)) {
+        selectedResource = bestCandidate;
+      } else {
+        selectedResource = prevSticky;
+      }
+      loop.collectStickySelector.force(selectedResource);
+      forcedFuelReplacement = true;
     } else {
       Translation2d cur = loop.collectStickyPoint;
       selectedResource = (cur != null && cand.collectValid().test(cur)) ? cur : bestCandidate;
     }
 
-    Translation2d prevSticky = loop.collectStickyPoint;
-
     if (pass == 0
+        && !forcedFuelReplacement
         && prevSticky != null
         && selectedResource != null
         && !stickySame(prevSticky, selectedResource)) {
@@ -127,12 +122,19 @@ public final class FieldTrackerCollectPassStickyStep {
         selectedResource = prevSticky;
         loop.collectStickySelector.force(prevSticky);
       }
+
+      if (stickyShouldYieldForFuel
+          && bestCandidate != null
+          && stickySame(prevSticky, selectedResource)) {
+        selectedResource = bestCandidate;
+        loop.collectStickySelector.force(bestCandidate);
+        forcedFuelReplacement = true;
+      }
     }
 
-    prevSticky = loop.collectStickyPoint;
     boolean switched = stickySwitched(prevSticky, selectedResource);
 
-    if (switched && loop.collectStickyLastSwitchNs != 0L) {
+    if (switched && !forcedFuelReplacement && loop.collectStickyLastSwitchNs != 0L) {
       double sinceLastSwitchS = nowSFromNs(ctx.nowNs() - loop.collectStickyLastSwitchNs);
       double movedSinceLastSwitch =
           loop.collectStickyLastSwitchRobotPos != null

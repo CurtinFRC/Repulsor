@@ -151,7 +151,7 @@ public class _Rebuilt2026 {
       double halfL,
       double halfW,
       List<? extends Obstacle> obs) {
-    return DragShotPlanner.isShooterPoseValid(shooterPos, targetFieldPos, halfL, halfW, obs);
+    return DragShotPlanner.isShooterPoseValid(shooterPos, targetFieldPos, halfL, halfW, obs, true);
   }
 
   private static Pose2d safeValidFallback(
@@ -223,7 +223,7 @@ public class _Rebuilt2026 {
   public static final Constraints HUB_SHOT_CONSTRAINTS =
       new Constraints(0, 30, 60, 90.0, Constraints.ShotStyle.ARC);
 
-  public static final int BLUE_HUB_ANCHOR_TAG_ID = 20;
+  public static final int BLUE_HUB_ANCHOR_TAG_ID = 25; // 20
   public static final int BLUE_OUTPOST_ANCHOR_TAG_ID = 13;
 
   public static final GameSetpoint HUB_SHOOT =
@@ -494,8 +494,8 @@ public class _Rebuilt2026 {
 
     @Override
     public Pose2d bluePose(SetpointContext ctx) {
-      Translation2d target = hubAimpointFromAnchorTagBlueCached(blueHubAnchorTagId);
-      return computeShootPose(ctx, target);
+      Translation2d blueTarget = hubAimpointFromAnchorTagBlueCached(blueHubAnchorTagId);
+      return computeShootPose(ctx, blueTarget);
     }
 
     @Override
