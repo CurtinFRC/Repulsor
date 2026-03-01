@@ -431,8 +431,10 @@ public class Robot extends LoggedRobot {
                 return true;
               });
       Pose2d currentPosition = drive.getPose();
-      Trigger isRed = new Trigger(() -> DriverStation.getAlliance().get().equals(Alliance.Red));
-      Trigger isBlue = new Trigger(() -> DriverStation.getAlliance().get().equals(Alliance.Blue));
+      Trigger isRed =
+          new Trigger(() -> DriverStation.getAlliance().orElse(Alliance.Blue).equals(Alliance.Red));
+      Trigger isBlue =
+          new Trigger(() -> DriverStation.getAlliance().orElse(Alliance.Red).equals(Alliance.Blue));
 
       Trigger isLeft =
           new Trigger(() -> currentPosition.getY() < FieldConstants.Hub.topCenterPoint.getY());
