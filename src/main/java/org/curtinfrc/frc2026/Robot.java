@@ -5,8 +5,6 @@ import static org.curtinfrc.frc2026.vision.Vision.devCameraConfigs;
 
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.signals.InvertedValue;
-
-import choreo.util.ChoreoAllianceFlipUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.net.WebServer;
@@ -15,12 +13,10 @@ import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -57,7 +53,6 @@ import org.curtinfrc.frc2026.subsystems.hoodedshooter.ShooterIO;
 import org.curtinfrc.frc2026.subsystems.hoodedshooter.ShooterIOComp;
 import org.curtinfrc.frc2026.subsystems.hoodedshooter.ShooterIODev;
 import org.curtinfrc.frc2026.subsystems.hoodedshooter.ShooterIOSim;
-import org.curtinfrc.frc2026.util.FieldConstants;
 import org.curtinfrc.frc2026.util.GameState;
 import org.curtinfrc.frc2026.util.PhoenixUtil;
 import org.curtinfrc.frc2026.util.Repulsor.Behaviours.AutoPathBehaviour;
@@ -66,7 +61,6 @@ import org.curtinfrc.frc2026.util.Repulsor.Behaviours.ShuttleBehaviour;
 import org.curtinfrc.frc2026.util.Repulsor.Behaviours.ShuttleRecoveryBehaviour;
 import org.curtinfrc.frc2026.util.Repulsor.Behaviours.TestBehaviour;
 import org.curtinfrc.frc2026.util.Repulsor.Commands.Triggers;
-import org.curtinfrc.frc2026.util.Repulsor.DriverStation.NtRepulsorDriverStation;
 import org.curtinfrc.frc2026.util.Repulsor.DriverStation.RepulsorDriverStation;
 import org.curtinfrc.frc2026.util.Repulsor.DriverStation.RepulsorDriverStationBootstrap;
 import org.curtinfrc.frc2026.util.Repulsor.Fallback;
@@ -405,10 +399,13 @@ public class Robot extends LoggedRobot {
     //               }
 
     //             } else {
-    //               // If alliance is blue, then check if it is in the alliance zone by checking the x
-    //               // value is less than the left trench opening (opponent) Then set the location to
+    //               // If alliance is blue, then check if it is in the alliance zone by checking
+    // the x
+    //               // value is less than the left trench opening (opponent) Then set the location
+    // to
     //               // hub.
-    //               if (currentPosition.getX() < FieldConstants.LeftTrench.oppOpeningTopLeft.getX()) {
+    //               if (currentPosition.getX() <
+    // FieldConstants.LeftTrench.oppOpeningTopLeft.getX()) {
     //                 drive.locationHeadingjoyStickDrive(
     //                     () -> -controller.getLeftY(),
     //                     () -> -controller.getLeftX(),
@@ -435,9 +432,11 @@ public class Robot extends LoggedRobot {
     //           });
     //   Pose2d currentPosition = drive.getPose();
     //   Trigger isRed =
-    //       new Trigger(() -> DriverStation.getAlliance().orElse(Alliance.Blue).equals(Alliance.Red));
+    //       new Trigger(() ->
+    // DriverStation.getAlliance().orElse(Alliance.Blue).equals(Alliance.Red));
     //   Trigger isBlue =
-    //       new Trigger(() -> DriverStation.getAlliance().orElse(Alliance.Red).equals(Alliance.Blue));
+    //       new Trigger(() ->
+    // DriverStation.getAlliance().orElse(Alliance.Red).equals(Alliance.Blue));
 
     //   Trigger isLeft =
     //       new Trigger(() -> currentPosition.getY() < FieldConstants.Hub.topCenterPoint.getY());
@@ -570,11 +569,13 @@ public class Robot extends LoggedRobot {
 
     wireRepulsor();
 
-    // controller.a().whileTrue(drive.alignTo(new Pose2d(Constants.FIELD_LENGTH / 2, Constants.FIELD_WIDTH / 2, new Rotation2d())));
+    // controller.a().whileTrue(drive.alignTo(new Pose2d(Constants.FIELD_LENGTH / 2,
+    // Constants.FIELD_WIDTH / 2, new Rotation2d())));
     // controller.b().whileTrue(
     //      drive.alignTo(
     //     ChoreoAllianceFlipUtil.flip(new Pose2d(
-    //         15.391 - (Constants.ROBOT_X / 2), 3.84 + (Constants.ROBOT_Y / 2), new Rotation2d()))));
+    //         15.391 - (Constants.ROBOT_X / 2), 3.84 + (Constants.ROBOT_Y / 2), new
+    // Rotation2d()))));
 
     System.out.println("Robot initialized.");
   }
