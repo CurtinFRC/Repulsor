@@ -73,6 +73,7 @@ public class HoodedShooter extends SubsystemBase {
     Logger.recordOutput("HoodedShooter/hoodTarget", hoodTarget);
     Logger.recordOutput("HoodedShooter/shooterTarget", shooterTarget);
 
+    if (Constants.getMode() != Mode.SIM) {
     for (int motor = 0; motor < HOOD_MOTOR_NUMBER; motor++) {
       hoodMotorDisconnectedAlerts[motor].set(!hoodInputs.motorsConnected[motor]);
       hoodMotorTempAlerts[motor].set(hoodInputs.motorTemperatures[motor] > MOTOR_WARNING_TEMP);
@@ -82,6 +83,7 @@ public class HoodedShooter extends SubsystemBase {
       shooterMotorTempAlerts[motor].set(
           shooterInputs.motorTemperatures[motor] > MOTOR_WARNING_TEMP);
     }
+  }
   }
 
   public Command setHoodPosition(double position) {
