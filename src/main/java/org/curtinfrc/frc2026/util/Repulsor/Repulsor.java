@@ -47,8 +47,8 @@ import org.curtinfrc.frc2026.util.Repulsor.Fallback.PlannerFallback;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.RepulsorSample;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldDefinition;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
-import org.curtinfrc.frc2026.util.Repulsor.Fields.Rebuilt2026;
 import org.curtinfrc.frc2026.util.Repulsor.Flags.FlagManager;
 import org.curtinfrc.frc2026.util.Repulsor.Reasoning.Reasoner;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.GameSetpoint;
@@ -56,7 +56,6 @@ import org.curtinfrc.frc2026.util.Repulsor.Setpoints.HeightSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointContext;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointType;
-import org.curtinfrc.frc2026.util.Repulsor.Setpoints.Setpoints;
 import org.curtinfrc.frc2026.util.Repulsor.State.SimMatchDriver;
 import org.curtinfrc.frc2026.util.Repulsor.State.StateManager;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
@@ -82,16 +81,15 @@ public class Repulsor {
   private VisionPlanner m_visionPlanner = new VisionPlanner();
   private DriveRepulsor m_drive;
   private UsageType m_usageType = UsageType.kAutoDrive;
+  private FieldDefinition m_fieldDefinition = Constants.FIELD;
 
   public boolean isSameDrive(DriveRepulsor other) {
     return this.m_drive == other;
   }
 
-  private RepulsorSetpoint m_currentGoal =
-      new RepulsorSetpoint(Setpoints.Rebuilt2026.CENTER_COLLECT, HeightSetpoint.NONE);
+  private RepulsorSetpoint m_currentGoal;
 
-  private RepulsorSetpoint m_nextScore =
-      new RepulsorSetpoint(Setpoints.Rebuilt2026.HUB_SHOOT, HeightSetpoint.NET);
+  private RepulsorSetpoint m_nextScore;
 
   private final List<FieldVision> m_fieldVisions = new ArrayList<>();
 
@@ -191,16 +189,33 @@ public class Repulsor {
       double robot_x,
       double robot_y,
       Supplier<Boolean> hasPiece) {
+    this(drive, usageType, robot_x, robot_y, hasPiece, Constants.FIELD);
+  }
+
+  public Repulsor(
+      DriveRepulsor drive,
+      UsageType usageType,
+      double robot_x,
+      double robot_y,
+      Supplier<Boolean> hasPiece,
+      FieldDefinition fieldDefinition) {
     this.m_drive = drive;
     this.m_usageType = usageType;
     this.robot_x = robot_x;
     this.robot_y = robot_y;
     this.m_hasPiece = hasPiece;
 
-    m_planner = new FieldPlanner(new Rebuilt2026(), new DriveTuningHeat(() -> m_drive.getPose()));
+    FieldDefinition field = fieldDefinition == null ? Constants.FIELD : fieldDefinition;
+    m_fieldDefinition = field;
+    m_currentGoal = field.defaultCollectSetpoint().orElse(null);
+    m_nextScore = field.defaultScoreSetpoint().orElse(m_currentGoal);
+
+    m_planner = new FieldPlanner(field, new DriveTuningHeat(() -> m_drive.getPose(), field));
     m_behaviourManager = new BehaviourManager();
 
+    FieldTrackerCore.setDefaultProvider(field);
     FieldTrackerCore ft = FieldTrackerCore.getInstance();
+    ft.rebuild(field);
     FieldVision front = ft.createFieldVision("main");
     m_fieldVisions.add(front);
 
@@ -209,6 +224,15 @@ public class Repulsor {
 
   public Repulsor(DriveRepulsor drive, double robot_x, double robot_y, Supplier<Boolean> hasPiece) {
     this(drive, UsageType.kFullAuto, robot_x, robot_y, hasPiece);
+  }
+
+  public Repulsor(
+      DriveRepulsor drive,
+      double robot_x,
+      double robot_y,
+      Supplier<Boolean> hasPiece,
+      FieldDefinition fieldDefinition) {
+    this(drive, UsageType.kFullAuto, robot_x, robot_y, hasPiece, fieldDefinition);
   }
 
   public Repulsor withInitialNext(RepulsorSetpoint setpoint) {
@@ -255,6 +279,10 @@ public class Repulsor {
 
   public FieldPlanner getFieldPlanner() {
     return m_planner;
+  }
+
+  public FieldDefinition getFieldDefinition() {
+    return m_fieldDefinition;
   }
 
   public VisionPlanner getVisionPlanner() {

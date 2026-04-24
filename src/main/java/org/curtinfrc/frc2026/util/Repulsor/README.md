@@ -132,8 +132,11 @@ If you need to rebuild the behaviour set at runtime, call `repulsor.clearBehavio
 
 ## Field And Objective Model
 
-- `FieldDefinition` ties together three concerns: obstacle provider, heatmap provider, and objective layout provider.
-- `Rebuilt2026` is the default field definition via `Constants.FIELD`.
+- `FieldDefinition` ties together field geometry, AprilTag layout, obstacle provider, heatmap provider, objective layout provider, tracker resource configuration, default collect/score setpoints, and optional action profiles.
+- `Rebuilt2026` is the default field definition via `Constants.FIELD`; override it with the JVM property `-Drepulsor.field=reefscape2025` or pass a `FieldDefinition` into the `Repulsor` constructor.
+- Field-specific tuning should live in a `FieldDefinition`; runtime classes should consume `ctx.repulsor.getFieldDefinition()` instead of importing a specific game class.
+- `FieldGeometry` centralizes dimensions, center, bounds checks, diagonal, and margin clamping.
+- `FieldActionProfile` is where field/game-specific action capabilities live, such as the Rebuilt 2026 shuttle shot target, physics, constraints, route height, and offsets.
 - `FieldMapBuilder` constructs alliance-tagged `GameElement` objectives with category tags:
   - `kScore`
   - `kCollect`

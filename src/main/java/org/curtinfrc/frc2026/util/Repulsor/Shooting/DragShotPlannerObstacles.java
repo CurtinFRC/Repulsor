@@ -26,6 +26,7 @@ import java.util.List;
 import org.curtinfrc.frc2026.util.Repulsor.Constants;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.Profiler.Profiler;
 
 final class DragShotPlannerObstacles {
@@ -71,8 +72,9 @@ final class DragShotPlannerObstacles {
       }
 
       final double SHOOT_X_END_BAND_M = 13.49;
+      FieldGeometry geometry = Constants.FIELD_GEOMETRY;
       double minBand = SHOOT_X_END_BAND_M;
-      double maxBand = Constants.FIELD_LENGTH - SHOOT_X_END_BAND_M;
+      double maxBand = geometry.lengthMeters() - SHOOT_X_END_BAND_M;
       if (x < minBand && x > maxBand && checkBounds) {
         return false;
       }
@@ -101,10 +103,7 @@ final class DragShotPlannerObstacles {
         }
       }
 
-      if (x < 0.0 || x > Constants.FIELD_LENGTH) {
-        return false;
-      }
-      if (y < 0.0 || y > Constants.FIELD_WIDTH) {
+      if (!geometry.contains(shooterPos)) {
         return false;
       }
 

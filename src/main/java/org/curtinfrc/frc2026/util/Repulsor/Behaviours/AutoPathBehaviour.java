@@ -39,7 +39,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import org.curtinfrc.frc2026.util.Repulsor.Constants;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.RepulsorSample;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
 import org.curtinfrc.frc2026.util.Repulsor.Metrics.HPStationMetrics;
@@ -51,7 +50,6 @@ import org.curtinfrc.frc2026.util.Repulsor.Setpoints.MutablePoseSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointContext;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointType;
-import org.curtinfrc.frc2026.util.Repulsor.Setpoints.Setpoints.Rebuilt2026;
 import org.curtinfrc.frc2026.util.Repulsor.Simulation.NetworkTablesValue;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
@@ -254,7 +252,7 @@ public class AutoPathBehaviour extends Behaviour {
             HeightSetpoint.NONE);
 
     final RepulsorSetpoint scoreFallback =
-        new RepulsorSetpoint(Rebuilt2026.HUB_SHOOT, HeightSetpoint.NET);
+        ctx.repulsor.getFieldDefinition().defaultScoreSetpoint().orElse(null);
 
     Command shootReadyCmd = buildShootReadyCommand(ctx);
     AtomicBoolean shootLatched = new AtomicBoolean(false);
@@ -577,10 +575,12 @@ public class AutoPathBehaviour extends Behaviour {
     if (nextBlue == null) {
       nextBlue =
           new Pose2d(
-              Constants.FIELD_LENGTH * 0.5, Constants.FIELD_WIDTH * 0.5, robotPose.getRotation());
+              ctx.repulsor.getFieldDefinition().fieldLengthMeters() * 0.5,
+              ctx.repulsor.getFieldDefinition().fieldWidthMeters() * 0.5,
+              robotPose.getRotation());
     }
 
-    nextBlue = recoverFromCollectHold(tracker, robotPose, nextBlue);
+    nextBlue = recoverFromCollectHold(ctx, tracker, robotPose, nextBlue);
     nextBlue = new Pose2d(nextBlue.getTranslation(), nextBlue.getRotation());
 
     Logger.recordOutput("FinalCollect", nextBlue);
@@ -590,7 +590,7 @@ public class AutoPathBehaviour extends Behaviour {
   }
 
   private Pose2d recoverFromCollectHold(
-      FieldTrackerCore tracker, Pose2d robotPose, Pose2d currentCandidate) {
+      BehaviourContext ctx, FieldTrackerCore tracker, Pose2d robotPose, Pose2d currentCandidate) {
     if (tracker == null || robotPose == null || currentCandidate == null) return currentCandidate;
 
     final double HOLD_GOAL_NEAR_M = 0.25;
@@ -600,7 +600,10 @@ public class AutoPathBehaviour extends Behaviour {
         robotPose.getTranslation().getDistance(currentCandidate.getTranslation());
     if (candidateDist > HOLD_GOAL_NEAR_M) return currentCandidate;
 
-    double fieldDiag = Math.hypot(Constants.FIELD_LENGTH, Constants.FIELD_WIDTH);
+    double fieldDiag =
+        Math.hypot(
+            ctx.repulsor.getFieldDefinition().fieldLengthMeters(),
+            ctx.repulsor.getFieldDefinition().fieldWidthMeters());
     Translation2d farFuel =
         tracker.getPredictor().nearestCollectResource(robotPose.getTranslation(), fieldDiag);
     if (farFuel == null) return currentCandidate;

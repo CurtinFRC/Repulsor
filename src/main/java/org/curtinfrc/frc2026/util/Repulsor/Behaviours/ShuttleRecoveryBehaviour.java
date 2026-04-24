@@ -11,15 +11,18 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
-import org.curtinfrc.frc2026.util.Repulsor.Constants;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.RepulsorSample;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldActionProfile.ShuttleShotProfile;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.HeightSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.MutablePoseSetpoint;
@@ -27,19 +30,14 @@ import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointContext;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointType;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointUtil;
-import org.curtinfrc.frc2026.util.Repulsor.Setpoints.Specific._Rebuilt2026;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.DragShotPlanner;
-import org.curtinfrc.frc2026.util.Repulsor.Shooting.GamePiecePhysics;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.ShotSolution;
 import org.curtinfrc.frc2026.util.Repulsor.Simulation.NetworkTablesValue;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
 
 public final class ShuttleRecoveryBehaviour extends Behaviour {
-  private static final double SHOOT_BEHIND_HUB_METERS = 2.95;
-  private static final double SHOOT_LATERAL_STEP_METERS = 0.45;
   private static final double SHOOT_POS_TOL_METERS = 0.34;
   private static final double SHOOT_YAW_TOL_DEG = 13.0;
-  private static final double FIELD_MARGIN_METERS = 0.28;
 
   private static final double MOTION_COMP_LATENCY_SEC = 0.08;
   private static final double MOTION_COMP_MIN_LEAD_SEC = 0.10;
@@ -48,11 +46,6 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
   private static final double DEFAULT_TIME_TO_PLANE_SEC = 0.18;
   private static final long MAGAZINE_CAPACITY = 16L;
   private static final int RECOVERY_GOAL_UNITS = 2;
-
-  private static final double[] SHOOT_LATERAL_OFFSETS =
-      new double[] {0.0, SHOOT_LATERAL_STEP_METERS, -SHOOT_LATERAL_STEP_METERS, 0.9, -0.9};
-
-  private static final GamePiecePhysics SHUTTLE_GAME_PIECE = loadShuttleGamePiece();
 
   private final int prio;
   private final Supplier<Boolean> hasPiece;
@@ -96,6 +89,13 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
 
   @Override
   public Command build(BehaviourContext ctx) {
+    Optional<ShuttleShotProfile> shotProfileOpt =
+        ctx.repulsor.getFieldDefinition().actionProfile().shuttleShot();
+    FieldGeometry geometry = ctx.repulsor.getFieldDefinition().geometry();
+    List<Obstacle> staticShotObstacles = new ArrayList<>();
+    staticShotObstacles.addAll(ctx.repulsor.getFieldDefinition().walls());
+    staticShotObstacles.addAll(ctx.repulsor.getFieldDefinition().fieldObstacles());
+
     AtomicReference<Pose2d> collectBluePoseRef = new AtomicReference<>(Pose2d.kZero);
     RepulsorSetpoint collectRoute =
         new RepulsorSetpoint(
@@ -108,7 +108,7 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
         new RepulsorSetpoint(
             new MutablePoseSetpoint(
                 "SHUTTLE_RECOVERY_SHOOT_ROUTE", SetpointType.kScore, shuttleBluePoseRef),
-            HeightSetpoint.NET);
+            shotProfileOpt.map(ShuttleShotProfile::routeHeight).orElse(HeightSetpoint.NONE));
 
     AtomicReference<Pose2d> lastRobotPose = new AtomicReference<>(null);
     AtomicLong lastRobotPoseNs = new AtomicLong(0L);
@@ -131,12 +131,19 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
               double cap = ourSpeedCap != null ? Math.max(0.25, ourSpeedCap.get()) : 3.5;
 
               ShuttleAim aim =
-                  computeShuttleAim(
-                      robotPose,
-                      spCtx,
-                      ctx.vision.getObstacles(),
-                      fieldVelocity,
-                      lastTimeToPlaneSec);
+                  shotProfileOpt
+                      .map(
+                          profile ->
+                              computeShuttleAim(
+                                  profile,
+                                  geometry,
+                                  robotPose,
+                                  spCtx,
+                                  staticShotObstacles,
+                                  ctx.vision.getObstacles(),
+                                  fieldVelocity,
+                                  lastTimeToPlaneSec))
+                      .orElse(new ShuttleAim(robotPose, Optional.empty()));
 
               if (aim.shotSolution().isPresent()) {
                 ShotSolution solution = aim.shotSolution().get();
@@ -157,7 +164,7 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
               CategorySpec category;
               RepulsorSetpoint activeGoal;
 
-              if (piece) {
+              if (piece && shotProfileOpt.isPresent()) {
                 category = CategorySpec.kScore;
                 Pose2d shootFieldPose = aim.shootPose();
 
@@ -171,7 +178,7 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
                 activeGoal = shuttleShootRoute;
               } else {
                 category = CategorySpec.kCollect;
-                Pose2d collectGoal = chooseRecoveryCollectGoalBlue(robotPose, cap);
+                Pose2d collectGoal = chooseRecoveryCollectGoalBlue(robotPose, cap, geometry);
                 collectBluePoseRef.set(collectGoal);
                 activeGoal = collectRoute;
               }
@@ -211,7 +218,8 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
             });
   }
 
-  private Pose2d chooseRecoveryCollectGoalBlue(Pose2d robotPose, double cap) {
+  private Pose2d chooseRecoveryCollectGoalBlue(
+      Pose2d robotPose, double cap, FieldGeometry geometry) {
     DriverStation.Alliance wpAlliance =
         DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue);
     Pose2d robotPoseBlue =
@@ -222,20 +230,23 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
             .nextAllianceShuttleRecoveryGoalBlue(robotPoseBlue, cap, RECOVERY_GOAL_UNITS);
     if (nextBlue == null) {
       return new Pose2d(
-          Constants.FIELD_LENGTH * 0.25, Constants.FIELD_WIDTH * 0.5, robotPoseBlue.getRotation());
+          geometry.lengthMeters() * 0.25, geometry.widthMeters() * 0.5, robotPoseBlue.getRotation());
     }
     return new Pose2d(nextBlue.getTranslation(), nextBlue.getRotation());
   }
 
   private ShuttleAim computeShuttleAim(
+      ShuttleShotProfile profile,
+      FieldGeometry geometry,
       Pose2d robotPose,
       SetpointContext spCtx,
+      List<Obstacle> staticObstacles,
       List<? extends Obstacle> obstacles,
       Translation2d fieldVelocity,
       AtomicReference<Double> lastTimeToPlaneSec) {
     DriverStation.Alliance alliance =
         DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue);
-    Translation2d hubTarget = _Rebuilt2026.hubAimpointForAlliance(alliance);
+    Translation2d hubTarget = profile.target(alliance);
 
     double releaseH = Math.max(0.0, spCtx.shooterReleaseHeightMeters());
     double halfL = Math.max(0.0, spCtx.robotLengthMeters()) / 2.0;
@@ -252,13 +263,16 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
     Translation2d compensatedTarget =
         hubTarget.minus(
             new Translation2d(fieldVelocity.getX() * leadSec, fieldVelocity.getY() * leadSec));
-    compensatedTarget = clampToField(compensatedTarget);
+    compensatedTarget = geometry.clamp(compensatedTarget, profile.fieldMarginMeters());
 
     Optional<ShotSolution> solved =
         solveShuttleShot(
             robotPose.getTranslation(),
             hubTarget,
             compensatedTarget,
+            profile,
+            geometry,
+            staticObstacles,
             releaseH,
             halfL,
             halfW,
@@ -272,13 +286,16 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
       return new ShuttleAim(new Pose2d(solution.shooterPosition(), solution.shooterYaw()), solved);
     }
 
-    return new ShuttleAim(fallbackShuttlePose(hubTarget, alliance), Optional.empty());
+    return new ShuttleAim(fallbackShuttlePose(hubTarget, alliance, profile, geometry), Optional.empty());
   }
 
   private Optional<ShotSolution> solveShuttleShot(
       Translation2d robotPos,
       Translation2d hubTarget,
       Translation2d compensatedTarget,
+      ShuttleShotProfile profile,
+      FieldGeometry geometry,
+      List<Obstacle> staticObstacles,
       double shooterReleaseHeightMeters,
       double halfL,
       double halfW,
@@ -287,35 +304,37 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
     Translation2d behind = behindDirection(alliance);
     Translation2d lateral = new Translation2d(-behind.getY(), behind.getX());
     Translation2d base =
-        clampToField(
+        geometry.clamp(
             hubTarget.plus(
                 new Translation2d(
-                    behind.getX() * SHOOT_BEHIND_HUB_METERS,
-                    behind.getY() * SHOOT_BEHIND_HUB_METERS)));
+                    behind.getX() * profile.behindTargetMeters(),
+                    behind.getY() * profile.behindTargetMeters())),
+            profile.fieldMarginMeters());
 
     ShotSolution best = null;
     double bestScore = Double.POSITIVE_INFINITY;
 
-    for (double lateralOffset : SHOOT_LATERAL_OFFSETS) {
+    for (double lateralOffset : profile.lateralOffsetsMeters()) {
       Translation2d shooterPos =
-          clampToField(
+          geometry.clamp(
               base.plus(
                   new Translation2d(
-                      lateral.getX() * lateralOffset, lateral.getY() * lateralOffset)));
+                      lateral.getX() * lateralOffset, lateral.getY() * lateralOffset)),
+              profile.fieldMarginMeters());
 
-      if (!DragShotPlanner.isShooterPoseValid(
-          shooterPos, hubTarget, halfL, halfW, obstacles, true)) {
+      if (!isShooterPoseValid(
+          shooterPos, hubTarget, halfL, halfW, staticObstacles, obstacles, geometry)) {
         continue;
       }
 
       Optional<ShotSolution> solved =
           DragShotPlanner.calculateStaticShotAngleAndSpeed(
-              SHUTTLE_GAME_PIECE,
+              profile.gamePiecePhysics(),
               shooterPos,
               compensatedTarget,
-              _Rebuilt2026.HUB_OPENING_FRONT_EDGE_HEIGHT_M,
+              profile.targetHeightMeters(),
               shooterReleaseHeightMeters,
-              _Rebuilt2026.HUB_SHOT_CONSTRAINTS);
+              profile.constraints());
       if (solved.isEmpty()) {
         continue;
       }
@@ -389,26 +408,20 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
   }
 
   private static Pose2d fallbackShuttlePose(
-      Translation2d hubTarget, DriverStation.Alliance alliance) {
+      Translation2d hubTarget,
+      DriverStation.Alliance alliance,
+      ShuttleShotProfile profile,
+      FieldGeometry geometry) {
     Translation2d behind = behindDirection(alliance);
     Translation2d shooterPos =
-        clampToField(
+        geometry.clamp(
             hubTarget.plus(
                 new Translation2d(
-                    behind.getX() * SHOOT_BEHIND_HUB_METERS,
-                    behind.getY() * SHOOT_BEHIND_HUB_METERS)));
+                    behind.getX() * profile.behindTargetMeters(),
+                    behind.getY() * profile.behindTargetMeters())),
+            profile.fieldMarginMeters());
     Rotation2d yaw = hubTarget.minus(shooterPos).getAngle();
     return new Pose2d(shooterPos, yaw);
-  }
-
-  private static Translation2d clampToField(Translation2d point) {
-    double x =
-        MathUtil.clamp(
-            point.getX(), FIELD_MARGIN_METERS, Constants.FIELD_LENGTH - FIELD_MARGIN_METERS);
-    double y =
-        MathUtil.clamp(
-            point.getY(), FIELD_MARGIN_METERS, Constants.FIELD_WIDTH - FIELD_MARGIN_METERS);
-    return new Translation2d(x, y);
   }
 
   private static Translation2d behindDirection(DriverStation.Alliance alliance) {
@@ -418,27 +431,30 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
     return new Translation2d(-1.0, 0.0);
   }
 
-  private static GamePiecePhysics loadShuttleGamePiece() {
-    try {
-      return DragShotPlanner.loadGamePieceFromDeployYaml(_Rebuilt2026.GAME_PIECE_ID_FUEL);
-    } catch (Throwable ignored) {
-      return new GamePiecePhysics() {
-        @Override
-        public double massKg() {
-          return 0.27;
-        }
+  private static boolean isShooterPoseValid(
+      Translation2d shooterPos,
+      Translation2d targetFieldPosition,
+      double robotHalfLengthMeters,
+      double robotHalfWidthMeters,
+      List<Obstacle> staticObstacles,
+      List<? extends Obstacle> dynamicObstacles,
+      FieldGeometry geometry) {
+    if (!geometry.contains(shooterPos)) return false;
 
-        @Override
-        public double crossSectionAreaM2() {
-          return 0.014;
-        }
+    Translation2d delta = targetFieldPosition.minus(shooterPos);
+    Rotation2d yaw = Rotation2d.fromRadians(Math.atan2(delta.getY(), delta.getX()));
+    Translation2d[] rect =
+        FieldPlanner.robotRect(shooterPos, yaw, robotHalfLengthMeters, robotHalfWidthMeters);
 
-        @Override
-        public double dragCoefficient() {
-          return 0.95;
-        }
-      };
+    for (Obstacle obstacle : staticObstacles) {
+      if (obstacle.intersectsRectangle(rect)) return false;
     }
+    if (dynamicObstacles != null) {
+      for (Obstacle obstacle : dynamicObstacles) {
+        if (obstacle.intersectsRectangle(rect)) return false;
+      }
+    }
+    return true;
   }
 
   private static long safePieceCount(NetworkTablesValue<Long> countValue) {

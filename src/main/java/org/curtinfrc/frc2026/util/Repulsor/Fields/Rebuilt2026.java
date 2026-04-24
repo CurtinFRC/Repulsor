@@ -19,14 +19,16 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Fields;
 
-import static org.curtinfrc.frc2026.util.Repulsor.Constants.FIELD_LENGTH;
-
+import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.List;
-import org.curtinfrc.frc2026.util.Repulsor.Constants;
+import java.util.Optional;
+import java.util.Set;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldActionProfile.ShuttleShotProfile;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.CorridorCenterlineRail;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.GatedAttractorObstacle;
@@ -35,22 +37,36 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.RectangleObsta
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.VerticalObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
 import org.curtinfrc.frc2026.util.Repulsor.Heatmap;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.HeightSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.Setpoints;
+import org.curtinfrc.frc2026.util.Repulsor.Setpoints.Specific._Rebuilt2026;
+import org.curtinfrc.frc2026.util.Repulsor.Shooting.DragShotPlanner;
+import org.curtinfrc.frc2026.util.Repulsor.Shooting.GamePiecePhysics;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
 
 public final class Rebuilt2026 implements FieldDefinition {
+  public static final AprilTagFieldLayout APRIL_TAG_LAYOUT =
+      AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
+  public static final double FIELD_LENGTH_M = 16.540988;
+  public static final double FIELD_WIDTH_M = APRIL_TAG_LAYOUT.getFieldWidth();
+  private static final double SHUTTLE_BEHIND_HUB_METERS = 2.95;
+  private static final double SHUTTLE_FIELD_MARGIN_METERS = 0.28;
+  private static final double[] SHUTTLE_LATERAL_OFFSETS_METERS =
+      new double[] {0.0, 0.45, -0.45, 0.9, -0.9};
+  private static final GamePiecePhysics SHUTTLE_GAME_PIECE = loadShuttleGamePiece();
+
   private static final double CORNER_CHAMFER = 0;
 
   private static final double GRID_Z_MIN_M = -0.05;
   private static final double GRID_Z_MAX_M = 0.35;
 
   private static final double GRID_CELL_M = 0.75;
-  private static final double GRID_REGION_HALF_X_M = Constants.FIELD_LENGTH * 0.5;
-  private static final double GRID_REGION_HALF_Y_M = Constants.FIELD_WIDTH * 0.5;
+  private static final double GRID_REGION_HALF_X_M = FIELD_LENGTH_M * 0.5;
+  private static final double GRID_REGION_HALF_Y_M = FIELD_WIDTH_M * 0.5;
 
   @Override
   public GameElement[] build(FieldTrackerCore ft) {
@@ -94,8 +110,8 @@ public final class Rebuilt2026 implements FieldDefinition {
         .category(CategorySpec.kCollect)
         .add();
 
-    double cx = Constants.FIELD_LENGTH * 0.5;
-    double cy = Constants.FIELD_WIDTH * 0.5;
+    double cx = FIELD_LENGTH_M * 0.5;
+    double cy = FIELD_WIDTH_M * 0.5;
 
     double x0 = cx - GRID_REGION_HALF_X_M;
     double x1 = cx + GRID_REGION_HALF_X_M;
@@ -144,6 +160,76 @@ public final class Rebuilt2026 implements FieldDefinition {
   }
 
   @Override
+  public AprilTagFieldLayout aprilTagLayout() {
+    return APRIL_TAG_LAYOUT;
+  }
+
+  @Override
+  public double fieldLengthMeters() {
+    return FIELD_LENGTH_M;
+  }
+
+  @Override
+  public double fieldWidthMeters() {
+    return FIELD_WIDTH_M;
+  }
+
+  @Override
+  public Optional<RepulsorSetpoint> defaultCollectSetpoint() {
+    return Optional.of(
+        new RepulsorSetpoint(Setpoints.Rebuilt2026.CENTER_COLLECT, HeightSetpoint.NONE));
+  }
+
+  @Override
+  public Optional<RepulsorSetpoint> defaultScoreSetpoint() {
+    return Optional.of(new RepulsorSetpoint(Setpoints.Rebuilt2026.HUB_SHOOT, HeightSetpoint.NET));
+  }
+
+  @Override
+  public void configureTracker(FieldTrackerCore ft) {
+    ft.setCollectResourceTypes(Set.of("fuel"));
+    ft.configureCollectResourceProfile("fuel", new ResourceSpec(0.075, 1.0, 0.95));
+  }
+
+  @Override
+  public FieldActionProfile actionProfile() {
+    return new FieldActionProfile(
+        Optional.of(
+            new ShuttleShotProfile(
+                _Rebuilt2026::hubAimpointForAlliance,
+                SHUTTLE_GAME_PIECE,
+                _Rebuilt2026.HUB_OPENING_FRONT_EDGE_HEIGHT_M,
+                _Rebuilt2026.HUB_SHOT_CONSTRAINTS,
+                HeightSetpoint.NET,
+                SHUTTLE_BEHIND_HUB_METERS,
+                SHUTTLE_LATERAL_OFFSETS_METERS,
+                SHUTTLE_FIELD_MARGIN_METERS)));
+  }
+
+  private static GamePiecePhysics loadShuttleGamePiece() {
+    try {
+      return DragShotPlanner.loadGamePieceFromDeployYaml(_Rebuilt2026.GAME_PIECE_ID_FUEL);
+    } catch (Throwable ignored) {
+      return new GamePiecePhysics() {
+        @Override
+        public double massKg() {
+          return 0.27;
+        }
+
+        @Override
+        public double crossSectionAreaM2() {
+          return 0.014;
+        }
+
+        @Override
+        public double dragCoefficient() {
+          return 0.95;
+        }
+      };
+    }
+  }
+
+  @Override
   public List<Obstacle> fieldObstacles() {
     // double maxRangeY = 1;
     // double maxRangeX = 1.2;
@@ -152,12 +238,12 @@ public final class Rebuilt2026 implements FieldDefinition {
     double rectHeight = 5.711800;
     double rectHalfY = rectHeight * 0.5;
 
-    double leftRectX = (FIELD_LENGTH / 2) - 3.648981; // 2.5 meters 34 degrees 16 ms
-    double rightRectX = (FIELD_LENGTH / 2) + 3.648981;
-    double rectCy = Constants.FIELD_WIDTH / 2;
+    double leftRectX = (FIELD_LENGTH_M / 2) - 3.648981; // 2.5 meters 34 degrees 16 ms
+    double rightRectX = (FIELD_LENGTH_M / 2) + 3.648981;
+    double rectCy = FIELD_WIDTH_M / 2;
 
-    double gapHeight = Math.max(0.0, (Constants.FIELD_WIDTH * 0.5) - rectHalfY);
-    double gapTopY = Constants.FIELD_WIDTH - (gapHeight * 0.5);
+    double gapHeight = Math.max(0.0, (FIELD_WIDTH_M * 0.5) - rectHalfY);
+    double gapTopY = FIELD_WIDTH_M - (gapHeight * 0.5);
     double gapBottomY = gapHeight * 0.5;
 
     double rectStrength = 4.2;
@@ -440,9 +526,9 @@ public final class Rebuilt2026 implements FieldDefinition {
   public List<Obstacle> walls() {
     return List.of(
         new HorizontalObstacle(0.0, 1, true),
-        new HorizontalObstacle(Constants.FIELD_WIDTH, 1, false),
+        new HorizontalObstacle(FIELD_WIDTH_M, 1, false),
         new VerticalObstacle(0.0, 3, true),
-        new VerticalObstacle(Constants.FIELD_LENGTH, 3, false));
+        new VerticalObstacle(FIELD_LENGTH_M, 3, false));
   }
 
   @Override
@@ -452,8 +538,8 @@ public final class Rebuilt2026 implements FieldDefinition {
 
     final double TRANS_M = 0.30;
 
-    double cx = Constants.FIELD_LENGTH * 0.5;
-    double cy = Constants.FIELD_WIDTH * 0.5;
+    double cx = FIELD_LENGTH_M * 0.5;
+    double cy = FIELD_WIDTH_M * 0.5;
 
     double x0 = cx - GRID_REGION_HALF_X_M;
     double x1 = cx + GRID_REGION_HALF_X_M;
@@ -463,10 +549,10 @@ public final class Rebuilt2026 implements FieldDefinition {
     double half = 1.1938 * 0.5;
 
     double leftSqCx = 4.625594;
-    double leftRectCx = (FIELD_LENGTH * 0.5) - 3.63982;
+    double leftRectCx = (FIELD_LENGTH_M * 0.5) - 3.63982;
 
-    double rightSqCx = FIELD_LENGTH - 4.625594;
-    double rightRectCx = (FIELD_LENGTH * 0.5) + 3.63982;
+    double rightSqCx = FIELD_LENGTH_M - 4.625594;
+    double rightRectCx = (FIELD_LENGTH_M * 0.5) + 3.63982;
 
     double leftBandX0 = Math.min(leftSqCx, leftRectCx) - half;
     double leftBandX1 = Math.max(leftSqCx, leftRectCx) + half;

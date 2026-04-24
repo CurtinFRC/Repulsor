@@ -41,6 +41,8 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerForc
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerGoalManager;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.GatedAttractorObstacle;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldLayoutProvider;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
 import org.curtinfrc.frc2026.util.Repulsor.Force;
 import org.curtinfrc.frc2026.util.Repulsor.HeadingGate;
@@ -117,6 +119,8 @@ public class FieldPlanner {
   private final List<Obstacle> fieldObstacles;
   private final List<Obstacle> walls;
   private final List<GatedAttractorObstacle> gatedAttractors = new ArrayList<>();
+  private final double fieldLengthMeters;
+  private final double fieldWidthMeters;
 
   private final FieldPlannerForceModel forceModel;
   private final FieldPlannerGoalManager goalManager;
@@ -150,13 +154,21 @@ public class FieldPlanner {
     this.driveTuning = driveTuning;
     this.obstacleProvider =
         obstacleProvider == null ? new DefaultObstacleProvider() : obstacleProvider;
+    if (this.obstacleProvider instanceof FieldLayoutProvider field) {
+      FieldGeometry geometry = field.geometry();
+      this.fieldLengthMeters = geometry.lengthMeters();
+      this.fieldWidthMeters = geometry.widthMeters();
+    } else {
+      this.fieldLengthMeters = Constants.FIELD_LENGTH;
+      this.fieldWidthMeters = Constants.FIELD_WIDTH;
+    }
     this.fieldObstacles = new ArrayList<>(this.obstacleProvider.fieldObstacles());
     this.walls = new ArrayList<>(this.obstacleProvider.walls());
 
     for (Obstacle obs : this.fieldObstacles) {
       if (obs instanceof GatedAttractorObstacle gated) {
-        if (gated.waypoint) { 
-          if (gated.center.getY() > Constants.FIELD_WIDTH / 2.0) { // TODO REMOVE FOR REAL MATCH
+        if (gated.waypoint) {
+          if (gated.center.getY() > fieldWidthMeters / 2.0) { // TODO REMOVE FOR REAL MATCH
             continue;
           }
           gatedAttractors.add(gated);
@@ -164,8 +176,10 @@ public class FieldPlanner {
       }
     }
 
-    this.forceModel = new FieldPlannerForceModel(fieldObstacles, walls);
-    this.goalManager = new FieldPlannerGoalManager(gatedAttractors);
+    this.forceModel =
+        new FieldPlannerForceModel(fieldObstacles, walls, fieldLengthMeters, fieldWidthMeters);
+    this.goalManager =
+        new FieldPlannerGoalManager(gatedAttractors, fieldLengthMeters, fieldWidthMeters);
 
     String prefix = System.getenv("REACTIVE_BYPASS_ID");
     String logName;
@@ -338,8 +352,8 @@ public class FieldPlanner {
       boolean blockedWithoutDynamics =
           !memo.toGoalNoDyn(curTrans, goalManager.getGoalTranslation(), robot_x, robot_y);
 
-      double dxWall = Math.min(curTrans.getX(), Constants.FIELD_LENGTH - curTrans.getX());
-      double dyWall = Math.min(curTrans.getY(), Constants.FIELD_WIDTH - curTrans.getY());
+      double dxWall = Math.min(curTrans.getX(), fieldLengthMeters - curTrans.getX());
+      double dyWall = Math.min(curTrans.getY(), fieldWidthMeters - curTrans.getY());
       double dWall = Math.min(dxWall, dyWall);
       boolean nearWall = dWall < FORCE_THROUGH_WALL_DIST;
       boolean nearGoal = distToGoal <= FORCE_THROUGH_GOAL_DIST;

@@ -24,7 +24,6 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.RobotBase;
 import java.util.ArrayList;
 import java.util.List;
-import org.curtinfrc.frc2026.util.Repulsor.Constants;
 import org.curtinfrc.frc2026.util.Repulsor.DriverStation.NtRepulsorDriverStation;
 import org.curtinfrc.frc2026.util.Repulsor.DriverStation.RepulsorDriverStation;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
@@ -39,21 +38,29 @@ public final class FieldPlannerForceModel {
 
   private final List<Obstacle> fieldObstacles;
   private final List<Obstacle> walls;
+  private final double fieldLengthMeters;
+  private final double fieldWidthMeters;
   private final ArrayList<Pose2d> arrows = new ArrayList<>(ARROWS_SIZE);
   private final Pose2d arrowBackstage =
       new Pose2d(-10, -10, edu.wpi.first.math.geometry.Rotation2d.kZero);
 
-  public FieldPlannerForceModel(List<Obstacle> fieldObstacles, List<Obstacle> walls) {
+  public FieldPlannerForceModel(
+      List<Obstacle> fieldObstacles,
+      List<Obstacle> walls,
+      double fieldLengthMeters,
+      double fieldWidthMeters) {
     this.fieldObstacles = fieldObstacles;
     this.walls = walls;
+    this.fieldLengthMeters = fieldLengthMeters;
+    this.fieldWidthMeters = fieldWidthMeters;
     for (int i = 0; i < ARROWS_SIZE; i++) arrows.add(new Pose2d());
   }
 
   private boolean isInsideChamferedField(Translation2d p) {
     double x = p.getX();
     double y = p.getY();
-    double L = Constants.FIELD_LENGTH;
-    double W = Constants.FIELD_WIDTH;
+    double L = fieldLengthMeters;
+    double W = fieldWidthMeters;
 
     if (x < 0.0 || x > L || y < 0.0 || y > W) return false;
 
@@ -80,7 +87,7 @@ public final class FieldPlannerForceModel {
       for (int y = 0; y <= ARROWS_Y; y++) {
         var translation =
             new Translation2d(
-                x * Constants.FIELD_LENGTH / ARROWS_X, y * Constants.FIELD_WIDTH / ARROWS_Y);
+                x * fieldLengthMeters / ARROWS_X, y * fieldWidthMeters / ARROWS_Y);
 
         int idx = x * (ARROWS_Y + 1) + y;
 

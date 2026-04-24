@@ -24,6 +24,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.function.Supplier;
 import org.curtinfrc.frc2026.util.Repulsor.Constants;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldDefinition;
 import org.curtinfrc.frc2026.util.Repulsor.Heatmap;
 
 public class DriveTuningHeat extends DriveTuning {
@@ -38,8 +39,16 @@ public class DriveTuningHeat extends DriveTuning {
   private final Supplier<Pose2d> robotPoseSupplier;
 
   public DriveTuningHeat(Supplier<Pose2d> robotPoseSupplier) {
+    this(robotPoseSupplier, Constants.FIELD);
+  }
+
+  public DriveTuningHeat(Supplier<Pose2d> robotPoseSupplier, FieldDefinition field) {
+    this(robotPoseSupplier, field == null ? null : field.getHeatmap());
+  }
+
+  public DriveTuningHeat(Supplier<Pose2d> robotPoseSupplier, Heatmap heatmap) {
     super("Drive/Heat");
-    this.heatmap = Constants.FIELD.getHeatmap();
+    this.heatmap = heatmap == null ? Heatmap.builder().build() : heatmap;
     this.robotPoseSupplier = robotPoseSupplier;
   }
 

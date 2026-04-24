@@ -19,6 +19,8 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Fields;
 
+import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.apriltag.AprilTagFields;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
 
@@ -28,4 +30,22 @@ public interface FieldLayoutProvider {
   String gameName();
 
   int gameYear();
+
+  default AprilTagFieldLayout aprilTagLayout() {
+    return AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
+  }
+
+  default double fieldLengthMeters() {
+    return aprilTagLayout().getFieldLength();
+  }
+
+  default double fieldWidthMeters() {
+    return aprilTagLayout().getFieldWidth();
+  }
+
+  default FieldGeometry geometry() {
+    return new FieldGeometry(fieldLengthMeters(), fieldWidthMeters());
+  }
+
+  default void configureTracker(FieldTrackerCore ft) {}
 }

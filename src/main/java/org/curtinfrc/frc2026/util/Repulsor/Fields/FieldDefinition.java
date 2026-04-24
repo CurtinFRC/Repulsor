@@ -19,8 +19,22 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Fields;
 
+import java.util.Optional;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.Heatmap.HeatmapProvider;
+import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 
 public interface FieldDefinition
-    extends FieldLayoutProvider, FieldPlanner.ObstacleProvider, HeatmapProvider {}
+    extends FieldLayoutProvider, FieldPlanner.ObstacleProvider, HeatmapProvider {
+  default Optional<RepulsorSetpoint> defaultCollectSetpoint() {
+    return Optional.empty();
+  }
+
+  default Optional<RepulsorSetpoint> defaultScoreSetpoint() {
+    return Optional.empty();
+  }
+
+  default FieldActionProfile actionProfile() {
+    return FieldActionProfile.none();
+  }
+}

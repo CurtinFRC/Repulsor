@@ -24,7 +24,6 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.List;
-import org.curtinfrc.frc2026.util.Repulsor.Constants;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.GatedAttractorObstacle;
 import org.littletonrobotics.junction.Logger;
@@ -87,15 +86,22 @@ public final class FieldPlannerGoalManager {
   private Translation2d stagedExitPoint = null;
 
   private final List<GatedAttractorObstacle> gatedAttractors;
+  private final double fieldLengthMeters;
+  private final double fieldWidthMeters;
 
-  public FieldPlannerGoalManager(List<GatedAttractorObstacle> gatedAttractors) {
+  public FieldPlannerGoalManager(
+      List<GatedAttractorObstacle> gatedAttractors,
+      double fieldLengthMeters,
+      double fieldWidthMeters) {
     this.gatedAttractors = gatedAttractors;
+    this.fieldLengthMeters = fieldLengthMeters;
+    this.fieldWidthMeters = fieldWidthMeters;
     Logger.recordOutput(
         "GoalManagerGatedAttractors",
         this.gatedAttractors.stream()
             .map(g -> new Pose2d(g.center, new Rotation2d()))
             .toArray(Pose2d[]::new));
-        }
+  }
 
   public Pose2d getGoalPose() {
     return goal;
@@ -518,7 +524,7 @@ public final class FieldPlannerGoalManager {
   }
 
   private static int sideSignXBand(double x, double band) {
-    double mid = Constants.FIELD_LENGTH * 0.5;
+    double mid = fieldLengthMeters * 0.5;
     double b = Math.max(0.0, band);
     if (x < mid - b) return -1;
     if (x > mid + b) return 1;
@@ -541,7 +547,7 @@ public final class FieldPlannerGoalManager {
     // When exiting deep center toward an alliance side, avoid forced staging.
     // This reduces stop/slow behavior in open corridor return paths.
     if (goalSide != 0 && robotSide == 0) {
-      double mid = Constants.FIELD_LENGTH * 0.5;
+      double mid = fieldLengthMeters * 0.5;
       boolean deepCenter = Math.abs(pos.getX() - mid) <= STAGED_DEEP_CENTER_BAND_M;
       return !deepCenter;
     }
@@ -556,7 +562,7 @@ public final class FieldPlannerGoalManager {
     int robotSide = sideSignXBand(pos.getX(), STAGED_CENTER_BAND_M);
     if (!(goalSide != 0 && robotSide == 0)) return false;
 
-    double mid = Constants.FIELD_LENGTH * 0.5;
+    double mid = fieldLengthMeters * 0.5;
     boolean deepCenter = Math.abs(pos.getX() - mid) <= STAGED_DEEP_CENTER_BAND_M;
     if (!deepCenter) return false;
 
@@ -579,7 +585,7 @@ public final class FieldPlannerGoalManager {
 
   private boolean isCorridorSideGate(GatedAttractorObstacle gate) {
     if (gate == null || gate.center == null) return false;
-    double mid = Constants.FIELD_LENGTH * 0.5;
+    double mid = fieldLengthMeters * 0.5;
     return Math.abs(gate.center.getX() - mid) >= STAGED_CENTER_RETURN_GATE_MIN_OFFSET_M;
   }
 
@@ -590,7 +596,7 @@ public final class FieldPlannerGoalManager {
     double dx = target.getX() - gate.center.getX();
     double sign = Math.signum(dx);
     if (sign == 0.0) {
-      double mid = Constants.FIELD_LENGTH * 0.5;
+      double mid = fieldLengthMeters * 0.5;
       sign = gate.center.getX() >= mid ? 1.0 : -1.0;
     }
 
@@ -602,11 +608,11 @@ public final class FieldPlannerGoalManager {
         MathUtil.clamp(
             gate.center.getX() + sign * advance,
             STAGED_FIELD_EDGE_MARGIN_M,
-            Constants.FIELD_LENGTH - STAGED_FIELD_EDGE_MARGIN_M);
+            fieldLengthMeters - STAGED_FIELD_EDGE_MARGIN_M);
     double yBase = stagedLaneY != null ? stagedLaneY.doubleValue() : gate.center.getY();
     double y =
         MathUtil.clamp(
-            yBase, STAGED_FIELD_EDGE_MARGIN_M, Constants.FIELD_WIDTH - STAGED_FIELD_EDGE_MARGIN_M);
+            yBase, STAGED_FIELD_EDGE_MARGIN_M, fieldWidthMeters - STAGED_FIELD_EDGE_MARGIN_M);
 
     return new Translation2d(x, y);
   }
@@ -628,11 +634,11 @@ public final class FieldPlannerGoalManager {
         MathUtil.clamp(
             p.getX(),
             STAGED_FIELD_EDGE_MARGIN_M,
-            Constants.FIELD_LENGTH - STAGED_FIELD_EDGE_MARGIN_M),
+            fieldLengthMeters - STAGED_FIELD_EDGE_MARGIN_M),
         MathUtil.clamp(
             p.getY(),
             STAGED_FIELD_EDGE_MARGIN_M,
-            Constants.FIELD_WIDTH - STAGED_FIELD_EDGE_MARGIN_M));
+            fieldWidthMeters - STAGED_FIELD_EDGE_MARGIN_M));
   }
 
   private static Translation2d gateSidePoint(GatedAttractorObstacle gate, boolean rightSide) {
@@ -742,12 +748,12 @@ public final class FieldPlannerGoalManager {
         MathUtil.clamp(
             pullPoint.getX() + sign * lead,
             STAGED_FIELD_EDGE_MARGIN_M,
-            Constants.FIELD_LENGTH - STAGED_FIELD_EDGE_MARGIN_M);
+            fieldLengthMeters - STAGED_FIELD_EDGE_MARGIN_M);
     double y =
         MathUtil.clamp(
             pullPoint.getY(),
             STAGED_FIELD_EDGE_MARGIN_M,
-            Constants.FIELD_WIDTH - STAGED_FIELD_EDGE_MARGIN_M);
+            fieldWidthMeters - STAGED_FIELD_EDGE_MARGIN_M);
     return new Translation2d(x, y);
   }
 

@@ -27,16 +27,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
+import org.curtinfrc.frc2026.util.Repulsor.Constants;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldLayoutProvider;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
-import org.curtinfrc.frc2026.util.Repulsor.Fields.Rebuilt2026;
 import org.curtinfrc.frc2026.util.Repulsor.Offload.FieldTrackerOffloadEntrypoints_Offloaded;
 import org.curtinfrc.frc2026.util.Repulsor.Offload.ShuttleRecoveryDynamicObjectDTO;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.Candidate;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
-import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateRuntime;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerCollectPlanner;
@@ -47,8 +47,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Tracking.Vision.FieldVision;
 
 public class FieldTrackerCore {
   private static volatile FieldTrackerCore instance;
-  private static volatile FieldLayoutProvider defaultProvider = new Rebuilt2026();
-  private static final String DEFAULT_COLLECT_RESOURCE_TYPE = "fuel";
+  private static volatile FieldLayoutProvider defaultProvider = Constants.FIELD;
 
   public GameElement[] field_map;
 
@@ -103,8 +102,7 @@ public class FieldTrackerCore {
             this::isCollectResourceType);
 
     rebuildObjectiveCaches();
-    configureCollectResourceProfile(
-        DEFAULT_COLLECT_RESOURCE_TYPE, new ResourceSpec(0.075, 1.0, 0.95));
+    provider.configureTracker(this);
   }
 
   public void resetAll() {
@@ -138,7 +136,7 @@ public class FieldTrackerCore {
     if (type == null || type.isEmpty()) return false;
     return predictor != null
         ? predictor.isCollectResourceType(type)
-        : DEFAULT_COLLECT_RESOURCE_TYPE.equalsIgnoreCase(type);
+        : false;
   }
 
   public void configureCollectResourceProfile(String type, ResourceSpec resourceSpec) {
@@ -146,6 +144,10 @@ public class FieldTrackerCore {
     if (resourceSpec == null) throw new IllegalArgumentException("resourceSpec cannot be null");
     predictor.registerResourceSpec(type, resourceSpec);
     predictor.addCollectResourceType(type);
+  }
+
+  public void setCollectResourceTypes(Set<String> types) {
+    predictor.setCollectResourceTypes(types == null ? Set.of() : types);
   }
 
   public void updatePredictorWorld(Alliance ours) {
@@ -165,6 +167,7 @@ public class FieldTrackerCore {
     if (provider == null) throw new IllegalArgumentException("provider cannot be null");
     this.field_map = provider.build(this);
     rebuildObjectiveCaches();
+    provider.configureTracker(this);
   }
 
   public GameElement[] getFieldMap() {

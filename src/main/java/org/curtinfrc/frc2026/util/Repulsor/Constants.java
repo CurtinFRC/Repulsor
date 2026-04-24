@@ -20,14 +20,26 @@
 package org.curtinfrc.frc2026.util.Repulsor;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
-import edu.wpi.first.apriltag.AprilTagFields;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldDefinition;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.Reefscape2025;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.Rebuilt2026;
 
 public final class Constants {
-  public static final AprilTagFieldLayout aprilTagLayout =
-      AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
-  public static final double FIELD_LENGTH = 16.540988;
-  public static final double FIELD_WIDTH = aprilTagLayout.getFieldWidth();
-  public static final FieldDefinition FIELD = new Rebuilt2026();
+  public static final FieldDefinition FIELD = loadDefaultField();
+  public static final AprilTagFieldLayout aprilTagLayout = FIELD.aprilTagLayout();
+  public static final FieldGeometry FIELD_GEOMETRY = FIELD.geometry();
+  public static final double FIELD_LENGTH = FIELD_GEOMETRY.lengthMeters();
+  public static final double FIELD_WIDTH = FIELD_GEOMETRY.widthMeters();
+
+  private static FieldDefinition loadDefaultField() {
+    String field = System.getProperty("repulsor.field", "rebuilt2026").trim().toLowerCase();
+    return switch (field) {
+      case "reefscape", "reefscape2025", "2025" -> new Reefscape2025();
+      case "rebuilt", "rebuilt2026", "2026" -> new Rebuilt2026();
+      default -> new Rebuilt2026();
+    };
+  }
+
+  private Constants() {}
 }

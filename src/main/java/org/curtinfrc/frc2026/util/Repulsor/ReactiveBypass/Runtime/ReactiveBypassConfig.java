@@ -22,8 +22,8 @@ package org.curtinfrc.frc2026.util.Repulsor.ReactiveBypass.Runtime;
 import org.curtinfrc.frc2026.util.Repulsor.Constants;
 
 public class ReactiveBypassConfig {
-  public double fieldLen = Constants.FIELD_LENGTH;
-  public double fieldWid = Constants.FIELD_WIDTH;
+  public double fieldLen = Constants.FIELD_GEOMETRY.lengthMeters();
+  public double fieldWid = Constants.FIELD_GEOMETRY.widthMeters();
   public double inflationMeters = 0.10;
   public double triggerAheadMeters = 1.2;
   public double triggerWidthMeters = 0.7;

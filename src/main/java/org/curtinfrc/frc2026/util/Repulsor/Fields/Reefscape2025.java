@@ -19,11 +19,14 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Fields;
 
+import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.Arrays;
 import java.util.List;
-import org.curtinfrc.frc2026.util.Repulsor.Constants;
+import java.util.Optional;
+import java.util.Set;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.DiagonalWallObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.HorizontalObstacle;
@@ -31,6 +34,7 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.TeardropObstac
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.VerticalObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
 import org.curtinfrc.frc2026.util.Repulsor.Heatmap;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.HeightSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.Setpoints;
@@ -39,6 +43,10 @@ import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
 
 public final class Reefscape2025 implements FieldDefinition {
+  public static final AprilTagFieldLayout APRIL_TAG_LAYOUT =
+      AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeWelded);
+  public static final double FIELD_LENGTH_M = 17.548;
+  public static final double FIELD_WIDTH_M = 8.052;
 
   private static final double CORNER_CHAMFER = 1.5;
 
@@ -47,33 +55,6 @@ public final class Reefscape2025 implements FieldDefinition {
           new TeardropObstacle(new Translation2d(4.49, 4.00), 1.2, 2.2, 1.03, 3.0, 2.0),
           new TeardropObstacle(new Translation2d(13.08, 4.00), 1.2, 2.2, 1.03, 3.0, 2.0));
 
-  private static final List<Obstacle> WALLS =
-      List.of(
-          new HorizontalObstacle(0.0, 2.0, true),
-          new HorizontalObstacle(Constants.FIELD_WIDTH, 1.4, false),
-          new VerticalObstacle(0.0, 2.0, true),
-          new VerticalObstacle(Constants.FIELD_LENGTH, 1.4, false),
-          new DiagonalWallObstacle(
-              new Translation2d(0.0, CORNER_CHAMFER),
-              new Translation2d(CORNER_CHAMFER, 0.0),
-              2.0,
-              2.0),
-          new DiagonalWallObstacle(
-              new Translation2d(Constants.FIELD_LENGTH - CORNER_CHAMFER, 0.0),
-              new Translation2d(Constants.FIELD_LENGTH, CORNER_CHAMFER),
-              2.0,
-              2.0),
-          new DiagonalWallObstacle(
-              new Translation2d(0.0, Constants.FIELD_WIDTH - CORNER_CHAMFER),
-              new Translation2d(CORNER_CHAMFER, Constants.FIELD_WIDTH),
-              2.0,
-              2.0),
-          new DiagonalWallObstacle(
-              new Translation2d(Constants.FIELD_LENGTH - CORNER_CHAMFER, Constants.FIELD_WIDTH),
-              new Translation2d(Constants.FIELD_LENGTH, Constants.FIELD_WIDTH - CORNER_CHAMFER),
-              2.0,
-              2.0));
-
   @Override
   public List<Obstacle> fieldObstacles() {
     return FIELD_OBSTACLES;
@@ -81,7 +62,31 @@ public final class Reefscape2025 implements FieldDefinition {
 
   @Override
   public List<Obstacle> walls() {
-    return WALLS;
+    return List.of(
+        new HorizontalObstacle(0.0, 2.0, true),
+        new HorizontalObstacle(FIELD_WIDTH_M, 1.4, false),
+        new VerticalObstacle(0.0, 2.0, true),
+        new VerticalObstacle(FIELD_LENGTH_M, 1.4, false),
+        new DiagonalWallObstacle(
+            new Translation2d(0.0, CORNER_CHAMFER),
+            new Translation2d(CORNER_CHAMFER, 0.0),
+            2.0,
+            2.0),
+        new DiagonalWallObstacle(
+            new Translation2d(FIELD_LENGTH_M - CORNER_CHAMFER, 0.0),
+            new Translation2d(FIELD_LENGTH_M, CORNER_CHAMFER),
+            2.0,
+            2.0),
+        new DiagonalWallObstacle(
+            new Translation2d(0.0, FIELD_WIDTH_M - CORNER_CHAMFER),
+            new Translation2d(CORNER_CHAMFER, FIELD_WIDTH_M),
+            2.0,
+            2.0),
+        new DiagonalWallObstacle(
+            new Translation2d(FIELD_LENGTH_M - CORNER_CHAMFER, FIELD_WIDTH_M),
+            new Translation2d(FIELD_LENGTH_M, FIELD_WIDTH_M - CORNER_CHAMFER),
+            2.0,
+            2.0));
   }
 
   @Override
@@ -223,5 +228,37 @@ public final class Reefscape2025 implements FieldDefinition {
   @Override
   public int gameYear() {
     return 2025;
+  }
+
+  @Override
+  public AprilTagFieldLayout aprilTagLayout() {
+    return APRIL_TAG_LAYOUT;
+  }
+
+  @Override
+  public double fieldLengthMeters() {
+    return FIELD_LENGTH_M;
+  }
+
+  @Override
+  public double fieldWidthMeters() {
+    return FIELD_WIDTH_M;
+  }
+
+  @Override
+  public Optional<RepulsorSetpoint> defaultCollectSetpoint() {
+    return Optional.of(
+        new RepulsorSetpoint(Setpoints.Reefscape2025.LEFT_HP, HeightSetpoint.CORAL_STATION));
+  }
+
+  @Override
+  public Optional<RepulsorSetpoint> defaultScoreSetpoint() {
+    return Optional.of(new RepulsorSetpoint(Setpoints.Reefscape2025.A, HeightSetpoint.L2));
+  }
+
+  @Override
+  public void configureTracker(FieldTrackerCore ft) {
+    ft.setCollectResourceTypes(Set.of("coral"));
+    ft.configureCollectResourceProfile("coral", new ResourceSpec(0.10, 1.0, 0.95));
   }
 }
