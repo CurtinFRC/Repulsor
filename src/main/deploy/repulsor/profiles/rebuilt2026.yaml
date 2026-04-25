@@ -22,11 +22,28 @@ projectileShots:
       blueXMeters: 4.135247
       blueYMeters: 4.105618
     targetHeightMeters: 0.35
+    constraints:
+      minLaunchSpeedMetersPerSecond: 4.0
+      maxLaunchSpeedMetersPerSecond: 30.0
+      minLaunchAngleDegrees: 5.0
+      maxLaunchAngleDegrees: 45.0
+      shotStyle: DIRECT
     routeLevel: alliance.transfer
     routeMechanismSetpoint: NET
     behindTargetMeters: 2.3
     lateralOffsetsMeters: [0.0, 0.45, -0.45, 0.9, -0.9]
     fieldMarginMeters: 0.28
+    movingShot:
+      enabled: true
+      releaseLatencySeconds: 0.08
+      minFlightPredictionSeconds: 0.10
+      maxFlightPredictionSeconds: 0.45
+      defaultFlightPredictionSeconds: 0.18
+      maxCompensatedSpeedMetersPerSecond: 4.5
+      maxReleaseSpeedMetersPerSecond: 4.5
+      yawToleranceDegrees: 13.0
+      maxVerticalErrorMeters: 0.20
+      iterations: 3
     fallbackGamePiece:
       massKg: 0.27
       crossSectionAreaM2: 0.014
@@ -38,11 +55,28 @@ projectileShots:
     target:
       kind: hub
     targetHeightMeters: 1.43
+    constraints:
+      minLaunchSpeedMetersPerSecond: 0.0
+      maxLaunchSpeedMetersPerSecond: 30.0
+      minLaunchAngleDegrees: 60.0
+      maxLaunchAngleDegrees: 90.0
+      shotStyle: ARC
     routeLevel: hub
     routeMechanismSetpoint: NET
     behindTargetMeters: 2.95
     lateralOffsetsMeters: [0.0, 0.45, -0.45, 0.9, -0.9]
     fieldMarginMeters: 0.28
+    movingShot:
+      enabled: true
+      releaseLatencySeconds: 0.08
+      minFlightPredictionSeconds: 0.10
+      maxFlightPredictionSeconds: 0.45
+      defaultFlightPredictionSeconds: 0.18
+      maxCompensatedSpeedMetersPerSecond: 4.5
+      maxReleaseSpeedMetersPerSecond: 4.5
+      yawToleranceDegrees: 13.0
+      maxVerticalErrorMeters: 0.20
+      iterations: 3
     fallbackGamePiece:
       massKg: 0.27
       crossSectionAreaM2: 0.014

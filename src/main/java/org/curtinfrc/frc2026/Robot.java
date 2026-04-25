@@ -206,8 +206,16 @@ public class Robot extends LoggedRobot {
 
     repulsor.addBehaviours(
         new DefenceBehaviour(30, defenseGoalSup, () -> 5.2),
-        new ShuttleBehaviour(20, () -> simHasPiece, () -> 5.2),
-        new ShuttleRecoveryBehaviour(25, () -> simHasPiece, () -> 5.2),
+        new ShuttleBehaviour(
+            20,
+            () -> simHasPiece,
+            () -> 5.2,
+            () -> hoodedShooter != null && hoodedShooter.hoodedShooterReady.getAsBoolean()),
+        new ShuttleRecoveryBehaviour(
+            25,
+            () -> simHasPiece,
+            () -> 5.2,
+            () -> hoodedShooter != null && hoodedShooter.hoodedShooterReady.getAsBoolean()),
         new TestBehaviour(),
         new AutoPathBehaviour(
             1000,

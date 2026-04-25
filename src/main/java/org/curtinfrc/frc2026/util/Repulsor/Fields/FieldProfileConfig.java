@@ -21,6 +21,7 @@ package org.curtinfrc.frc2026.util.Repulsor.Fields;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.curtinfrc.frc2026.util.Repulsor.Shooting.MovingShotSolver;
 
 public class FieldProfileConfig {
   public String id;
@@ -89,6 +90,7 @@ public class FieldProfileConfig {
     if (overlay.gamePieceId != null) base.gamePieceId = overlay.gamePieceId;
     mergeTarget(base.target, overlay.target);
     if (overlay.targetHeightMeters != null) base.targetHeightMeters = overlay.targetHeightMeters;
+    mergeConstraints(base.constraints, overlay.constraints);
     if (overlay.routeLevel != null) base.routeLevel = overlay.routeLevel;
     if (overlay.routeMechanismSetpoint != null)
       base.routeMechanismSetpoint = overlay.routeMechanismSetpoint;
@@ -96,6 +98,7 @@ public class FieldProfileConfig {
     if (overlay.lateralOffsetsMeters != null)
       base.lateralOffsetsMeters = overlay.lateralOffsetsMeters;
     if (overlay.fieldMarginMeters != null) base.fieldMarginMeters = overlay.fieldMarginMeters;
+    mergeMovingShot(base.movingShot, overlay.movingShot);
     if (overlay.fallbackGamePiece != null) {
       if (overlay.fallbackGamePiece.massKg != null) {
         base.fallbackGamePiece.massKg = overlay.fallbackGamePiece.massKg;
@@ -107,6 +110,40 @@ public class FieldProfileConfig {
         base.fallbackGamePiece.dragCoefficient = overlay.fallbackGamePiece.dragCoefficient;
       }
     }
+  }
+
+  private static void mergeConstraints(ShotConstraintsConfig base, ShotConstraintsConfig overlay) {
+    if (base == null || overlay == null) return;
+    if (overlay.minLaunchSpeedMetersPerSecond != null)
+      base.minLaunchSpeedMetersPerSecond = overlay.minLaunchSpeedMetersPerSecond;
+    if (overlay.maxLaunchSpeedMetersPerSecond != null)
+      base.maxLaunchSpeedMetersPerSecond = overlay.maxLaunchSpeedMetersPerSecond;
+    if (overlay.minLaunchAngleDegrees != null)
+      base.minLaunchAngleDegrees = overlay.minLaunchAngleDegrees;
+    if (overlay.maxLaunchAngleDegrees != null)
+      base.maxLaunchAngleDegrees = overlay.maxLaunchAngleDegrees;
+    if (overlay.shotStyle != null) base.shotStyle = overlay.shotStyle;
+  }
+
+  private static void mergeMovingShot(MovingShotConfig base, MovingShotConfig overlay) {
+    if (base == null || overlay == null) return;
+    if (overlay.enabled != null) base.enabled = overlay.enabled;
+    if (overlay.releaseLatencySeconds != null)
+      base.releaseLatencySeconds = overlay.releaseLatencySeconds;
+    if (overlay.minFlightPredictionSeconds != null)
+      base.minFlightPredictionSeconds = overlay.minFlightPredictionSeconds;
+    if (overlay.maxFlightPredictionSeconds != null)
+      base.maxFlightPredictionSeconds = overlay.maxFlightPredictionSeconds;
+    if (overlay.defaultFlightPredictionSeconds != null)
+      base.defaultFlightPredictionSeconds = overlay.defaultFlightPredictionSeconds;
+    if (overlay.maxCompensatedSpeedMetersPerSecond != null)
+      base.maxCompensatedSpeedMetersPerSecond = overlay.maxCompensatedSpeedMetersPerSecond;
+    if (overlay.maxReleaseSpeedMetersPerSecond != null)
+      base.maxReleaseSpeedMetersPerSecond = overlay.maxReleaseSpeedMetersPerSecond;
+    if (overlay.yawToleranceDegrees != null) base.yawToleranceDegrees = overlay.yawToleranceDegrees;
+    if (overlay.maxVerticalErrorMeters != null)
+      base.maxVerticalErrorMeters = overlay.maxVerticalErrorMeters;
+    if (overlay.iterations != null) base.iterations = overlay.iterations;
   }
 
   private static void mergeTarget(TargetConfig base, TargetConfig overlay) {
@@ -190,11 +227,13 @@ public class FieldProfileConfig {
     public String gamePieceId;
     public TargetConfig target = new TargetConfig();
     public Double targetHeightMeters;
+    public ShotConstraintsConfig constraints = new ShotConstraintsConfig();
     public String routeLevel;
     public String routeMechanismSetpoint;
     public Double behindTargetMeters;
     public double[] lateralOffsetsMeters;
     public Double fieldMarginMeters;
+    public MovingShotConfig movingShot = new MovingShotConfig();
     public GamePiecePhysicsConfig fallbackGamePiece = new GamePiecePhysicsConfig();
   }
 
@@ -211,6 +250,75 @@ public class FieldProfileConfig {
     public Double massKg;
     public Double crossSectionAreaM2;
     public Double dragCoefficient;
+  }
+
+  public static class ShotConstraintsConfig {
+    public Double minLaunchSpeedMetersPerSecond;
+    public Double maxLaunchSpeedMetersPerSecond;
+    public Double minLaunchAngleDegrees;
+    public Double maxLaunchAngleDegrees;
+    public String shotStyle;
+
+    public org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints constraints(
+        org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints fallback) {
+      org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints base =
+          fallback == null
+              ? new org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints(0.0, 30.0, 0.0, 90.0)
+              : fallback;
+      return new org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints(
+          finiteNonNegative(minLaunchSpeedMetersPerSecond, base.minLaunchSpeedMetersPerSecond()),
+          finiteNonNegative(maxLaunchSpeedMetersPerSecond, base.maxLaunchSpeedMetersPerSecond()),
+          finiteNonNegative(minLaunchAngleDegrees, base.minLaunchAngleDeg()),
+          finiteNonNegative(maxLaunchAngleDegrees, base.maxLaunchAngleDeg()),
+          shotStyle(shotStyle, base.shotStyle()));
+    }
+
+    private static org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints.ShotStyle shotStyle(
+        String value, org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints.ShotStyle fallback) {
+      if (value == null || value.isBlank()) {
+        return fallback;
+      }
+      try {
+        return org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints.ShotStyle.valueOf(
+            value.trim().toUpperCase());
+      } catch (IllegalArgumentException ex) {
+        return fallback;
+      }
+    }
+  }
+
+  public static class MovingShotConfig {
+    public Boolean enabled;
+    public Double releaseLatencySeconds;
+    public Double minFlightPredictionSeconds;
+    public Double maxFlightPredictionSeconds;
+    public Double defaultFlightPredictionSeconds;
+    public Double maxCompensatedSpeedMetersPerSecond;
+    public Double maxReleaseSpeedMetersPerSecond;
+    public Double yawToleranceDegrees;
+    public Double maxVerticalErrorMeters;
+    public Integer iterations;
+
+    public MovingShotSolver.Config solverConfig() {
+      MovingShotSolver.Config defaults = MovingShotSolver.Config.defaults();
+      return new MovingShotSolver.Config(
+          finiteNonNegative(releaseLatencySeconds, defaults.releaseLatencySeconds()),
+          finiteNonNegative(minFlightPredictionSeconds, defaults.minFlightPredictionSeconds()),
+          finiteNonNegative(maxFlightPredictionSeconds, defaults.maxFlightPredictionSeconds()),
+          finiteNonNegative(
+              defaultFlightPredictionSeconds, defaults.defaultFlightPredictionSeconds()),
+          finiteNonNegative(
+              maxCompensatedSpeedMetersPerSecond, defaults.maxCompensatedSpeedMetersPerSecond()),
+          finiteNonNegative(
+              maxReleaseSpeedMetersPerSecond, defaults.maxReleaseSpeedMetersPerSecond()),
+          finiteNonNegative(yawToleranceDegrees, defaults.yawToleranceDegrees()),
+          finiteNonNegative(maxVerticalErrorMeters, defaults.maxVerticalErrorMeters()),
+          positive(iterations, defaults.iterations()));
+    }
+  }
+
+  static double finiteNonNegative(Double value, double fallback) {
+    return value != null && Double.isFinite(value) && value >= 0.0 ? value : fallback;
   }
 
   public static class RebuiltCorridorConfig {

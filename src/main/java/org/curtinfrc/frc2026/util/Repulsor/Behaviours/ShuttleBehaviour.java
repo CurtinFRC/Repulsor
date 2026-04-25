@@ -48,6 +48,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Simulation.NetworkTablesValue;
 import org.curtinfrc.frc2026.util.Repulsor.Strategy.CycleStrategyEvaluator.Intent;
 import org.curtinfrc.frc2026.util.Repulsor.Strategy.StrategyDirective;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
+import org.littletonrobotics.junction.Logger;
 
 public class ShuttleBehaviour extends Behaviour {
   private static final double SHOOT_POS_TOL_METERS = 0.34;
@@ -62,6 +63,7 @@ public class ShuttleBehaviour extends Behaviour {
   private final int prio;
   private final Supplier<Boolean> hasPiece;
   private final Supplier<Double> ourSpeedCap;
+  private final Supplier<Boolean> mechanismReady;
 
   private final NetworkTablesValue<Double> shotAngle =
       NetworkTablesValue.ofDouble(
@@ -83,9 +85,18 @@ public class ShuttleBehaviour extends Behaviour {
   private Pose2d lastCollectBluePose;
 
   public ShuttleBehaviour(int priority, Supplier<Boolean> hasPiece, Supplier<Double> ourSpeedCap) {
+    this(priority, hasPiece, ourSpeedCap, () -> true);
+  }
+
+  public ShuttleBehaviour(
+      int priority,
+      Supplier<Boolean> hasPiece,
+      Supplier<Double> ourSpeedCap,
+      Supplier<Boolean> mechanismReady) {
     this.prio = priority;
     this.hasPiece = hasPiece;
     this.ourSpeedCap = ourSpeedCap;
+    this.mechanismReady = mechanismReady == null ? () -> true : mechanismReady;
   }
 
   @Override
@@ -215,11 +226,14 @@ public class ShuttleBehaviour extends Behaviour {
 
               boolean readyToShoot =
                   currentPieceCount > 0L
-                      && ProjectileCycleRuntime.isReadyToShoot(
-                          robotPose, goalPose, SHOOT_POS_TOL_METERS, SHOOT_YAW_TOL_DEG)
-                      && aim.shotSolution().isPresent();
+                      && ProjectileCycleRuntime.canRelease(
+                          aim, robotPose, goalPose, SHOOT_POS_TOL_METERS, SHOOT_YAW_TOL_DEG);
               boolean preturn = choice == Choice.SHOOT && shouldPreTurn(robotPose, goalPose, cap);
-              boolean allowPassthrough = readyToShoot;
+              boolean mechanismAtSetpoint = Boolean.TRUE.equals(mechanismReady.get());
+              boolean allowPassthrough = readyToShoot && mechanismAtSetpoint;
+              Logger.recordOutput("Repulsor/Shuttle/ReadyToRelease", readyToShoot);
+              Logger.recordOutput("Repulsor/Shuttle/MechanismReady", mechanismAtSetpoint);
+              Logger.recordOutput("Repulsor/Shuttle/PassthroughAllowed", allowPassthrough);
               shooterPassthrough.set(allowPassthrough);
 
               if (choice == Choice.COLLECT && currentPieceCount >= MAGAZINE_CAPACITY) {
@@ -307,11 +321,11 @@ public class ShuttleBehaviour extends Behaviour {
     }
 
     if (pieceCount >= MAGAZINE_CAPACITY - MAG_SAFETY_MARGIN) {
-      return aim.shotSolution().isPresent() ? Choice.SHOOT : Choice.COLLECT;
+      return aim.activeShotSolution().isPresent() ? Choice.SHOOT : Choice.COLLECT;
     }
 
-    Pose2d shootPose = aim.shootPose();
-    boolean shotOk = aim.shotSolution().isPresent();
+    Pose2d shootPose = aim.activeShootPose();
+    boolean shotOk = aim.activeShotSolution().isPresent();
 
     double v = Math.max(0.6, capMps);
 

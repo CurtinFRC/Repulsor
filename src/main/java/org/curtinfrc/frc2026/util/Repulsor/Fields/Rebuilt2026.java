@@ -98,11 +98,13 @@ public final class Rebuilt2026 implements FieldDefinition {
     fuelTransfer.target.blueXMeters = FIELD_LENGTH_M * 0.25;
     fuelTransfer.target.blueYMeters = FIELD_WIDTH_M * 0.5;
     fuelTransfer.targetHeightMeters = 0.35;
+    configureDefaultShotConstraints(fuelTransfer, 4.0, 30.0, 5.0, 45.0, "DIRECT");
     fuelTransfer.routeLevel = "alliance.transfer";
     fuelTransfer.routeMechanismSetpoint = HeightSetpoint.NET.name();
     fuelTransfer.behindTargetMeters = 2.3;
     fuelTransfer.lateralOffsetsMeters = new double[] {0.0, 0.45, -0.45, 0.9, -0.9};
     fuelTransfer.fieldMarginMeters = 0.28;
+    configureDefaultMovingShot(fuelTransfer);
     fuelTransfer.fallbackGamePiece.massKg = 0.27;
     fuelTransfer.fallbackGamePiece.crossSectionAreaM2 = 0.014;
     fuelTransfer.fallbackGamePiece.dragCoefficient = 0.95;
@@ -115,11 +117,19 @@ public final class Rebuilt2026 implements FieldDefinition {
     fuelScore.gamePieceId = _Rebuilt2026.GAME_PIECE_ID_FUEL;
     fuelScore.target.kind = "hub";
     fuelScore.targetHeightMeters = _Rebuilt2026.HUB_OPENING_FRONT_EDGE_HEIGHT_M;
+    configureDefaultShotConstraints(
+        fuelScore,
+        _Rebuilt2026.HUB_SHOT_CONSTRAINTS.minLaunchSpeedMetersPerSecond(),
+        _Rebuilt2026.HUB_SHOT_CONSTRAINTS.maxLaunchSpeedMetersPerSecond(),
+        _Rebuilt2026.HUB_SHOT_CONSTRAINTS.minLaunchAngleDeg(),
+        _Rebuilt2026.HUB_SHOT_CONSTRAINTS.maxLaunchAngleDeg(),
+        _Rebuilt2026.HUB_SHOT_CONSTRAINTS.shotStyle().name());
     fuelScore.routeLevel = "hub";
     fuelScore.routeMechanismSetpoint = HeightSetpoint.NET.name();
     fuelScore.behindTargetMeters = 2.95;
     fuelScore.lateralOffsetsMeters = new double[] {0.0, 0.45, -0.45, 0.9, -0.9};
     fuelScore.fieldMarginMeters = 0.28;
+    configureDefaultMovingShot(fuelScore);
     fuelScore.fallbackGamePiece.massKg = 0.27;
     fuelScore.fallbackGamePiece.crossSectionAreaM2 = 0.014;
     fuelScore.fallbackGamePiece.dragCoefficient = 0.95;
@@ -320,12 +330,43 @@ public final class Rebuilt2026 implements FieldDefinition {
         targetForAlliance(shot),
         loadProjectileGamePiece(shot),
         shot.targetHeightMeters,
-        _Rebuilt2026.HUB_SHOT_CONSTRAINTS,
+        shot.constraints != null
+            ? shot.constraints.constraints(_Rebuilt2026.HUB_SHOT_CONSTRAINTS)
+            : _Rebuilt2026.HUB_SHOT_CONSTRAINTS,
         shot.routeLevel,
         routeMechanismSetpoint(shot.routeMechanismSetpoint),
         shot.behindTargetMeters,
         shot.lateralOffsetsMeters,
-        shot.fieldMarginMeters);
+        shot.fieldMarginMeters,
+        shot.movingShot == null || !Boolean.FALSE.equals(shot.movingShot.enabled),
+        shot.movingShot != null ? shot.movingShot.solverConfig() : null);
+  }
+
+  private static void configureDefaultShotConstraints(
+      FieldProfileConfig.ProjectileShotConfig shot,
+      double minSpeed,
+      double maxSpeed,
+      double minAngleDeg,
+      double maxAngleDeg,
+      String shotStyle) {
+    shot.constraints.minLaunchSpeedMetersPerSecond = minSpeed;
+    shot.constraints.maxLaunchSpeedMetersPerSecond = maxSpeed;
+    shot.constraints.minLaunchAngleDegrees = minAngleDeg;
+    shot.constraints.maxLaunchAngleDegrees = maxAngleDeg;
+    shot.constraints.shotStyle = shotStyle;
+  }
+
+  private static void configureDefaultMovingShot(FieldProfileConfig.ProjectileShotConfig shot) {
+    shot.movingShot.enabled = true;
+    shot.movingShot.releaseLatencySeconds = 0.08;
+    shot.movingShot.minFlightPredictionSeconds = 0.10;
+    shot.movingShot.maxFlightPredictionSeconds = 0.45;
+    shot.movingShot.defaultFlightPredictionSeconds = 0.18;
+    shot.movingShot.maxCompensatedSpeedMetersPerSecond = 4.5;
+    shot.movingShot.maxReleaseSpeedMetersPerSecond = 4.5;
+    shot.movingShot.yawToleranceDegrees = 13.0;
+    shot.movingShot.maxVerticalErrorMeters = 0.20;
+    shot.movingShot.iterations = 3;
   }
 
   private Function<DriverStation.Alliance, Translation2d> targetForAlliance(

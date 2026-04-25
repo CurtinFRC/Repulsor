@@ -36,8 +36,10 @@ import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldActionProfile.ProjectileS
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointContext;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.DragShotPlanner;
+import org.curtinfrc.frc2026.util.Repulsor.Shooting.MovingShotSolver;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.ShotSolution;
 import org.curtinfrc.frc2026.util.Repulsor.Simulation.NetworkTablesValue;
+import org.littletonrobotics.junction.Logger;
 
 public final class ProjectileCycleRuntime {
   public static final double MOTION_COMP_LATENCY_SEC = 0.08;
@@ -45,10 +47,34 @@ public final class ProjectileCycleRuntime {
   public static final double MOTION_COMP_MAX_LEAD_SEC = 0.45;
   public static final double MOTION_COMP_MAX_SPEED_MPS = 4.5;
   public static final double DEFAULT_TIME_TO_PLANE_SEC = 0.18;
+  public static final MovingShotSolver.Config DEFAULT_MOVING_SHOT_CONFIG =
+      MovingShotSolver.Config.defaults();
 
   private ProjectileCycleRuntime() {}
 
-  public record Aim(Pose2d shootPose, Optional<ShotSolution> shotSolution) {}
+  public record Aim(
+      Pose2d shootPose,
+      Optional<ShotSolution> shotSolution,
+      Optional<MovingShotSolver.Result> movingShot) {
+    public Aim(Pose2d shootPose, Optional<ShotSolution> shotSolution) {
+      this(shootPose, shotSolution, Optional.empty());
+    }
+
+    public Optional<ShotSolution> activeShotSolution() {
+      if (movingShot.isPresent()) {
+        return Optional.of(movingShot.get().solution());
+      }
+      return shotSolution;
+    }
+
+    public Pose2d activeShootPose() {
+      return movingShot.map(MovingShotSolver.Result::predictedReleasePose).orElse(shootPose);
+    }
+
+    public boolean readyToReleaseMoving() {
+      return movingShot.map(MovingShotSolver.Result::readyToRelease).orElse(false);
+    }
+  }
 
   public static SetpointContext makeCtx(BehaviourContext ctx, Pose2d robotPose) {
     double release;
@@ -97,6 +123,28 @@ public final class ProjectileCycleRuntime {
       List<? extends Obstacle> obstacles,
       Translation2d fieldVelocity,
       AtomicReference<Double> lastTimeToPlaneSec) {
+    return computeAim(
+        profile,
+        geometry,
+        robotPose,
+        spCtx,
+        staticObstacles,
+        obstacles,
+        fieldVelocity,
+        lastTimeToPlaneSec,
+        profile.movingShotConfig());
+  }
+
+  public static Aim computeAim(
+      ProjectileShotAction profile,
+      FieldGeometry geometry,
+      Pose2d robotPose,
+      SetpointContext spCtx,
+      List<Obstacle> staticObstacles,
+      List<? extends Obstacle> obstacles,
+      Translation2d fieldVelocity,
+      AtomicReference<Double> lastTimeToPlaneSec,
+      MovingShotSolver.Config movingShotConfig) {
     DriverStation.Alliance alliance =
         DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue);
     Translation2d target = profile.target(alliance);
@@ -131,16 +179,42 @@ public final class ProjectileCycleRuntime {
             halfW,
             obstacles,
             alliance);
+    Optional<MovingShotSolver.Result> movingShot =
+        profile.movingShotEnabled()
+            ? MovingShotSolver.solve(
+                new MovingShotSolver.Request(
+                    profile.gamePiecePhysics(),
+                    target,
+                    profile.targetHeightMeters(),
+                    robotPose.getTranslation(),
+                    robotPose.getRotation(),
+                    fieldVelocity,
+                    releaseH,
+                    profile.constraints(),
+                    movingShotConfig,
+                    prevFlight))
+            : Optional.empty();
+    movingShot.ifPresent(
+        result ->
+            lastTimeToPlaneSec.set(
+                MathUtil.clamp(
+                    result.solution().timeToPlaneSeconds(),
+                    MOTION_COMP_MIN_LEAD_SEC,
+                    MOTION_COMP_MAX_LEAD_SEC)));
 
     if (solved.isPresent()) {
       ShotSolution solution = solved.get();
-      lastTimeToPlaneSec.set(
-          MathUtil.clamp(
-              solution.timeToPlaneSeconds(), MOTION_COMP_MIN_LEAD_SEC, MOTION_COMP_MAX_LEAD_SEC));
-      return new Aim(new Pose2d(solution.shooterPosition(), solution.shooterYaw()), solved);
+      if (movingShot.isEmpty()) {
+        lastTimeToPlaneSec.set(
+            MathUtil.clamp(
+                solution.timeToPlaneSeconds(), MOTION_COMP_MIN_LEAD_SEC, MOTION_COMP_MAX_LEAD_SEC));
+      }
+      return new Aim(
+          new Pose2d(solution.shooterPosition(), solution.shooterYaw()), solved, movingShot);
     }
 
-    return new Aim(fallbackShootPose(target, alliance, profile, geometry), Optional.empty());
+    return new Aim(
+        fallbackShootPose(target, alliance, profile, geometry), Optional.empty(), movingShot);
   }
 
   public static void publishShotTelemetry(
@@ -148,8 +222,10 @@ public final class ProjectileCycleRuntime {
       AtomicReference<ShotSolution> lastValidShot,
       NetworkTablesValue<Double> shotSpeed,
       NetworkTablesValue<Double> shotAngle) {
-    if (aim.shotSolution().isPresent()) {
-      ShotSolution solution = aim.shotSolution().get();
+    publishMovingShotTelemetry(aim);
+    Optional<ShotSolution> active = aim.activeShotSolution();
+    if (active.isPresent()) {
+      ShotSolution solution = active.get();
       lastValidShot.set(solution);
       shotSpeed.set(solution.launchSpeedMetersPerSecond());
       shotAngle.set(solution.launchAngle().getDegrees());
@@ -176,6 +252,49 @@ public final class ProjectileCycleRuntime {
             shortestAngleRad(
                 robotPose.getRotation().getRadians(), goalPose.getRotation().getRadians()));
     return e <= Math.toRadians(yawTolDeg);
+  }
+
+  public static boolean canRelease(
+      Aim aim, Pose2d robotPose, Pose2d goalPose, double posTolMeters, double yawTolDeg) {
+    if (aim.readyToReleaseMoving()) {
+      return true;
+    }
+    return aim.shotSolution().isPresent()
+        && isReadyToShoot(robotPose, goalPose, posTolMeters, yawTolDeg);
+  }
+
+  private static void publishMovingShotTelemetry(Aim aim) {
+    Optional<MovingShotSolver.Result> moving = aim.movingShot();
+    Logger.recordOutput("Repulsor/MovingShot/Solved", moving.isPresent());
+    Logger.recordOutput("Repulsor/MovingShot/Ready", aim.readyToReleaseMoving());
+    if (moving.isEmpty()) {
+      Logger.recordOutput("Repulsor/MovingShot/YawErrorDeg", 0.0);
+      Logger.recordOutput("Repulsor/MovingShot/VerticalErrorMeters", 0.0);
+      Logger.recordOutput("Repulsor/MovingShot/ReleaseSpeedAllowed", false);
+      Logger.recordOutput("Repulsor/MovingShot/YawAligned", false);
+      Logger.recordOutput("Repulsor/MovingShot/VerticalErrorAllowed", false);
+      Logger.recordOutput("Repulsor/MovingShot/FlightPredictionSeconds", 0.0);
+      Logger.recordOutput("Repulsor/MovingShot/CompensatedVelocityMps", 0.0);
+      return;
+    }
+
+    MovingShotSolver.Result result = moving.get();
+    Logger.recordOutput("Repulsor/MovingShot/PredictedReleasePose", result.predictedReleasePose());
+    Logger.recordOutput(
+        "Repulsor/MovingShot/CompensatedTarget",
+        new Pose2d(result.compensatedTarget(), Rotation2d.kZero));
+    Logger.recordOutput(
+        "Repulsor/MovingShot/YawErrorDeg", Math.toDegrees(result.yawErrorRadians()));
+    Logger.recordOutput(
+        "Repulsor/MovingShot/VerticalErrorMeters", result.solution().verticalErrorMeters());
+    Logger.recordOutput("Repulsor/MovingShot/ReleaseSpeedAllowed", result.releaseSpeedAllowed());
+    Logger.recordOutput("Repulsor/MovingShot/YawAligned", result.yawAligned());
+    Logger.recordOutput("Repulsor/MovingShot/VerticalErrorAllowed", result.verticalErrorAllowed());
+    Logger.recordOutput(
+        "Repulsor/MovingShot/FlightPredictionSeconds", result.flightPredictionSeconds());
+    Logger.recordOutput(
+        "Repulsor/MovingShot/CompensatedVelocityMps",
+        result.compensatedShooterVelocity().getNorm());
   }
 
   public static double shortestAngleRad(double from, double to) {

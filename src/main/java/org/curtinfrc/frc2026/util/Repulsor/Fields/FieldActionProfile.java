@@ -28,6 +28,7 @@ import java.util.function.Function;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.HeightSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.GamePiecePhysics;
+import org.curtinfrc.frc2026.util.Repulsor.Shooting.MovingShotSolver;
 
 public record FieldActionProfile(Map<String, ProjectileShotAction> projectileShots) {
   public FieldActionProfile {
@@ -82,7 +83,9 @@ public record FieldActionProfile(Map<String, ProjectileShotAction> projectileSho
       HeightSetpoint routeMechanismSetpoint,
       double behindTargetMeters,
       double[] lateralOffsetsMeters,
-      double fieldMarginMeters) {
+      double fieldMarginMeters,
+      boolean movingShotEnabled,
+      MovingShotSolver.Config movingShotConfig) {
     public ProjectileShotAction {
       id = id == null || id.isBlank() ? "projectileShot" : id.trim();
       role = role == null ? ActionRole.OTHER : role;
@@ -100,6 +103,8 @@ public record FieldActionProfile(Map<String, ProjectileShotAction> projectileSho
           routeMechanismSetpoint == null ? HeightSetpoint.NONE : routeMechanismSetpoint;
       behindTargetMeters = Math.max(0.0, behindTargetMeters);
       fieldMarginMeters = Math.max(0.0, fieldMarginMeters);
+      movingShotConfig =
+          movingShotConfig == null ? MovingShotSolver.Config.defaults() : movingShotConfig;
       lateralOffsetsMeters =
           lateralOffsetsMeters == null || lateralOffsetsMeters.length == 0
               ? new double[] {0.0}

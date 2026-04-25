@@ -30,6 +30,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Simulation.NetworkTablesValue;
 import org.curtinfrc.frc2026.util.Repulsor.Strategy.CycleStrategyEvaluator.Intent;
 import org.curtinfrc.frc2026.util.Repulsor.Strategy.StrategyDirective;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
+import org.littletonrobotics.junction.Logger;
 
 public final class ShuttleRecoveryBehaviour extends Behaviour {
   private static final double SHOOT_POS_TOL_METERS = 0.34;
@@ -41,6 +42,7 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
   private final int prio;
   private final Supplier<Boolean> hasPiece;
   private final Supplier<Double> ourSpeedCap;
+  private final Supplier<Boolean> mechanismReady;
 
   private final NetworkTablesValue<Double> shotAngle =
       NetworkTablesValue.ofDouble(
@@ -58,9 +60,18 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
 
   public ShuttleRecoveryBehaviour(
       int priority, Supplier<Boolean> hasPiece, Supplier<Double> ourSpeedCap) {
+    this(priority, hasPiece, ourSpeedCap, () -> true);
+  }
+
+  public ShuttleRecoveryBehaviour(
+      int priority,
+      Supplier<Boolean> hasPiece,
+      Supplier<Double> ourSpeedCap,
+      Supplier<Boolean> mechanismReady) {
     this.prio = priority;
     this.hasPiece = hasPiece;
     this.ourSpeedCap = ourSpeedCap;
+    this.mechanismReady = mechanismReady == null ? () -> true : mechanismReady;
   }
 
   @Override
@@ -173,10 +184,14 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
 
               boolean readyToShoot =
                   piece
-                      && ProjectileCycleRuntime.isReadyToShoot(
-                          robotPose, goalPose, SHOOT_POS_TOL_METERS, SHOOT_YAW_TOL_DEG)
-                      && aim.shotSolution().isPresent();
-              boolean allowPassthrough = readyToShoot && currentPieceCount > 0L;
+                      && ProjectileCycleRuntime.canRelease(
+                          aim, robotPose, goalPose, SHOOT_POS_TOL_METERS, SHOOT_YAW_TOL_DEG);
+              boolean mechanismAtSetpoint = Boolean.TRUE.equals(mechanismReady.get());
+              boolean allowPassthrough =
+                  readyToShoot && currentPieceCount > 0L && mechanismAtSetpoint;
+              Logger.recordOutput("Repulsor/ShuttleRecovery/ReadyToRelease", readyToShoot);
+              Logger.recordOutput("Repulsor/ShuttleRecovery/MechanismReady", mechanismAtSetpoint);
+              Logger.recordOutput("Repulsor/ShuttleRecovery/PassthroughAllowed", allowPassthrough);
               shooterPassthrough.set(allowPassthrough);
 
               if (!piece && currentPieceCount >= MAGAZINE_CAPACITY) {

@@ -138,8 +138,10 @@ public final class FieldProfileValidator {
       requireOptionalNonNegative(shot.target.blueYMeters, prefix + ".target.blueYMeters", errors);
     }
     requirePositive(shot.targetHeightMeters, prefix + ".targetHeightMeters", errors);
+    validateShotConstraints(prefix + ".constraints", shot.constraints, errors);
     requireNonNegative(shot.behindTargetMeters, prefix + ".behindTargetMeters", errors);
     requireNonNegative(shot.fieldMarginMeters, prefix + ".fieldMarginMeters", errors);
+    validateMovingShot(prefix + ".movingShot", shot.movingShot, errors);
     if (shot.lateralOffsetsMeters == null || shot.lateralOffsetsMeters.length == 0) {
       errors.add(prefix + ".lateralOffsetsMeters must have at least one value");
     }
@@ -155,6 +157,81 @@ public final class FieldProfileValidator {
           shot.fallbackGamePiece.dragCoefficient,
           prefix + ".fallbackGamePiece.dragCoefficient",
           errors);
+    }
+  }
+
+  private static void validateShotConstraints(
+      String prefix, FieldProfileConfig.ShotConstraintsConfig constraints, List<String> errors) {
+    if (constraints == null) {
+      return;
+    }
+    requireOptionalNonNegative(
+        constraints.minLaunchSpeedMetersPerSecond,
+        prefix + ".minLaunchSpeedMetersPerSecond",
+        errors);
+    requireOptionalNonNegative(
+        constraints.maxLaunchSpeedMetersPerSecond,
+        prefix + ".maxLaunchSpeedMetersPerSecond",
+        errors);
+    requireOptionalNonNegative(
+        constraints.minLaunchAngleDegrees, prefix + ".minLaunchAngleDegrees", errors);
+    requireOptionalNonNegative(
+        constraints.maxLaunchAngleDegrees, prefix + ".maxLaunchAngleDegrees", errors);
+    if (constraints.minLaunchSpeedMetersPerSecond != null
+        && constraints.maxLaunchSpeedMetersPerSecond != null
+        && constraints.maxLaunchSpeedMetersPerSecond < constraints.minLaunchSpeedMetersPerSecond) {
+      errors.add(
+          prefix + ".maxLaunchSpeedMetersPerSecond must be >= minLaunchSpeedMetersPerSecond");
+    }
+    if (constraints.minLaunchAngleDegrees != null
+        && constraints.maxLaunchAngleDegrees != null
+        && constraints.maxLaunchAngleDegrees < constraints.minLaunchAngleDegrees) {
+      errors.add(prefix + ".maxLaunchAngleDegrees must be >= minLaunchAngleDegrees");
+    }
+    if (constraints.shotStyle != null && !constraints.shotStyle.isBlank()) {
+      try {
+        org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints.ShotStyle.valueOf(
+            constraints.shotStyle.trim().toUpperCase());
+      } catch (IllegalArgumentException ex) {
+        errors.add(prefix + ".shotStyle must be one of ANY, DIRECT, ARC");
+      }
+    }
+  }
+
+  private static void validateMovingShot(
+      String prefix, FieldProfileConfig.MovingShotConfig movingShot, List<String> errors) {
+    if (movingShot == null || Boolean.FALSE.equals(movingShot.enabled)) {
+      return;
+    }
+    requireOptionalNonNegative(
+        movingShot.releaseLatencySeconds, prefix + ".releaseLatencySeconds", errors);
+    requireOptionalNonNegative(
+        movingShot.minFlightPredictionSeconds, prefix + ".minFlightPredictionSeconds", errors);
+    requireOptionalNonNegative(
+        movingShot.maxFlightPredictionSeconds, prefix + ".maxFlightPredictionSeconds", errors);
+    requireOptionalNonNegative(
+        movingShot.defaultFlightPredictionSeconds,
+        prefix + ".defaultFlightPredictionSeconds",
+        errors);
+    requireOptionalNonNegative(
+        movingShot.maxCompensatedSpeedMetersPerSecond,
+        prefix + ".maxCompensatedSpeedMetersPerSecond",
+        errors);
+    requireOptionalNonNegative(
+        movingShot.maxReleaseSpeedMetersPerSecond,
+        prefix + ".maxReleaseSpeedMetersPerSecond",
+        errors);
+    requireOptionalNonNegative(
+        movingShot.yawToleranceDegrees, prefix + ".yawToleranceDegrees", errors);
+    requireOptionalNonNegative(
+        movingShot.maxVerticalErrorMeters, prefix + ".maxVerticalErrorMeters", errors);
+    if (movingShot.iterations != null && movingShot.iterations <= 0) {
+      errors.add(prefix + ".iterations must be > 0 when provided");
+    }
+    if (movingShot.minFlightPredictionSeconds != null
+        && movingShot.maxFlightPredictionSeconds != null
+        && movingShot.maxFlightPredictionSeconds < movingShot.minFlightPredictionSeconds) {
+      errors.add(prefix + ".maxFlightPredictionSeconds must be >= minFlightPredictionSeconds");
     }
   }
 
