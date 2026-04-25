@@ -24,8 +24,10 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.List;
+import org.curtinfrc.frc2026.util.Repulsor.Constants;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.GatedAttractorObstacle;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
 import org.littletonrobotics.junction.Logger;
 
 public final class FieldPlannerGoalManager {
@@ -88,6 +90,15 @@ public final class FieldPlannerGoalManager {
   private final List<GatedAttractorObstacle> gatedAttractors;
   private final double fieldLengthMeters;
   private final double fieldWidthMeters;
+
+  public FieldPlannerGoalManager(List<GatedAttractorObstacle> gatedAttractors) {
+    this(gatedAttractors, Constants.FIELD_GEOMETRY);
+  }
+
+  public FieldPlannerGoalManager(
+      List<GatedAttractorObstacle> gatedAttractors, FieldGeometry fieldGeometry) {
+    this(gatedAttractors, fieldGeometry.lengthMeters(), fieldGeometry.widthMeters());
+  }
 
   public FieldPlannerGoalManager(
       List<GatedAttractorObstacle> gatedAttractors,
@@ -523,7 +534,7 @@ public final class FieldPlannerGoalManager {
     return best;
   }
 
-  private static int sideSignXBand(double x, double band) {
+  private int sideSignXBand(double x, double band) {
     double mid = fieldLengthMeters * 0.5;
     double b = Math.max(0.0, band);
     if (x < mid - b) return -1;
@@ -628,7 +639,7 @@ public final class FieldPlannerGoalManager {
     return dx >= 0.0;
   }
 
-  private static Translation2d clampToField(Translation2d p) {
+  private Translation2d clampToField(Translation2d p) {
     if (p == null) return null;
     return new Translation2d(
         MathUtil.clamp(
@@ -730,7 +741,7 @@ public final class FieldPlannerGoalManager {
     return proj >= Math.max(0.0, projMeters);
   }
 
-  private static Translation2d extendPullPointThroughGate(
+  private Translation2d extendPullPointThroughGate(
       Translation2d pullPoint, Translation2d gateCenter, Translation2d target) {
     if (pullPoint == null || gateCenter == null || target == null) return pullPoint;
 

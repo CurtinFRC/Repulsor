@@ -37,6 +37,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Offload.FieldTrackerOffloadEntrypoint
 import org.curtinfrc.frc2026.util.Repulsor.Offload.ShuttleRecoveryDynamicObjectDTO;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.Candidate;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateRuntime;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerCollectPlanner;
