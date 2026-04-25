@@ -85,7 +85,8 @@ public class FieldPlanner {
 
     boolean toGoalNoDyn(Translation2d a, Translation2d b, double rx, double ry) {
       if (toGoalNoDyn != null) return toGoalNoDyn.booleanValue();
-      toGoalNoDyn = isClearPath("Repulsor/ForceThrough/NoDyn", a, b, Collections.emptyList(), rx, ry, false);
+      toGoalNoDyn =
+          isClearPath("Repulsor/ForceThrough/NoDyn", a, b, Collections.emptyList(), rx, ry, false);
       return toGoalNoDyn.booleanValue();
     }
   }
@@ -623,22 +624,10 @@ public class FieldPlanner {
       boolean publishSamples) {
     if (!OFFLOAD_PATHING_ENABLED || isOffloadWorkerThread()) {
       return ExtraPathing.isClearPath(
-          topicRoot,
-          start,
-          goal,
-          obstacles,
-          robotLengthMeters,
-          robotWidthMeters,
-          publishSamples);
+          topicRoot, start, goal, obstacles, robotLengthMeters, robotWidthMeters, publishSamples);
     }
     return FieldPlannerPathingOffloadEntrypoints_Offloaded.isClearPath_offload(
-        topicRoot,
-        start,
-        goal,
-        obstacles,
-        robotLengthMeters,
-        robotWidthMeters,
-        publishSamples);
+        topicRoot, start, goal, obstacles, robotLengthMeters, robotWidthMeters, publishSamples);
   }
 
   private static boolean robotIntersects(

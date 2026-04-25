@@ -132,17 +132,40 @@ If you need to rebuild the behaviour set at runtime, call `repulsor.clearBehavio
 
 ## Field And Objective Model
 
-- `FieldDefinition` ties together field geometry, AprilTag layout, obstacle provider, heatmap provider, objective layout provider, tracker resource configuration, default collect/score setpoints, and optional action profiles.
+- `FieldModel` contains pure field data: geometry plus AprilTag layout.
+- `FieldDefinition` is the game profile on top of that field model: obstacle provider, heatmap provider, objective layout provider, tracker resource configuration, default collect/score setpoints, and optional action profiles.
 - `Rebuilt2026` is the default field definition via `Constants.FIELD`; override it with the JVM property `-Drepulsor.field=reefscape2025` or pass a `FieldDefinition` into the `Repulsor` constructor.
 - Field-specific tuning should live in a `FieldDefinition`; runtime classes should consume `ctx.repulsor.getFieldDefinition()` instead of importing a specific game class.
 - `FieldGeometry` centralizes dimensions, center, bounds checks, diagonal, and margin clamping.
-- `FieldActionProfile` is where field/game-specific action capabilities live, such as the Rebuilt 2026 shuttle shot target, physics, constraints, route height, and offsets.
+- `FieldActionProfile` is where field/game-specific action capabilities live. The core model exposes generic projectile actions by role, such as `TRANSFER_TO_SCORE`; Rebuilt 2026's mid-field fuel return is one configured action, not a universal Repulsor concept.
+- `RepulsorSetpoint` carries both a generic game `levelId` such as `hub`, `reef.l2`, or `coral.station` and the legacy mechanism setpoint needed by current robot mechanisms.
 - `FieldMapBuilder` constructs alliance-tagged `GameElement` objectives with category tags:
   - `kScore`
   - `kCollect`
   - `kEndgame`
 
 This allows the planner and predictive layers to ask for mode-specific candidates while reusing one field map.
+
+## YAML Game Profile Tuning
+
+Game-tunable values can be overridden from YAML in `src/main/deploy/repulsor/profiles`.
+The default profile lookup is:
+
+1. `-Drepulsor.profile.path=C:\path\to\profile.yaml`
+2. `-Drepulsor.profile.dir=C:\path\to\profiles`
+3. `src/main/deploy/repulsor/profiles/<profile>.yaml` in the current working directory
+4. `<deploy>/repulsor/profiles/<profile>.yaml` on the robot
+
+Current YAML-backed values include:
+
+- `geometry.lengthMeters` and `geometry.widthMeters`
+- Collect resource types and their `radiusMeters`, `unitValue`, and `sigmaMeters`
+- Projectile action tuning: role, game-piece id, target height, route level, mechanism setpoint, behind-target distance, lateral offsets, field margin, and fallback physics
+- Rebuilt corridor obstacle tuning: rectangle dimensions, pull points, bypass strengths, and rail parameters
+
+Use YAML for values that change per game or during tuning.
+Keep Java for behavior logic, setpoint functions, and geometric builders that need code.
+Each profile is validated as it loads; invalid values fail early instead of silently changing planner behavior.
 
 ## Configuration And Control
 

@@ -1,6 +1,5 @@
 package org.curtinfrc.frc2026.util.Repulsor.Fields;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import edu.wpi.first.math.geometry.Translation2d;
@@ -53,7 +52,8 @@ class Rebuilt2026ObstacleLayoutTest {
 
     // assertTrue(left > 0, "Expected left-side corridor waypoint gates");
     // assertTrue(right > 0, "Expected right-side corridor waypoint gates");
-    // assertEquals(left, right, "Waypoint gates should be balanced left/right for corridor staging");
+    // assertEquals(left, right, "Waypoint gates should be balanced left/right for corridor
+    // staging");
   }
 
   private static double pointDistanceToPolygonEdges(Translation2d p, Translation2d[] poly) {

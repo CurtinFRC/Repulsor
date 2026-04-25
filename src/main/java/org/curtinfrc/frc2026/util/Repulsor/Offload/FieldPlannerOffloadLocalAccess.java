@@ -31,8 +31,7 @@ public final class FieldPlannerOffloadLocalAccess {
     synchronized (LOCK) {
       FieldPlanner localPlanner = planner();
       localPlanner.syncGoalManagerState(
-          requestedGoalPose == null ? Pose2d.kZero : requestedGoalPose,
-          activeGoalPose);
+          requestedGoalPose == null ? Pose2d.kZero : requestedGoalPose, activeGoalPose);
 
       CategorySpec cat = parseCategory(categoryName);
       Alliance preferredAlliance = parseAlliance(preferredAllianceName);

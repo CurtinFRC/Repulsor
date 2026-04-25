@@ -135,9 +135,7 @@ public class FieldTrackerCore {
 
   private boolean isCollectResourceType(String type) {
     if (type == null || type.isEmpty()) return false;
-    return predictor != null
-        ? predictor.isCollectResourceType(type)
-        : false;
+    return predictor != null ? predictor.isCollectResourceType(type) : false;
   }
 
   public void configureCollectResourceProfile(String type, ResourceSpec resourceSpec) {

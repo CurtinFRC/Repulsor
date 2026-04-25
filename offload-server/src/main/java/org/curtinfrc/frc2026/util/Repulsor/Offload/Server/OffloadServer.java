@@ -107,13 +107,14 @@ public final class OffloadServer implements AutoCloseable {
     }
   }
 
-  private void dispatchRequest(OffloadProtocol.RequestFrame request, InetSocketAddress remoteAddress) {
+  private void dispatchRequest(
+      OffloadProtocol.RequestFrame request, InetSocketAddress remoteAddress) {
     String taskId = request.taskId();
 
     if (OffloadProtocol.TASK_PING.equals(taskId)) {
-      sendResponse(
-          remoteAddress, request.correlationId(), OffloadProtocol.STATUS_OK, new byte[0]);
-      System.out.println("Executed task " + taskId + " with request: " + request + " and response: OK");
+      sendResponse(remoteAddress, request.correlationId(), OffloadProtocol.STATUS_OK, new byte[0]);
+      System.out.println(
+          "Executed task " + taskId + " with request: " + request + " and response: OK");
       return;
     }
 
@@ -130,7 +131,8 @@ public final class OffloadServer implements AutoCloseable {
           request.correlationId(),
           OffloadProtocol.STATUS_OK,
           CborSerde.write(hello));
-      System.out.println("Executed HELLO task with request: " + request + " and response: " + hello);
+      System.out.println(
+          "Executed HELLO task with request: " + request + " and response: " + hello);
       return;
     }
 
@@ -151,7 +153,11 @@ public final class OffloadServer implements AutoCloseable {
               timing.executeStartNs = executeStartNs;
               if (timingLogsEnabled) {
                 logTaskStart(
-                    taskId, request.correlationId(), timing.receivedNs, executeStartNs, function.timeoutMs());
+                    taskId,
+                    request.correlationId(),
+                    timing.receivedNs,
+                    executeStartNs,
+                    function.timeoutMs());
               }
               try {
                 return executeFunction(function, request.payload());
@@ -185,20 +191,10 @@ public final class OffloadServer implements AutoCloseable {
                             new OffloadError("TIMING_WRAP_ERROR", summarizeRootCause(serializeEx)));
                   }
                 }
-                sendResponse(
-                    remoteAddress,
-                    request.correlationId(),
-                    status,
-                    responsePayload);
+                sendResponse(remoteAddress, request.correlationId(), status, responsePayload);
                 if (timingLogsEnabled) {
                   long writeEndNs = System.nanoTime();
-                  logTaskStop(
-                      taskId,
-                      request.correlationId(),
-                      timing,
-                      writeEndNs,
-                      "OK",
-                      "");
+                  logTaskStop(taskId, request.correlationId(), timing, writeEndNs, "OK", "");
                 }
               } else {
                 Throwable resolved = unwrapCompletionError(error);
@@ -236,7 +232,9 @@ public final class OffloadServer implements AutoCloseable {
                 new OffloadError(
                     "FRAME_TOO_LARGE",
                     "Response frame exceeds UDP packet size limit: " + frame.length + " bytes"));
-        frame = OffloadProtocol.serializeResponse(correlationId, OffloadProtocol.STATUS_ERR, errPayload);
+        frame =
+            OffloadProtocol.serializeResponse(
+                correlationId, OffloadProtocol.STATUS_ERR, errPayload);
       }
       if (frame.length > MAX_UDP_PACKET_BYTES) {
         return;
@@ -259,7 +257,13 @@ public final class OffloadServer implements AutoCloseable {
       thread.setContextClassLoader(pluginClassLoader);
       RequestT request = CborSerde.read(payloadBytes, function.requestType());
       ResponseT response = function.execute(request);
-      System.out.println("Executed task " + function.taskId() + " with request: " + request + " and response: " + response);
+      System.out.println(
+          "Executed task "
+              + function.taskId()
+              + " with request: "
+              + request
+              + " and response: "
+              + response);
       return CborSerde.write(response);
     } catch (Exception ex) {
       throw new IllegalStateException(

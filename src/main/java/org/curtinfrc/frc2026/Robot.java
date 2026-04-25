@@ -22,7 +22,6 @@ import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
@@ -430,7 +429,7 @@ public class Robot extends LoggedRobot {
     RepulsorDriverStationBootstrap.useDefaultNt();
 
     wireRepulsor();
-    
+
     // drive.setPose(new Pose2d(0, 0, new Rotation2d()));
 
     DriverStation.silenceJoystickConnectionWarning(true);
@@ -471,14 +470,16 @@ public class Robot extends LoggedRobot {
     //     .and(GameState.activeShift.negate())
     //     .whileTrue(
     //         hoodedShooter.shootAtTarget(
-    //             () -> ChoreoAllianceFlipUtil.flip(FieldConstants.ShuttlePoint.ShuttlePointRight)));
+    //             () ->
+    // ChoreoAllianceFlipUtil.flip(FieldConstants.ShuttlePoint.ShuttlePointRight)));
 
     // isInNeutralZone
     //     .and(isLeft)
     //     .and(GameState.activeShift.negate())
     //     .whileTrue(
     //         hoodedShooter.shootAtTarget(
-    //             () -> ChoreoAllianceFlipUtil.flip(FieldConstants.ShuttlePoint.ShuttlePointLeft)));
+    //             () ->
+    // ChoreoAllianceFlipUtil.flip(FieldConstants.ShuttlePoint.ShuttlePointLeft)));
 
     // isLeft
     //     .negate()
@@ -491,7 +492,8 @@ public class Robot extends LoggedRobot {
     //                 () -> -controller.getRightX(),
     //                 aligning,
     //                 () ->
-    //                     ChoreoAllianceFlipUtil.flip(FieldConstants.ShuttlePoint.ShuttlePointRight))
+    //
+    // ChoreoAllianceFlipUtil.flip(FieldConstants.ShuttlePoint.ShuttlePointRight))
     //             .withName("RightShuttling"));
 
     // isLeft
@@ -503,7 +505,8 @@ public class Robot extends LoggedRobot {
     //                 () -> -controller.getLeftX(),
     //                 () -> -controller.getRightX(),
     //                 aligning,
-    //                 () -> ChoreoAllianceFlipUtil.flip(FieldConstants.ShuttlePoint.ShuttlePointLeft))
+    //                 () ->
+    // ChoreoAllianceFlipUtil.flip(FieldConstants.ShuttlePoint.ShuttlePointLeft))
     //             .withName("LeftShuttling"));
 
     // controller.rightBumper().onTrue(Commands.runOnce(() -> intaker = !intaker));
@@ -532,7 +535,7 @@ public class Robot extends LoggedRobot {
     //             .andThen(
     //                 drive.TrenchAlign(() -> -controller.getLeftY(), () -> -controller.getLeftX())
     //                     .finallyDo(() -> edge = true)));
-      controller
+    controller
         .a()
         .whileTrue(
             drive.alignTo(
@@ -542,11 +545,10 @@ public class Robot extends LoggedRobot {
         .b()
         .whileTrue(
             drive.alignTo(
-                    new Pose2d(
-                        15.391 - (Constants.ROBOT_X / 2),
-                        3.84 + (Constants.ROBOT_Y / 2),
-                        new Rotation2d())));
-
+                new Pose2d(
+                    15.391 - (Constants.ROBOT_X / 2),
+                    3.84 + (Constants.ROBOT_Y / 2),
+                    new Rotation2d())));
   }
 
   /** This function is called periodically during all modes. */
@@ -608,8 +610,7 @@ public class Robot extends LoggedRobot {
 
   /** This function is called once when teleop is enabled. */
   @Override
-  public void teleopInit() {
-  }
+  public void teleopInit() {}
 
   /** This function is called periodically during operator control. */
   @Override
@@ -715,7 +716,7 @@ public class Robot extends LoggedRobot {
     final ArrayList<String> runningDefaultCommands = new ArrayList<>();
     for (final Command command : runningNonInterrupters) {
       boolean isDefaultCommand = false;
-      for (Subsystem subsystem : command.getRequirements()) { 
+      for (Subsystem subsystem : command.getRequirements()) {
         if (subsystem.getDefaultCommand() == command) {
           runningDefaultCommands.add(getCommandName(command));
           isDefaultCommand = true;

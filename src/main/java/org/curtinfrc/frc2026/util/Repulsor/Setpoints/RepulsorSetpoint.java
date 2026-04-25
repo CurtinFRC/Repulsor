@@ -24,12 +24,18 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 
 public final class RepulsorSetpoint {
   private final GameSetpoint point;
-  private final HeightSetpoint height;
+  private final String levelId;
+  private final HeightSetpoint mechanismSetpoint;
 
   public RepulsorSetpoint(GameSetpoint point, HeightSetpoint height) {
+    this(point, height == null ? "none" : height.name().toLowerCase(), height);
+  }
+
+  public RepulsorSetpoint(GameSetpoint point, String levelId, HeightSetpoint mechanismSetpoint) {
     if (point == null) throw new IllegalArgumentException("point cannot be null");
     this.point = point;
-    this.height = height == null ? HeightSetpoint.NONE : height;
+    this.levelId = levelId == null || levelId.isBlank() ? "none" : levelId.trim();
+    this.mechanismSetpoint = mechanismSetpoint == null ? HeightSetpoint.NONE : mechanismSetpoint;
   }
 
   public GameSetpoint point() {
@@ -37,7 +43,15 @@ public final class RepulsorSetpoint {
   }
 
   public HeightSetpoint height() {
-    return height;
+    return mechanismSetpoint;
+  }
+
+  public String levelId() {
+    return levelId;
+  }
+
+  public HeightSetpoint mechanismSetpoint() {
+    return mechanismSetpoint;
   }
 
   public Pose2d getBlue(SetpointContext ctx) {

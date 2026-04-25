@@ -1,0 +1,56 @@
+id: rebuilt2026
+gameName: REBUILT
+gameYear: 2026
+
+geometry:
+  lengthMeters: 16.540988
+  widthMeters: 8.211236
+
+resources:
+  fuel:
+    radiusMeters: 0.075
+    unitValue: 1.0
+    sigmaMeters: 0.95
+
+projectileShots:
+  fuelReturnToHub:
+    enabled: true
+    role: TRANSFER_TO_SCORE
+    gamePieceId: fuel
+    targetHeightMeters: 1.43
+    routeLevel: hub
+    routeMechanismSetpoint: NET
+    behindTargetMeters: 2.95
+    lateralOffsetsMeters: [0.0, 0.45, -0.45, 0.9, -0.9]
+    fieldMarginMeters: 0.28
+    fallbackGamePiece:
+      massKg: 0.27
+      crossSectionAreaM2: 0.014
+      dragCoefficient: 0.95
+
+rebuiltCorridor:
+  rectWidthMeters: 0.5929315
+  rectHeightMeters: 5.7118
+  rectOffsetFromCenterMeters: 3.648981
+  edgeOffsetMeters: 0.48
+  rectStrength: 4.2
+  rectRangeXMeters: 1.55
+  rectRangeYMeters: 2.0
+  biasStrength: 0.3
+  biasRangeMeters: 1.2
+  bypassStrengthScale: 1.2
+  bypassRangeMeters: 1.4
+  sidePullDxMeters: 1.0
+  sideBiasStrengthScale: 0.35
+  sideBiasRangeScale: 0.7
+  sideBypassStrengthScale: 0.75
+  sideBypassRangeScale: 0.75
+  railXWindowMeters: 1.4
+  railMinHalfWidthMeters: 0.24
+  railHalfWidthGapScale: 0.42
+  railStrength: 1.8
+  railMaxForce: 2.6
+  centerRailMinWindowMeters: 1.2
+  centerRailWindowScale: 0.45
+  outerRailXOffsetScale: 0.9
+  outerRailWindowMeters: 1.0

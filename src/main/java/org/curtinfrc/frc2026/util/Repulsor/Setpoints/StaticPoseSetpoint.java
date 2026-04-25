@@ -15,8 +15,8 @@ public class StaticPoseSetpoint extends GameSetpoint {
     return bluePose;
   }
 
-    @Override
-    public Pose2d redPose(SetpointContext ctx) {
-      return bluePose;
-    }
+  @Override
+  public Pose2d redPose(SetpointContext ctx) {
+    return bluePose;
+  }
 }

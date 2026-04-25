@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
@@ -29,8 +28,8 @@ import org.curtinfrc.frc2026.util.Repulsor.Offload.Client.OffloadHost;
 import org.curtinfrc.frc2026.util.Repulsor.Offload.Client.OffloadServerTiming;
 import org.curtinfrc.frc2026.util.Repulsor.Offload.Client.UdpOffloadClient;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateLocalAccess;
-import org.curtinfrc.frc2026.util.Repulsor.Shooting.DragShotPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints;
+import org.curtinfrc.frc2026.util.Repulsor.Shooting.DragShotPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.GamePiecePhysics;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.ShotSolution;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerLocalAccess;
@@ -70,8 +69,8 @@ class RealOffloadServerDragShotTest {
             + ":"
             + host.port()
             + " ("
-              + udpProbe
-              + "). Check routing/firewall/server bind address.");
+            + udpProbe
+            + "). Check routing/firewall/server bind address.");
 
     LatencyRecorder latencyRecorder =
         new LatencyRecorder(
@@ -131,8 +130,8 @@ class RealOffloadServerDragShotTest {
     }
   }
 
-  private static void runSampleDoubleValueRpc(LatencyRecorder latencyRecorder, UdpOffloadClient client)
-      throws Exception {
+  private static void runSampleDoubleValueRpc(
+      LatencyRecorder latencyRecorder, UdpOffloadClient client) throws Exception {
     SampleMathOffloadEntrypoints_doubleValue_OffloadRequest request =
         new SampleMathOffloadEntrypoints_doubleValue_OffloadRequest();
     request.setArg0(OffloadValueCodec.encode("int", 7));
@@ -245,7 +244,8 @@ class RealOffloadServerDragShotTest {
                     .get(4, TimeUnit.SECONDS));
 
     boolean remote = (boolean) OffloadValueCodec.decode("boolean", response.getResult());
-    boolean local = ExtraPathing.robotIntersects(center, robotLengthMeters, robotWidthMeters, obstacles);
+    boolean local =
+        ExtraPathing.robotIntersects(center, robotLengthMeters, robotWidthMeters, obstacles);
     assertEquals(local, remote, "field planner robotIntersects RPC vs local");
   }
 
@@ -292,8 +292,10 @@ class RealOffloadServerDragShotTest {
             OffloadValueCodec.decode(
                 "org.curtinfrc.frc2026.util.Repulsor.Offload.FieldPlannerCalculateResultDTO",
                 response.getResult());
-    assertTrue(Double.isFinite(remote.getGoalX()), "field planner calculate goal x should be finite");
-    assertTrue(Double.isFinite(remote.getGoalY()), "field planner calculate goal y should be finite");
+    assertTrue(
+        Double.isFinite(remote.getGoalX()), "field planner calculate goal x should be finite");
+    assertTrue(
+        Double.isFinite(remote.getGoalY()), "field planner calculate goal y should be finite");
     assertTrue(
         Double.isFinite(remote.getVxMetersPerSecond()),
         "field planner calculate vx should be finite");
@@ -321,13 +323,15 @@ class RealOffloadServerDragShotTest {
         OffloadValueCodec.encode(
             "org.curtinfrc.frc2026.util.Repulsor.Shooting.GamePiecePhysics", gamePiece));
     request.setArg1(
-        OffloadValueCodec.encode("edu.wpi.first.math.geometry.Translation2d", shooterFieldPosition));
+        OffloadValueCodec.encode(
+            "edu.wpi.first.math.geometry.Translation2d", shooterFieldPosition));
     request.setArg2(
         OffloadValueCodec.encode("edu.wpi.first.math.geometry.Translation2d", targetFieldPosition));
     request.setArg3(OffloadValueCodec.encode("double", targetHeightMeters));
     request.setArg4(OffloadValueCodec.encode("double", shooterReleaseHeightMeters));
     request.setArg5(
-        OffloadValueCodec.encode("org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints", constraints));
+        OffloadValueCodec.encode(
+            "org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints", constraints));
 
     DragShotPlannerOffloadEntrypoints_calculateStaticShotAngleAndSpeed_OffloadResponse response =
         warmupThenMeasure(
@@ -398,7 +402,8 @@ class RealOffloadServerDragShotTest {
     request.setArg6(OffloadValueCodec.encode("double", robotHalfWidthMeters));
     request.setArg7(OffloadValueCodec.encode(OBSTACLE_LIST_TYPE, dynamicObstacles));
     request.setArg8(
-        OffloadValueCodec.encode("org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints", constraints));
+        OffloadValueCodec.encode(
+            "org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints", constraints));
 
     DragShotPlannerOffloadEntrypoints_findBestShotAuto_OffloadResponse response =
         warmupThenMeasure(
@@ -434,8 +439,7 @@ class RealOffloadServerDragShotTest {
   }
 
   private static void runPredictiveShuttleRecoveryRpc(
-      LatencyRecorder latencyRecorder, UdpOffloadClient client)
-      throws Exception {
+      LatencyRecorder latencyRecorder, UdpOffloadClient client) throws Exception {
     Pose2d robotPose = new Pose2d(2.2, 3.4, Rotation2d.fromDegrees(25.0));
     double ourSpeedCap = 2.8;
     int goalUnits = 1;
@@ -476,8 +480,7 @@ class RealOffloadServerDragShotTest {
   }
 
   private static void runFieldTrackerRecoveryGoalRpc(
-      LatencyRecorder latencyRecorder, UdpOffloadClient client)
-      throws Exception {
+      LatencyRecorder latencyRecorder, UdpOffloadClient client) throws Exception {
     Pose2d robotPose = new Pose2d(2.2, 3.4, Rotation2d.fromDegrees(25.0));
     double ourSpeedCap = 2.8;
     int goalUnits = 1;
@@ -508,9 +511,7 @@ class RealOffloadServerDragShotTest {
 
     Pose2d remote =
         (Pose2d)
-            OffloadValueCodec.decode(
-                "edu.wpi.first.math.geometry.Pose2d",
-                response.getResult());
+            OffloadValueCodec.decode("edu.wpi.first.math.geometry.Pose2d", response.getResult());
     Pose2d local =
         FieldTrackerLocalAccess.nextAllianceShuttleRecoveryGoalBlueLocal(
             robotPose, ourSpeedCap, goalUnits, flipRedToBlue, dynamicObjects);
@@ -624,7 +625,8 @@ class RealOffloadServerDragShotTest {
       this.metricsFile = metricsFile;
     }
 
-    <T> T measure(String taskId, ThrowingSupplier<T> call, UdpOffloadClient client) throws Exception {
+    <T> T measure(String taskId, ThrowingSupplier<T> call, UdpOffloadClient client)
+        throws Exception {
       long startNs = System.nanoTime();
       T value = call.get();
       long elapsedNs = System.nanoTime() - startNs;
@@ -674,13 +676,7 @@ class RealOffloadServerDragShotTest {
             if (server == null || exec == null || overhead == null) {
               System.out.printf(
                   "  task=%s samples=%d minMs=%.3f p50Ms=%.3f avgMs=%.3f p95Ms=%.3f maxMs=%.3f%n",
-                  taskId,
-                  samples.size(),
-                  rtt.minMs,
-                  rtt.p50Ms,
-                  rtt.avgMs,
-                  rtt.p95Ms,
-                  rtt.maxMs);
+                  taskId, samples.size(), rtt.minMs, rtt.p50Ms, rtt.avgMs, rtt.p95Ms, rtt.maxMs);
               return;
             }
 
@@ -840,8 +836,7 @@ class RealOffloadServerDragShotTest {
   }
 
   private static OffloadHost parseHost() {
-    String configured =
-        System.getProperty(HOST_PROPERTY, DEFAULT_HOST + ":" + DEFAULT_PORT).trim();
+    String configured = System.getProperty(HOST_PROPERTY, DEFAULT_HOST + ":" + DEFAULT_PORT).trim();
     if (configured.isEmpty()) {
       throw new IllegalArgumentException(HOST_PROPERTY + " must be non-empty.");
     }
@@ -898,7 +893,11 @@ class RealOffloadServerDragShotTest {
 
       byte[] frame = new byte[responsePacket.getLength()];
       System.arraycopy(
-          responsePacket.getData(), responsePacket.getOffset(), frame, 0, responsePacket.getLength());
+          responsePacket.getData(),
+          responsePacket.getOffset(),
+          frame,
+          0,
+          responsePacket.getLength());
       OffloadProtocol.ResponseFrame response = OffloadProtocol.parseResponse(frame);
       if (response.correlationId() != correlationId) {
         return "unexpected-correlation:" + response.correlationId();
@@ -975,7 +974,10 @@ class RealOffloadServerDragShotTest {
     private final double airDensityKgPerM3;
 
     TestGamePiecePhysics(
-        double massKg, double crossSectionAreaM2, double dragCoefficient, double airDensityKgPerM3) {
+        double massKg,
+        double crossSectionAreaM2,
+        double dragCoefficient,
+        double airDensityKgPerM3) {
       this.massKg = massKg;
       this.crossSectionAreaM2 = crossSectionAreaM2;
       this.dragCoefficient = dragCoefficient;

@@ -22,13 +22,15 @@ package org.curtinfrc.frc2026.util.Repulsor;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldDefinition;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
-import org.curtinfrc.frc2026.util.Repulsor.Fields.Reefscape2025;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldModel;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.Rebuilt2026;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.Reefscape2025;
 
 public final class Constants {
   public static final FieldDefinition FIELD = loadDefaultField();
-  public static final AprilTagFieldLayout aprilTagLayout = FIELD.aprilTagLayout();
-  public static final FieldGeometry FIELD_GEOMETRY = FIELD.geometry();
+  public static final FieldModel FIELD_MODEL = FIELD.fieldModel();
+  public static final AprilTagFieldLayout aprilTagLayout = FIELD_MODEL.aprilTagLayout();
+  public static final FieldGeometry FIELD_GEOMETRY = FIELD_MODEL.geometry();
   public static final double FIELD_LENGTH = FIELD_GEOMETRY.lengthMeters();
   public static final double FIELD_WIDTH = FIELD_GEOMETRY.widthMeters();
 

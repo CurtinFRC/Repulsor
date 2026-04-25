@@ -1,0 +1,15 @@
+id: reefscape2025
+gameName: REEFSCAPE
+gameYear: 2025
+
+geometry:
+  lengthMeters: 17.548
+  widthMeters: 8.052
+
+resources:
+  coral:
+    radiusMeters: 0.10
+    unitValue: 1.0
+    sigmaMeters: 0.95
+
+projectileShots: {}

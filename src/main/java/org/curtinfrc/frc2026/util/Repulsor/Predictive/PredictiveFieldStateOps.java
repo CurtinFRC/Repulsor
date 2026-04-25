@@ -481,9 +481,7 @@ public final class PredictiveFieldStateOps {
     SpatialDyn dyn = cachedDyn();
     if (dyn == null || dyn.resources.isEmpty()) return null;
 
-    final double robotHalf =
-        0.5
-            * Math.max(OFFLOAD_SAFE_ROBOT_X_M, OFFLOAD_SAFE_ROBOT_Y_M);
+    final double robotHalf = 0.5 * Math.max(OFFLOAD_SAFE_ROBOT_X_M, OFFLOAD_SAFE_ROBOT_Y_M);
     final double robotWallMargin = robotHalf + 0.03;
     final double wallClearMin = robotWallMargin + 0.05;
     final java.util.function.ToDoubleFunction<Translation2d> wallPenalty =

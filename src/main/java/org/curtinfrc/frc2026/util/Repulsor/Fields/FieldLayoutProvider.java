@@ -47,5 +47,9 @@ public interface FieldLayoutProvider {
     return new FieldGeometry(fieldLengthMeters(), fieldWidthMeters());
   }
 
+  default FieldModel fieldModel() {
+    return new FieldModel(geometry(), aprilTagLayout());
+  }
+
   default void configureTracker(FieldTrackerCore ft) {}
 }

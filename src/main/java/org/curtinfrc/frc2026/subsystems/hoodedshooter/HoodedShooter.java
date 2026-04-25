@@ -11,7 +11,6 @@ import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
-import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -148,7 +147,6 @@ public class HoodedShooter extends SubsystemBase {
           shooterInputs.motorTemperatures[motor] > MOTOR_WARNING_TEMP);
     }
   }
-  
 
   public Translation2d getVirtualTargetLocation(Supplier<Translation2d> location) {
     double realDistanceLength = location.get().minus(robotPose.get().getTranslation()).getNorm();

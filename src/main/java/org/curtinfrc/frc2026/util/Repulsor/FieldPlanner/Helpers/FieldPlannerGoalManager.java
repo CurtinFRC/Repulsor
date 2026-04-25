@@ -24,7 +24,6 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.List;
-import org.curtinfrc.frc2026.util.Repulsor.Constants;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.GatedAttractorObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
@@ -69,6 +68,8 @@ public final class FieldPlannerGoalManager {
   private static final double STAGED_CENTER_RETURN_EXIT_MAX_M = 2.40;
   private static final double STAGED_CENTER_RETURN_GATE_MIN_OFFSET_M = 2.0;
   private static final double STAGED_FIELD_EDGE_MARGIN_M = 0.35;
+  private static final FieldGeometry COMPATIBILITY_FIELD_GEOMETRY =
+      new FieldGeometry(16.540988, 8.211236);
 
   private Pose2d goal = Pose2d.kZero;
   private Pose2d requestedGoal = Pose2d.kZero;
@@ -92,7 +93,7 @@ public final class FieldPlannerGoalManager {
   private final double fieldWidthMeters;
 
   public FieldPlannerGoalManager(List<GatedAttractorObstacle> gatedAttractors) {
-    this(gatedAttractors, Constants.FIELD_GEOMETRY);
+    this(gatedAttractors, COMPATIBILITY_FIELD_GEOMETRY);
   }
 
   public FieldPlannerGoalManager(
@@ -170,7 +171,9 @@ public final class FieldPlannerGoalManager {
     Translation2d reqT = requestedGoal.getTranslation();
     GatedAttractorObstacle firstBlock = firstOccludingGateAlongSegment(curPos, reqT);
 
-    Logger.recordOutput("FirstOccludingGate", firstBlock != null ? new Pose2d(firstBlock.center, new Rotation2d()) : null);
+    Logger.recordOutput(
+        "FirstOccludingGate",
+        firstBlock != null ? new Pose2d(firstBlock.center, new Rotation2d()) : null);
 
     boolean stageForOccludingGate =
         firstBlock != null && !shouldDeferCenterReturnStage(curPos, reqT, firstBlock);
@@ -643,13 +646,9 @@ public final class FieldPlannerGoalManager {
     if (p == null) return null;
     return new Translation2d(
         MathUtil.clamp(
-            p.getX(),
-            STAGED_FIELD_EDGE_MARGIN_M,
-            fieldLengthMeters - STAGED_FIELD_EDGE_MARGIN_M),
+            p.getX(), STAGED_FIELD_EDGE_MARGIN_M, fieldLengthMeters - STAGED_FIELD_EDGE_MARGIN_M),
         MathUtil.clamp(
-            p.getY(),
-            STAGED_FIELD_EDGE_MARGIN_M,
-            fieldWidthMeters - STAGED_FIELD_EDGE_MARGIN_M));
+            p.getY(), STAGED_FIELD_EDGE_MARGIN_M, fieldWidthMeters - STAGED_FIELD_EDGE_MARGIN_M));
   }
 
   private static Translation2d gateSidePoint(GatedAttractorObstacle gate, boolean rightSide) {

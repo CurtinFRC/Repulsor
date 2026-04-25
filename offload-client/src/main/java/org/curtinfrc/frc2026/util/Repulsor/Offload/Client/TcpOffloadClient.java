@@ -223,7 +223,8 @@ public final class TcpOffloadClient implements OffloadGateway, AutoCloseable {
         return;
       }
       if (response.status() == OffloadProtocol.STATUS_OK_TIMED) {
-        OffloadProtocol.TimedPayload timingPayload = OffloadProtocol.parseTimedPayload(response.payload());
+        OffloadProtocol.TimedPayload timingPayload =
+            OffloadProtocol.parseTimedPayload(response.payload());
         latestServerTimingByTask.put(
             pending.taskId(),
             new OffloadServerTiming(

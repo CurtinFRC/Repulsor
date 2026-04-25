@@ -330,9 +330,9 @@ task(realOffloadDragShotTest, type: Test) {
     systemProperty(
             "repulsor.offload.real.host",
             (System.getProperty("repulsor.offload.real.host")
-                    ?: project.findProperty("repulsorOffloadRealHost")
-                    ?: System.getenv("REPULSOR_OFFLOAD_REAL_HOST")
-                    ?: "10.47.88.11:5808").toString().trim())
+            ?: project.findProperty("repulsorOffloadRealHost")
+            ?: System.getenv("REPULSOR_OFFLOAD_REAL_HOST")
+            ?: "10.47.88.11:5808").toString().trim())
     filter {
         includeTestsMatching "org.curtinfrc.frc2026.util.Repulsor.Offload.RealOffloadServerDragShotTest"
     }
@@ -358,7 +358,10 @@ tasks.named("localOffloadSmokeTest", Test) {
 }
 
 def requestedTasks = gradle.startParameter.taskNames
-def dedicatedOffloadTestTasks = ["localOffloadSmokeTest", "realOffloadDragShotTest"]
+def dedicatedOffloadTestTasks = [
+    "localOffloadSmokeTest",
+    "realOffloadDragShotTest"
+]
 def dedicatedOffloadOnlyRequested =
         !requestedTasks.isEmpty() &&
         requestedTasks.every { requested ->
@@ -404,70 +407,70 @@ task(deployOffloadToCoprocessors) {
             println "Warning: ${reactiveBypassConfigFile} not found. Deploy will continue without ReactiveBypassConfig.yaml."
         }
 
-hosts.each { host ->
-    def target = "${user}@${host}"
+        hosts.each { host ->
+            def target = "${user}@${host}"
 
-    def remoteTmpDir = "/tmp/repulsor-offload-deploy"
-    def remoteBundleDir = "${remoteTmpDir}/bundle"
-    def remoteServerJarTmp = "${remoteBundleDir}/offload-server.jar"
-    def remoteTaskJarTmp = "${remoteBundleDir}/offload-tasks.jar"
-    def remoteManifestTmp = "${remoteBundleDir}/offload-manifest.json"
-    def remoteNixExprTmp = "${remoteBundleDir}/default.nix"
-    def remoteReactiveBypassConfigTmp = "${remoteBundleDir}/ReactiveBypassConfig.yaml"
+            def remoteTmpDir = "/tmp/repulsor-offload-deploy"
+            def remoteBundleDir = "${remoteTmpDir}/bundle"
+            def remoteServerJarTmp = "${remoteBundleDir}/offload-server.jar"
+            def remoteTaskJarTmp = "${remoteBundleDir}/offload-tasks.jar"
+            def remoteManifestTmp = "${remoteBundleDir}/offload-manifest.json"
+            def remoteNixExprTmp = "${remoteBundleDir}/default.nix"
+            def remoteReactiveBypassConfigTmp = "${remoteBundleDir}/ReactiveBypassConfig.yaml"
 
-    println "Deploying offload Nix bundle to ${target}:${nixBundleDir} (staging at ${remoteBundleDir}, benchmarking=${benchmarkingEnabled})"
+            println "Deploying offload Nix bundle to ${target}:${nixBundleDir} (staging at ${remoteBundleDir}, benchmarking=${benchmarkingEnabled})"
 
-    exec {
-        commandLine "ssh",
-                "-o", "BatchMode=yes",
-                "-o", "StrictHostKeyChecking=accept-new",
-                target,
-                "mkdir -p '${remoteBundleDir}'"
-    }
+            exec {
+                commandLine "ssh",
+                        "-o", "BatchMode=yes",
+                        "-o", "StrictHostKeyChecking=accept-new",
+                        target,
+                        "mkdir -p '${remoteBundleDir}'"
+            }
 
-    exec {
-        commandLine "scp",
-                "-o", "BatchMode=yes",
-                "-o", "StrictHostKeyChecking=accept-new",
-                serverJar.absolutePath,
-                "${target}:${remoteServerJarTmp}"
-    }
+            exec {
+                commandLine "scp",
+                        "-o", "BatchMode=yes",
+                        "-o", "StrictHostKeyChecking=accept-new",
+                        serverJar.absolutePath,
+                        "${target}:${remoteServerJarTmp}"
+            }
 
-    exec {
-        commandLine "scp",
-                "-o", "BatchMode=yes",
-                "-o", "StrictHostKeyChecking=accept-new",
-                taskJar.absolutePath,
-                "${target}:${remoteTaskJarTmp}"
-    }
+            exec {
+                commandLine "scp",
+                        "-o", "BatchMode=yes",
+                        "-o", "StrictHostKeyChecking=accept-new",
+                        taskJar.absolutePath,
+                        "${target}:${remoteTaskJarTmp}"
+            }
 
-    exec {
-        commandLine "scp",
-                "-o", "BatchMode=yes",
-                "-o", "StrictHostKeyChecking=accept-new",
-                manifestFile.absolutePath,
-                "${target}:${remoteManifestTmp}"
-    }
+            exec {
+                commandLine "scp",
+                        "-o", "BatchMode=yes",
+                        "-o", "StrictHostKeyChecking=accept-new",
+                        manifestFile.absolutePath,
+                        "${target}:${remoteManifestTmp}"
+            }
 
-    exec {
-        commandLine "scp",
-                "-o", "BatchMode=yes",
-                "-o", "StrictHostKeyChecking=accept-new",
-                nixFile.absolutePath,
-                "${target}:${remoteNixExprTmp}"
-    }
+            exec {
+                commandLine "scp",
+                        "-o", "BatchMode=yes",
+                        "-o", "StrictHostKeyChecking=accept-new",
+                        nixFile.absolutePath,
+                        "${target}:${remoteNixExprTmp}"
+            }
 
-    if (hasReactiveBypassConfig) {
-        exec {
-            commandLine "scp",
-                    "-o", "BatchMode=yes",
-                    "-o", "StrictHostKeyChecking=accept-new",
-                    reactiveBypassConfigFile.absolutePath,
-                    "${target}:${remoteReactiveBypassConfigTmp}"
-        }
-    }
+            if (hasReactiveBypassConfig) {
+                exec {
+                    commandLine "scp",
+                            "-o", "BatchMode=yes",
+                            "-o", "StrictHostKeyChecking=accept-new",
+                            reactiveBypassConfigFile.absolutePath,
+                            "${target}:${remoteReactiveBypassConfigTmp}"
+                }
+            }
 
-    def remoteCmd = """set -euo pipefail
+            def remoteCmd = """set -euo pipefail
 run() { "\$@"; }
 
 if mkdir -p '${nixBundleDir}' 2>/dev/null; then
@@ -496,22 +499,22 @@ echo "Uploaded offload bundle to ${nixBundleDir} on ${host}."
 echo 'Next: ssh ${target} "sudo nixos-rebuild switch"'
 """
 
-    def result = exec {
-        ignoreExitValue = true
-        commandLine "ssh",
-                "-o", "BatchMode=yes",
-                "-o", "StrictHostKeyChecking=accept-new",
-                target,
-                remoteCmd
-    }
+            def result = exec {
+                ignoreExitValue = true
+                commandLine "ssh",
+                        "-o", "BatchMode=yes",
+                        "-o", "StrictHostKeyChecking=accept-new",
+                        target,
+                        remoteCmd
+            }
 
-    if (result.exitValue != 0) {
-        throw new GradleException(
+            if (result.exitValue != 0) {
+                throw new GradleException(
                 "Copied offload artifacts to ${host}, but syncing into ${nixBundleDir} failed. " +
                 "Grant passwordless sudo for mkdir/mv/chown or set -PoffloadNixBundleDir to a writable path."
-        )
-    }
-}
+                )
+            }
+        }
     }
 }
 
@@ -764,7 +767,11 @@ spotless {
     java {
         target fileTree(".") {
             include "**/*.java"
-            targetExclude 'bin/**', 'build/**', '**/generated/**', '**/generated-sources/**'
+            targetExclude 'bin/**',
+                    'build/**',
+                    '**/generated/**',
+                    '**/generated-sources/**',
+                    'src/main/java/org/curtinfrc/frc2026/BuildConstants.java'
         }
         replaceRegex("removeBOM", "^\\uFEFF", "")
         toggleOffOn()

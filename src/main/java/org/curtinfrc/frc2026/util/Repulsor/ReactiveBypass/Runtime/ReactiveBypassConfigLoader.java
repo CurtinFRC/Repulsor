@@ -20,7 +20,6 @@
 package org.curtinfrc.frc2026.util.Repulsor.ReactiveBypass.Runtime;
 
 import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;

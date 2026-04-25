@@ -40,7 +40,7 @@ import java.util.function.Supplier;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.RepulsorSample;
-import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldActionProfile.ShuttleShotProfile;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldActionProfile.ProjectileShotAction;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.HeightSetpoint;
@@ -110,13 +110,14 @@ public class ShuttleBehaviour extends Behaviour {
 
   @Override
   public boolean shouldRun(EnumSet<BehaviourFlag> flags, BehaviourContext ctx) {
-    return flags.contains(BehaviourFlag.SHUTTLE_MODE);
+    return flags.contains(BehaviourFlag.SHUTTLE_MODE)
+        && ctx.repulsor.getFieldDefinition().actionProfile().transferProjectileShot().isPresent();
   }
 
   @Override
   public Command build(BehaviourContext ctx) {
-    Optional<ShuttleShotProfile> shotProfileOpt =
-        ctx.repulsor.getFieldDefinition().actionProfile().shuttleShot();
+    Optional<ProjectileShotAction> shotProfileOpt =
+        ctx.repulsor.getFieldDefinition().actionProfile().transferProjectileShot();
     FieldGeometry geometry = ctx.repulsor.getFieldDefinition().geometry();
     List<Obstacle> staticShotObstacles = new ArrayList<>();
     staticShotObstacles.addAll(ctx.repulsor.getFieldDefinition().walls());
@@ -127,13 +128,17 @@ public class ShuttleBehaviour extends Behaviour {
         new RepulsorSetpoint(
             new MutablePoseSetpoint(
                 "SHUTTLE_COLLECT_ROUTE", SetpointType.kOther, collectBluePoseRef),
+            "none",
             HeightSetpoint.NONE);
 
     AtomicReference<Pose2d> shuttleBluePoseRef = new AtomicReference<>(Pose2d.kZero);
     RepulsorSetpoint shuttleShootRoute =
         new RepulsorSetpoint(
             new MutablePoseSetpoint("SHUTTLE_SHOOT_ROUTE", SetpointType.kScore, shuttleBluePoseRef),
-            shotProfileOpt.map(ShuttleShotProfile::routeHeight).orElse(HeightSetpoint.NONE));
+            shotProfileOpt.map(ProjectileShotAction::routeLevel).orElse("none"),
+            shotProfileOpt
+                .map(ProjectileShotAction::routeMechanismSetpoint)
+                .orElse(HeightSetpoint.NONE));
 
     AtomicReference<Pose2d> lastRobotPose = new AtomicReference<>(null);
     AtomicLong lastRobotPoseNs = new AtomicLong(0L);
@@ -163,8 +168,7 @@ public class ShuttleBehaviour extends Behaviour {
                   FieldTrackerCore.getInstance()
                       .nextCollectionGoalBlue(robotPose, cap, collectGoalUnits);
               if (collectGoalBlue == null) {
-                collectGoalBlue =
-                    new Pose2d(geometry.center(), robotPose.getRotation());
+                collectGoalBlue = new Pose2d(geometry.center(), robotPose.getRotation());
               }
               collectGoalBlue =
                   new Pose2d(collectGoalBlue.getTranslation(), collectGoalBlue.getRotation());
@@ -333,7 +337,7 @@ public class ShuttleBehaviour extends Behaviour {
   }
 
   private ShuttleAim computeShuttleAim(
-      ShuttleShotProfile profile,
+      ProjectileShotAction profile,
       FieldGeometry geometry,
       Pose2d robotPose,
       SetpointContext spCtx,
@@ -384,14 +388,15 @@ public class ShuttleBehaviour extends Behaviour {
       return new ShuttleAim(new Pose2d(solution.shooterPosition(), solution.shooterYaw()), solved);
     }
 
-    return new ShuttleAim(fallbackShuttlePose(hubTarget, alliance, profile, geometry), Optional.empty());
+    return new ShuttleAim(
+        fallbackShuttlePose(hubTarget, alliance, profile, geometry), Optional.empty());
   }
 
   private Optional<ShotSolution> solveShuttleShot(
       Translation2d robotPos,
       Translation2d hubTarget,
       Translation2d compensatedTarget,
-      ShuttleShotProfile profile,
+      ProjectileShotAction profile,
       FieldGeometry geometry,
       List<Obstacle> staticObstacles,
       double shooterReleaseHeightMeters,
@@ -454,7 +459,7 @@ public class ShuttleBehaviour extends Behaviour {
   private static Pose2d fallbackShuttlePose(
       Translation2d hubTarget,
       DriverStation.Alliance alliance,
-      ShuttleShotProfile profile,
+      ProjectileShotAction profile,
       FieldGeometry geometry) {
     Translation2d behind = behindDirection(alliance);
     Translation2d shooterPos =

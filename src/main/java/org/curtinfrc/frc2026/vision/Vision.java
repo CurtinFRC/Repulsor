@@ -56,8 +56,7 @@ public class Vision extends VirtualSubsystem {
             1.0),
       };
 
-
-        public static CameraConfig[] compCameraConfigs =
+  public static CameraConfig[] compCameraConfigs =
       new CameraConfig[] {
         // todo
         new CameraConfig(

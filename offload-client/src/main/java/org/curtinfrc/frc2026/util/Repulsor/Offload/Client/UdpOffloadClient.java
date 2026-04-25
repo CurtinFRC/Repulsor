@@ -38,7 +38,8 @@ public final class UdpOffloadClient implements OffloadGateway, AutoCloseable {
 
   private final ExecutorService ioExecutor;
   private final byte[] receiveBuffer = new byte[MAX_UDP_PACKET_BYTES];
-  private final DatagramPacket receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length);
+  private final DatagramPacket receivePacket =
+      new DatagramPacket(receiveBuffer, receiveBuffer.length);
   private volatile boolean running;
 
   private volatile DatagramSocket socket;
@@ -186,7 +187,8 @@ public final class UdpOffloadClient implements OffloadGateway, AutoCloseable {
 
   private OffloadHelloResponse hello(DatagramSocket sourceSocket) throws IOException {
     long correlation = nextCorrelation.getAndIncrement();
-    byte[] helloBytes = OffloadProtocol.serializeRequest(correlation, OffloadProtocol.TASK_HELLO, new byte[0]);
+    byte[] helloBytes =
+        OffloadProtocol.serializeRequest(correlation, OffloadProtocol.TASK_HELLO, new byte[0]);
     sendPacket(sourceSocket, helloBytes);
 
     while (true) {
@@ -233,9 +235,11 @@ public final class UdpOffloadClient implements OffloadGateway, AutoCloseable {
     drainOutbound(activeSocket, 15);
   }
 
-  private void sendRequest(DatagramSocket activeSocket, OutboundRequest request) throws IOException {
+  private void sendRequest(DatagramSocket activeSocket, OutboundRequest request)
+      throws IOException {
     byte[] frame =
-        OffloadProtocol.serializeRequest(request.correlationId(), request.taskId(), request.payload());
+        OffloadProtocol.serializeRequest(
+            request.correlationId(), request.taskId(), request.payload());
     if (frame.length > MAX_UDP_PACKET_BYTES) {
       PendingRequest pending = pendingByCorrelation.remove(request.correlationId());
       if (pending != null) {
@@ -258,7 +262,8 @@ public final class UdpOffloadClient implements OffloadGateway, AutoCloseable {
         return;
       }
       if (response.status() == OffloadProtocol.STATUS_OK_TIMED) {
-        OffloadProtocol.TimedPayload timingPayload = OffloadProtocol.parseTimedPayload(response.payload());
+        OffloadProtocol.TimedPayload timingPayload =
+            OffloadProtocol.parseTimedPayload(response.payload());
         latestServerTimingByTask.put(
             pending.taskId(),
             new OffloadServerTiming(
@@ -296,7 +301,8 @@ public final class UdpOffloadClient implements OffloadGateway, AutoCloseable {
     }
   }
 
-  private OffloadProtocol.ResponseFrame receivePacket(DatagramSocket sourceSocket) throws IOException {
+  private OffloadProtocol.ResponseFrame receivePacket(DatagramSocket sourceSocket)
+      throws IOException {
     receivePacket.setLength(receiveBuffer.length);
     sourceSocket.receive(receivePacket);
     return OffloadProtocol.parseResponse(

@@ -19,27 +19,12 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Fields;
 
-import java.util.List;
-import java.util.Optional;
-import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
-import org.curtinfrc.frc2026.util.Repulsor.Heatmap.HeatmapProvider;
-import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
+import edu.wpi.first.apriltag.AprilTagFieldLayout;
 
-public interface FieldDefinition
-    extends FieldLayoutProvider, FieldPlanner.ObstacleProvider, HeatmapProvider {
-  default Optional<RepulsorSetpoint> defaultCollectSetpoint() {
-    return Optional.empty();
-  }
-
-  default Optional<RepulsorSetpoint> defaultScoreSetpoint() {
-    return Optional.empty();
-  }
-
-  default FieldActionProfile actionProfile() {
-    return FieldActionProfile.none();
-  }
-
-  default List<String> validateProfile() {
-    return FieldProfileValidator.validate(this);
+public record FieldModel(FieldGeometry geometry, AprilTagFieldLayout aprilTagLayout) {
+  public FieldModel {
+    if (geometry == null) {
+      throw new IllegalArgumentException("geometry cannot be null");
+    }
   }
 }

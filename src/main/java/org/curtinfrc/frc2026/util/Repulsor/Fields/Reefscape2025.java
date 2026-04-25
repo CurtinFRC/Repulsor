@@ -26,7 +26,6 @@ import edu.wpi.first.math.geometry.Translation2d;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.DiagonalWallObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.HorizontalObstacle;
@@ -47,6 +46,8 @@ public final class Reefscape2025 implements FieldDefinition {
       AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeWelded);
   public static final double FIELD_LENGTH_M = 17.548;
   public static final double FIELD_WIDTH_M = 8.052;
+  private final FieldProfileConfig profile;
+  private final FieldGeometry geometry;
 
   private static final double CORNER_CHAMFER = 1.5;
 
@@ -54,6 +55,31 @@ public final class Reefscape2025 implements FieldDefinition {
       List.of(
           new TeardropObstacle(new Translation2d(4.49, 4.00), 1.2, 2.2, 1.03, 3.0, 2.0),
           new TeardropObstacle(new Translation2d(13.08, 4.00), 1.2, 2.2, 1.03, 3.0, 2.0));
+
+  public Reefscape2025() {
+    this(FieldProfileYamlLoader.loadOrDefault("reefscape2025", defaultProfileConfig()));
+  }
+
+  Reefscape2025(FieldProfileConfig profile) {
+    this.profile = profile;
+    this.geometry = profile.fieldGeometry(FIELD_LENGTH_M, FIELD_WIDTH_M);
+  }
+
+  private static FieldProfileConfig defaultProfileConfig() {
+    FieldProfileConfig cfg = new FieldProfileConfig();
+    cfg.id = "reefscape2025";
+    cfg.gameName = "REEFSCAPE";
+    cfg.gameYear = 2025;
+    cfg.geometry.lengthMeters = FIELD_LENGTH_M;
+    cfg.geometry.widthMeters = FIELD_WIDTH_M;
+
+    FieldProfileConfig.ResourceConfig coral = new FieldProfileConfig.ResourceConfig();
+    coral.radiusMeters = 0.10;
+    coral.unitValue = 1.0;
+    coral.sigmaMeters = 0.95;
+    cfg.resources.put("coral", coral);
+    return cfg;
+  }
 
   @Override
   public List<Obstacle> fieldObstacles() {
@@ -64,27 +90,27 @@ public final class Reefscape2025 implements FieldDefinition {
   public List<Obstacle> walls() {
     return List.of(
         new HorizontalObstacle(0.0, 2.0, true),
-        new HorizontalObstacle(FIELD_WIDTH_M, 1.4, false),
+        new HorizontalObstacle(geometry.widthMeters(), 1.4, false),
         new VerticalObstacle(0.0, 2.0, true),
-        new VerticalObstacle(FIELD_LENGTH_M, 1.4, false),
+        new VerticalObstacle(geometry.lengthMeters(), 1.4, false),
         new DiagonalWallObstacle(
             new Translation2d(0.0, CORNER_CHAMFER),
             new Translation2d(CORNER_CHAMFER, 0.0),
             2.0,
             2.0),
         new DiagonalWallObstacle(
-            new Translation2d(FIELD_LENGTH_M - CORNER_CHAMFER, 0.0),
-            new Translation2d(FIELD_LENGTH_M, CORNER_CHAMFER),
+            new Translation2d(geometry.lengthMeters() - CORNER_CHAMFER, 0.0),
+            new Translation2d(geometry.lengthMeters(), CORNER_CHAMFER),
             2.0,
             2.0),
         new DiagonalWallObstacle(
-            new Translation2d(0.0, FIELD_WIDTH_M - CORNER_CHAMFER),
-            new Translation2d(CORNER_CHAMFER, FIELD_WIDTH_M),
+            new Translation2d(0.0, geometry.widthMeters() - CORNER_CHAMFER),
+            new Translation2d(CORNER_CHAMFER, geometry.widthMeters()),
             2.0,
             2.0),
         new DiagonalWallObstacle(
-            new Translation2d(FIELD_LENGTH_M - CORNER_CHAMFER, FIELD_WIDTH_M),
-            new Translation2d(FIELD_LENGTH_M, FIELD_WIDTH_M - CORNER_CHAMFER),
+            new Translation2d(geometry.lengthMeters() - CORNER_CHAMFER, geometry.widthMeters()),
+            new Translation2d(geometry.lengthMeters(), geometry.widthMeters() - CORNER_CHAMFER),
             2.0,
             2.0));
   }
@@ -222,12 +248,12 @@ public final class Reefscape2025 implements FieldDefinition {
 
   @Override
   public String gameName() {
-    return "REEFSCAPE";
+    return profile.gameName;
   }
 
   @Override
   public int gameYear() {
-    return 2025;
+    return profile.gameYear;
   }
 
   @Override
@@ -237,28 +263,40 @@ public final class Reefscape2025 implements FieldDefinition {
 
   @Override
   public double fieldLengthMeters() {
-    return FIELD_LENGTH_M;
+    return geometry.lengthMeters();
   }
 
   @Override
   public double fieldWidthMeters() {
-    return FIELD_WIDTH_M;
+    return geometry.widthMeters();
+  }
+
+  @Override
+  public FieldGeometry geometry() {
+    return geometry;
   }
 
   @Override
   public Optional<RepulsorSetpoint> defaultCollectSetpoint() {
     return Optional.of(
-        new RepulsorSetpoint(Setpoints.Reefscape2025.LEFT_HP, HeightSetpoint.CORAL_STATION));
+        new RepulsorSetpoint(
+            Setpoints.Reefscape2025.LEFT_HP, "coral.station", HeightSetpoint.CORAL_STATION));
   }
 
   @Override
   public Optional<RepulsorSetpoint> defaultScoreSetpoint() {
-    return Optional.of(new RepulsorSetpoint(Setpoints.Reefscape2025.A, HeightSetpoint.L2));
+    return Optional.of(
+        new RepulsorSetpoint(Setpoints.Reefscape2025.A, "reef.l2", HeightSetpoint.L2));
   }
 
   @Override
   public void configureTracker(FieldTrackerCore ft) {
-    ft.setCollectResourceTypes(Set.of("coral"));
-    ft.configureCollectResourceProfile("coral", new ResourceSpec(0.10, 1.0, 0.95));
+    ft.setCollectResourceTypes(profile.resources.keySet());
+    for (var entry : profile.resources.entrySet()) {
+      FieldProfileConfig.ResourceConfig resource = entry.getValue();
+      ft.configureCollectResourceProfile(
+          entry.getKey(),
+          new ResourceSpec(resource.radiusMeters, resource.unitValue, resource.sigmaMeters));
+    }
   }
 }

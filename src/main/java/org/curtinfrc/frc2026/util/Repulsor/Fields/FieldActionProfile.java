@@ -21,31 +21,67 @@ package org.curtinfrc.frc2026.util.Repulsor.Fields;
 
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.HeightSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.GamePiecePhysics;
 
-public record FieldActionProfile(Optional<ShuttleShotProfile> shuttleShot) {
+public record FieldActionProfile(Map<String, ProjectileShotAction> projectileShots) {
   public FieldActionProfile {
-    shuttleShot = shuttleShot == null ? Optional.empty() : shuttleShot;
+    projectileShots =
+        projectileShots == null ? Map.of() : Map.copyOf(new LinkedHashMap<>(projectileShots));
   }
 
   public static FieldActionProfile none() {
-    return new FieldActionProfile(Optional.empty());
+    return new FieldActionProfile(Map.of());
   }
 
-  public record ShuttleShotProfile(
+  public Optional<ProjectileShotAction> projectileShot(String id) {
+    if (id == null || id.isBlank()) return Optional.empty();
+    return Optional.ofNullable(projectileShots.get(id));
+  }
+
+  public Optional<ProjectileShotAction> firstProjectileShot(ActionRole role) {
+    if (role == null) return Optional.empty();
+    return projectileShots.values().stream().filter(action -> action.role() == role).findFirst();
+  }
+
+  public Optional<ProjectileShotAction> transferProjectileShot() {
+    return firstProjectileShot(ActionRole.TRANSFER_TO_SCORE);
+  }
+
+  /** Compatibility shim for older 2026-specific behavior code. Prefer transferProjectileShot(). */
+  @Deprecated(forRemoval = false)
+  public Optional<ProjectileShotAction> shuttleShot() {
+    return transferProjectileShot();
+  }
+
+  public enum ActionRole {
+    SCORE,
+    TRANSFER_TO_SCORE,
+    COLLECT,
+    ENDGAME,
+    OTHER
+  }
+
+  public record ProjectileShotAction(
+      String id,
+      ActionRole role,
       Function<DriverStation.Alliance, Translation2d> targetForAlliance,
       GamePiecePhysics gamePiecePhysics,
       double targetHeightMeters,
       Constraints constraints,
-      HeightSetpoint routeHeight,
+      String routeLevel,
+      HeightSetpoint routeMechanismSetpoint,
       double behindTargetMeters,
       double[] lateralOffsetsMeters,
       double fieldMarginMeters) {
-    public ShuttleShotProfile {
+    public ProjectileShotAction {
+      id = id == null || id.isBlank() ? "projectileShot" : id.trim();
+      role = role == null ? ActionRole.OTHER : role;
       if (targetForAlliance == null) {
         throw new IllegalArgumentException("targetForAlliance cannot be null");
       }
@@ -55,7 +91,9 @@ public record FieldActionProfile(Optional<ShuttleShotProfile> shuttleShot) {
       if (constraints == null) {
         throw new IllegalArgumentException("constraints cannot be null");
       }
-      routeHeight = routeHeight == null ? HeightSetpoint.NONE : routeHeight;
+      routeLevel = routeLevel == null || routeLevel.isBlank() ? "none" : routeLevel.trim();
+      routeMechanismSetpoint =
+          routeMechanismSetpoint == null ? HeightSetpoint.NONE : routeMechanismSetpoint;
       behindTargetMeters = Math.max(0.0, behindTargetMeters);
       fieldMarginMeters = Math.max(0.0, fieldMarginMeters);
       lateralOffsetsMeters =
@@ -69,10 +107,15 @@ public record FieldActionProfile(Optional<ShuttleShotProfile> shuttleShot) {
       return lateralOffsetsMeters.clone();
     }
 
+    /** Compatibility name for old route-height callers. Prefer routeMechanismSetpoint(). */
+    @Deprecated(forRemoval = false)
+    public HeightSetpoint routeHeight() {
+      return routeMechanismSetpoint;
+    }
+
     public Translation2d target(DriverStation.Alliance alliance) {
       Translation2d target =
-          targetForAlliance.apply(
-              alliance == null ? DriverStation.Alliance.Blue : alliance);
+          targetForAlliance.apply(alliance == null ? DriverStation.Alliance.Blue : alliance);
       return target == null ? new Translation2d() : target;
     }
   }

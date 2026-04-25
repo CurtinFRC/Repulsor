@@ -86,8 +86,7 @@ public final class FieldPlannerForceModel {
     for (int x = 0; x <= ARROWS_X; x++) {
       for (int y = 0; y <= ARROWS_Y; y++) {
         var translation =
-            new Translation2d(
-                x * fieldLengthMeters / ARROWS_X, y * fieldWidthMeters / ARROWS_Y);
+            new Translation2d(x * fieldLengthMeters / ARROWS_X, y * fieldWidthMeters / ARROWS_Y);
 
         int idx = x * (ARROWS_Y + 1) + y;
 

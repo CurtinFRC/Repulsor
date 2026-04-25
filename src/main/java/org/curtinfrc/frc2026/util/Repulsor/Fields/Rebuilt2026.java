@@ -27,14 +27,14 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
-import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldActionProfile.ShuttleShotProfile;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.CorridorCenterlineRail;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.GatedAttractorObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.HorizontalObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.RectangleObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.VerticalObstacle;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldActionProfile.ActionRole;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldActionProfile.ProjectileShotAction;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
 import org.curtinfrc.frc2026.util.Repulsor.Heatmap;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
@@ -53,11 +53,8 @@ public final class Rebuilt2026 implements FieldDefinition {
       AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
   public static final double FIELD_LENGTH_M = 16.540988;
   public static final double FIELD_WIDTH_M = APRIL_TAG_LAYOUT.getFieldWidth();
-  private static final double SHUTTLE_BEHIND_HUB_METERS = 2.95;
-  private static final double SHUTTLE_FIELD_MARGIN_METERS = 0.28;
-  private static final double[] SHUTTLE_LATERAL_OFFSETS_METERS =
-      new double[] {0.0, 0.45, -0.45, 0.9, -0.9};
-  private static final GamePiecePhysics SHUTTLE_GAME_PIECE = loadShuttleGamePiece();
+  private final FieldProfileConfig profile;
+  private final FieldGeometry geometry;
 
   private static final double CORNER_CHAMFER = 0;
 
@@ -65,8 +62,78 @@ public final class Rebuilt2026 implements FieldDefinition {
   private static final double GRID_Z_MAX_M = 0.35;
 
   private static final double GRID_CELL_M = 0.75;
-  private static final double GRID_REGION_HALF_X_M = FIELD_LENGTH_M * 0.5;
-  private static final double GRID_REGION_HALF_Y_M = FIELD_WIDTH_M * 0.5;
+
+  public Rebuilt2026() {
+    this(FieldProfileYamlLoader.loadOrDefault("rebuilt2026", defaultProfileConfig()));
+  }
+
+  Rebuilt2026(FieldProfileConfig profile) {
+    this.profile = profile;
+    this.geometry = profile.fieldGeometry(FIELD_LENGTH_M, FIELD_WIDTH_M);
+  }
+
+  private static FieldProfileConfig defaultProfileConfig() {
+    FieldProfileConfig cfg = new FieldProfileConfig();
+    cfg.id = "rebuilt2026";
+    cfg.gameName = "REBUILT";
+    cfg.gameYear = 2026;
+    cfg.geometry.lengthMeters = FIELD_LENGTH_M;
+    cfg.geometry.widthMeters = FIELD_WIDTH_M;
+
+    FieldProfileConfig.ResourceConfig fuel = new FieldProfileConfig.ResourceConfig();
+    fuel.radiusMeters = 0.075;
+    fuel.unitValue = 1.0;
+    fuel.sigmaMeters = 0.95;
+    cfg.resources.put("fuel", fuel);
+
+    FieldProfileConfig.ProjectileShotConfig fuelReturn =
+        new FieldProfileConfig.ProjectileShotConfig();
+    fuelReturn.enabled = true;
+    fuelReturn.role = ActionRole.TRANSFER_TO_SCORE.name();
+    fuelReturn.gamePieceId = _Rebuilt2026.GAME_PIECE_ID_FUEL;
+    fuelReturn.targetHeightMeters = _Rebuilt2026.HUB_OPENING_FRONT_EDGE_HEIGHT_M;
+    fuelReturn.routeLevel = "hub";
+    fuelReturn.routeMechanismSetpoint = HeightSetpoint.NET.name();
+    fuelReturn.behindTargetMeters = 2.95;
+    fuelReturn.lateralOffsetsMeters = new double[] {0.0, 0.45, -0.45, 0.9, -0.9};
+    fuelReturn.fieldMarginMeters = 0.28;
+    fuelReturn.fallbackGamePiece.massKg = 0.27;
+    fuelReturn.fallbackGamePiece.crossSectionAreaM2 = 0.014;
+    fuelReturn.fallbackGamePiece.dragCoefficient = 0.95;
+    cfg.projectileShots.put("fuelReturnToHub", fuelReturn);
+
+    FieldProfileConfig.RebuiltCorridorConfig corridor = cfg.rebuiltCorridor;
+    corridor.rectWidthMeters = 0.5929315;
+    corridor.rectHeightMeters = 5.711800;
+    corridor.rectOffsetFromCenterMeters = 3.648981;
+    corridor.edgeOffsetMeters = 0.48;
+    corridor.rectStrength = 4.2;
+    corridor.rectRangeXMeters = 1.55;
+    corridor.rectRangeYMeters = 2.0;
+    corridor.biasStrength = 0.3;
+    corridor.biasRangeMeters = 1.2;
+    corridor.bypassStrengthScale = 1.2;
+    corridor.bypassRangeMeters = 1.4;
+    corridor.sidePullDxMeters = 1.0;
+    corridor.sideBiasStrengthScale = 0.35;
+    corridor.sideBiasRangeScale = 0.70;
+    corridor.sideBypassStrengthScale = 0.75;
+    corridor.sideBypassRangeScale = 0.75;
+    corridor.railXWindowMeters = 1.4;
+    corridor.railMinHalfWidthMeters = 0.24;
+    corridor.railHalfWidthGapScale = 0.42;
+    corridor.railStrength = 1.8;
+    corridor.railMaxForce = 2.6;
+    corridor.centerRailMinWindowMeters = 1.2;
+    corridor.centerRailWindowScale = 0.45;
+    corridor.outerRailXOffsetScale = 0.9;
+    corridor.outerRailWindowMeters = 1.0;
+    return cfg;
+  }
+
+  private static double positive(Double value, double fallback) {
+    return value != null && Double.isFinite(value) && value > 0.0 ? value : fallback;
+  }
 
   @Override
   public GameElement[] build(FieldTrackerCore ft) {
@@ -110,13 +177,13 @@ public final class Rebuilt2026 implements FieldDefinition {
         .category(CategorySpec.kCollect)
         .add();
 
-    double cx = FIELD_LENGTH_M * 0.5;
-    double cy = FIELD_WIDTH_M * 0.5;
+    double cx = geometry.lengthMeters() * 0.5;
+    double cy = geometry.widthMeters() * 0.5;
 
-    double x0 = cx - GRID_REGION_HALF_X_M;
-    double x1 = cx + GRID_REGION_HALF_X_M;
-    double y0 = cy - GRID_REGION_HALF_Y_M;
-    double y1 = cy + GRID_REGION_HALF_Y_M;
+    double x0 = 0.0;
+    double x1 = geometry.lengthMeters();
+    double y0 = 0.0;
+    double y1 = geometry.widthMeters();
 
     int nx = (int) Math.floor((x1 - x0) / GRID_CELL_M);
     int ny = (int) Math.floor((y1 - y0) / GRID_CELL_M);
@@ -151,12 +218,12 @@ public final class Rebuilt2026 implements FieldDefinition {
 
   @Override
   public String gameName() {
-    return "REBUILT";
+    return profile.gameName;
   }
 
   @Override
   public int gameYear() {
-    return 2026;
+    return profile.gameYear;
   }
 
   @Override
@@ -166,64 +233,120 @@ public final class Rebuilt2026 implements FieldDefinition {
 
   @Override
   public double fieldLengthMeters() {
-    return FIELD_LENGTH_M;
+    return geometry.lengthMeters();
   }
 
   @Override
   public double fieldWidthMeters() {
-    return FIELD_WIDTH_M;
+    return geometry.widthMeters();
+  }
+
+  @Override
+  public FieldGeometry geometry() {
+    return geometry;
   }
 
   @Override
   public Optional<RepulsorSetpoint> defaultCollectSetpoint() {
     return Optional.of(
-        new RepulsorSetpoint(Setpoints.Rebuilt2026.CENTER_COLLECT, HeightSetpoint.NONE));
+        new RepulsorSetpoint(
+            Setpoints.Rebuilt2026.CENTER_COLLECT, "center.collect", HeightSetpoint.NONE));
   }
 
   @Override
   public Optional<RepulsorSetpoint> defaultScoreSetpoint() {
-    return Optional.of(new RepulsorSetpoint(Setpoints.Rebuilt2026.HUB_SHOOT, HeightSetpoint.NET));
+    return Optional.of(
+        new RepulsorSetpoint(Setpoints.Rebuilt2026.HUB_SHOOT, "hub", HeightSetpoint.NET));
   }
 
   @Override
   public void configureTracker(FieldTrackerCore ft) {
-    ft.setCollectResourceTypes(Set.of("fuel"));
-    ft.configureCollectResourceProfile("fuel", new ResourceSpec(0.075, 1.0, 0.95));
+    ft.setCollectResourceTypes(profile.resources.keySet());
+    for (var entry : profile.resources.entrySet()) {
+      FieldProfileConfig.ResourceConfig resource = entry.getValue();
+      ft.configureCollectResourceProfile(
+          entry.getKey(),
+          new ResourceSpec(resource.radiusMeters, resource.unitValue, resource.sigmaMeters));
+    }
   }
 
   @Override
   public FieldActionProfile actionProfile() {
-    return new FieldActionProfile(
-        Optional.of(
-            new ShuttleShotProfile(
-                _Rebuilt2026::hubAimpointForAlliance,
-                SHUTTLE_GAME_PIECE,
-                _Rebuilt2026.HUB_OPENING_FRONT_EDGE_HEIGHT_M,
-                _Rebuilt2026.HUB_SHOT_CONSTRAINTS,
-                HeightSetpoint.NET,
-                SHUTTLE_BEHIND_HUB_METERS,
-                SHUTTLE_LATERAL_OFFSETS_METERS,
-                SHUTTLE_FIELD_MARGIN_METERS)));
+    var actions = new java.util.LinkedHashMap<String, ProjectileShotAction>();
+    for (var entry : profile.projectileShots.entrySet()) {
+      FieldProfileConfig.ProjectileShotConfig shot = entry.getValue();
+      if (shot == null || !Boolean.TRUE.equals(shot.enabled)) {
+        continue;
+      }
+      actions.put(entry.getKey(), projectileShotAction(entry.getKey(), shot));
+    }
+
+    FieldProfileConfig.ShuttleShotConfig legacy = profile.shuttleShot;
+    if (legacy != null && Boolean.TRUE.equals(legacy.enabled)) {
+      actions.putIfAbsent("legacyShuttleShot", projectileShotAction("legacyShuttleShot", legacy));
+    }
+
+    return new FieldActionProfile(actions);
   }
 
-  private static GamePiecePhysics loadShuttleGamePiece() {
+  private static ProjectileShotAction projectileShotAction(
+      String id, FieldProfileConfig.ProjectileShotConfig shot) {
+    return new ProjectileShotAction(
+        id,
+        actionRole(shot.role),
+        _Rebuilt2026::hubAimpointForAlliance,
+        loadProjectileGamePiece(shot),
+        shot.targetHeightMeters,
+        _Rebuilt2026.HUB_SHOT_CONSTRAINTS,
+        shot.routeLevel,
+        routeMechanismSetpoint(shot.routeMechanismSetpoint),
+        shot.behindTargetMeters,
+        shot.lateralOffsetsMeters,
+        shot.fieldMarginMeters);
+  }
+
+  private static ActionRole actionRole(String value) {
+    if (value == null || value.isBlank()) return ActionRole.OTHER;
     try {
-      return DragShotPlanner.loadGamePieceFromDeployYaml(_Rebuilt2026.GAME_PIECE_ID_FUEL);
+      return ActionRole.valueOf(value.trim().toUpperCase());
+    } catch (IllegalArgumentException ex) {
+      return ActionRole.OTHER;
+    }
+  }
+
+  private static HeightSetpoint routeMechanismSetpoint(String value) {
+    if (value == null || value.isBlank()) return HeightSetpoint.NET;
+    try {
+      return HeightSetpoint.valueOf(value.trim().toUpperCase());
+    } catch (IllegalArgumentException ex) {
+      return HeightSetpoint.NET;
+    }
+  }
+
+  private static GamePiecePhysics loadProjectileGamePiece(
+      FieldProfileConfig.ProjectileShotConfig cfg) {
+    try {
+      String gamePieceId =
+          cfg.gamePieceId == null || cfg.gamePieceId.isBlank()
+              ? _Rebuilt2026.GAME_PIECE_ID_FUEL
+              : cfg.gamePieceId.trim();
+      return DragShotPlanner.loadGamePieceFromDeployYaml(gamePieceId);
     } catch (Throwable ignored) {
+      FieldProfileConfig.GamePiecePhysicsConfig fallback = cfg.fallbackGamePiece;
       return new GamePiecePhysics() {
         @Override
         public double massKg() {
-          return 0.27;
+          return fallback.massKg;
         }
 
         @Override
         public double crossSectionAreaM2() {
-          return 0.014;
+          return fallback.crossSectionAreaM2;
         }
 
         @Override
         public double dragCoefficient() {
-          return 0.95;
+          return fallback.dragCoefficient;
         }
       };
     }
@@ -233,30 +356,34 @@ public final class Rebuilt2026 implements FieldDefinition {
   public List<Obstacle> fieldObstacles() {
     // double maxRangeY = 1;
     // double maxRangeX = 1.2;
+    FieldProfileConfig.RebuiltCorridorConfig corridor = profile.rebuiltCorridor;
+    double fieldLength = geometry.lengthMeters();
+    double fieldWidth = geometry.widthMeters();
 
-    double rectWidth = 0.5929315;
-    double rectHeight = 5.711800;
+    double rectWidth = positive(corridor.rectWidthMeters, 0.5929315);
+    double rectHeight = positive(corridor.rectHeightMeters, 5.711800);
     double rectHalfY = rectHeight * 0.5;
 
-    double leftRectX = (FIELD_LENGTH_M / 2) - 3.648981; // 2.5 meters 34 degrees 16 ms
-    double rightRectX = (FIELD_LENGTH_M / 2) + 3.648981;
-    double rectCy = FIELD_WIDTH_M / 2;
+    double rectOffset = positive(corridor.rectOffsetFromCenterMeters, 3.648981);
+    double leftRectX = (fieldLength / 2) - rectOffset; // 2.5 meters 34 degrees 16 ms
+    double rightRectX = (fieldLength / 2) + rectOffset;
+    double rectCy = fieldWidth / 2;
 
-    double gapHeight = Math.max(0.0, (FIELD_WIDTH_M * 0.5) - rectHalfY);
-    double gapTopY = FIELD_WIDTH_M - (gapHeight * 0.5);
+    double gapHeight = Math.max(0.0, (fieldWidth * 0.5) - rectHalfY);
+    double gapTopY = fieldWidth - (gapHeight * 0.5);
     double gapBottomY = gapHeight * 0.5;
 
-    double rectStrength = 4.2;
-    double rectRangeX = 1.55;
-    double rectRangeY = 2.0;
+    double rectStrength = positive(corridor.rectStrength, 4.2);
+    double rectRangeX = positive(corridor.rectRangeXMeters, 1.55);
+    double rectRangeY = positive(corridor.rectRangeYMeters, 2.0);
 
-    double biasStrength = 0.3;
-    double biasRange = 1.2;
+    double biasStrength = positive(corridor.biasStrength, 0.3);
+    double biasRange = positive(corridor.biasRangeMeters, 1.2);
 
-    double bypassStrengthScale = 1.2;
-    double bypassRange = 1.4;
+    double bypassStrengthScale = positive(corridor.bypassStrengthScale, 1.2);
+    double bypassRange = positive(corridor.bypassRangeMeters, 1.4);
 
-    double edgeOffset = 0.48;
+    double edgeOffset = positive(corridor.edgeOffsetMeters, 0.48);
 
     double rectHalfX = rectWidth * 0.5;
     Translation2d[] leftGate =
@@ -277,29 +404,36 @@ public final class Rebuilt2026 implements FieldDefinition {
     double leftInsideX = leftRectX + rectHalfX + edgeOffset;
     double rightInsideX = rightRectX - rectHalfX - edgeOffset;
 
-    double sidePullDx = 1.0;
+    double sidePullDx = positive(corridor.sidePullDxMeters, 1.0);
 
     double leftPullXOut = leftRectX - sidePullDx;
     double rightPullXOut = rightRectX + sidePullDx;
 
-    double sideBiasStrength = biasStrength * 0.35;
-    double sideBiasRange = biasRange * 0.70;
+    double sideBiasStrength = biasStrength * positive(corridor.sideBiasStrengthScale, 0.35);
+    double sideBiasRange = biasRange * positive(corridor.sideBiasRangeScale, 0.70);
 
-    double sideBypassStrengthScale = bypassStrengthScale * 0.75;
-    double sideBypassRange = bypassRange * 0.75;
+    double sideBypassStrengthScale =
+        bypassStrengthScale * positive(corridor.sideBypassStrengthScale, 0.75);
+    double sideBypassRange = bypassRange * positive(corridor.sideBypassRangeScale, 0.75);
 
     double leftPullXIn = leftRectX + sidePullDx;
 
     double rightPullXIn = rightRectX - sidePullDx;
 
-    double railXWindow = 1.4;
-    double corridorHalfWidthGuess = Math.max(0.24, gapHeight * 0.42);
-    double railStrength = 1.8;
-    double railMaxForce = 2.6;
+    double railXWindow = positive(corridor.railXWindowMeters, 1.4);
+    double corridorHalfWidthGuess =
+        Math.max(
+            positive(corridor.railMinHalfWidthMeters, 0.24),
+            gapHeight * positive(corridor.railHalfWidthGapScale, 0.42));
+    double railStrength = positive(corridor.railStrength, 1.8);
+    double railMaxForce = positive(corridor.railMaxForce, 2.6);
     double centerRailX = 0.5 * (leftRectX + rightRectX);
-    double centerRailWindow = Math.max(1.2, (rightRectX - leftRectX) * 0.45);
-    double outerRailXOffset = sidePullDx * 0.9;
-    double outerRailWindow = 1.0;
+    double centerRailWindow =
+        Math.max(
+            positive(corridor.centerRailMinWindowMeters, 1.2),
+            (rightRectX - leftRectX) * positive(corridor.centerRailWindowScale, 0.45));
+    double outerRailXOffset = sidePullDx * positive(corridor.outerRailXOffsetScale, 0.9);
+    double outerRailWindow = positive(corridor.outerRailWindowMeters, 1.0);
 
     return List.of(
         new RectangleObstacle(
@@ -526,9 +660,9 @@ public final class Rebuilt2026 implements FieldDefinition {
   public List<Obstacle> walls() {
     return List.of(
         new HorizontalObstacle(0.0, 1, true),
-        new HorizontalObstacle(FIELD_WIDTH_M, 1, false),
+        new HorizontalObstacle(geometry.widthMeters(), 1, false),
         new VerticalObstacle(0.0, 3, true),
-        new VerticalObstacle(FIELD_LENGTH_M, 3, false));
+        new VerticalObstacle(geometry.lengthMeters(), 3, false));
   }
 
   @Override
@@ -538,21 +672,21 @@ public final class Rebuilt2026 implements FieldDefinition {
 
     final double TRANS_M = 0.30;
 
-    double cx = FIELD_LENGTH_M * 0.5;
-    double cy = FIELD_WIDTH_M * 0.5;
+    double cx = geometry.lengthMeters() * 0.5;
+    double cy = geometry.widthMeters() * 0.5;
 
-    double x0 = cx - GRID_REGION_HALF_X_M;
-    double x1 = cx + GRID_REGION_HALF_X_M;
-    double y0 = cy - GRID_REGION_HALF_Y_M;
-    double y1 = cy + GRID_REGION_HALF_Y_M;
+    double x0 = 0.0;
+    double x1 = geometry.lengthMeters();
+    double y0 = 0.0;
+    double y1 = geometry.widthMeters();
 
     double half = 1.1938 * 0.5;
 
     double leftSqCx = 4.625594;
-    double leftRectCx = (FIELD_LENGTH_M * 0.5) - 3.63982;
+    double leftRectCx = (geometry.lengthMeters() * 0.5) - 3.63982;
 
-    double rightSqCx = FIELD_LENGTH_M - 4.625594;
-    double rightRectCx = (FIELD_LENGTH_M * 0.5) + 3.63982;
+    double rightSqCx = geometry.lengthMeters() - 4.625594;
+    double rightRectCx = (geometry.lengthMeters() * 0.5) + 3.63982;
 
     double leftBandX0 = Math.min(leftSqCx, leftRectCx) - half;
     double leftBandX1 = Math.max(leftSqCx, leftRectCx) + half;

@@ -21,7 +21,7 @@ import java.util.function.Supplier;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.RepulsorSample;
-import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldActionProfile.ShuttleShotProfile;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldActionProfile.ProjectileShotAction;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.HeightSetpoint;
@@ -84,13 +84,14 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
 
   @Override
   public boolean shouldRun(EnumSet<BehaviourFlag> flags, BehaviourContext ctx) {
-    return flags.contains(BehaviourFlag.SHUTTLE_RECOVERY_MODE);
+    return flags.contains(BehaviourFlag.SHUTTLE_RECOVERY_MODE)
+        && ctx.repulsor.getFieldDefinition().actionProfile().transferProjectileShot().isPresent();
   }
 
   @Override
   public Command build(BehaviourContext ctx) {
-    Optional<ShuttleShotProfile> shotProfileOpt =
-        ctx.repulsor.getFieldDefinition().actionProfile().shuttleShot();
+    Optional<ProjectileShotAction> shotProfileOpt =
+        ctx.repulsor.getFieldDefinition().actionProfile().transferProjectileShot();
     FieldGeometry geometry = ctx.repulsor.getFieldDefinition().geometry();
     List<Obstacle> staticShotObstacles = new ArrayList<>();
     staticShotObstacles.addAll(ctx.repulsor.getFieldDefinition().walls());
@@ -101,6 +102,7 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
         new RepulsorSetpoint(
             new MutablePoseSetpoint(
                 "SHUTTLE_RECOVERY_COLLECT_ROUTE", SetpointType.kOther, collectBluePoseRef),
+            "none",
             HeightSetpoint.NONE);
 
     AtomicReference<Pose2d> shuttleBluePoseRef = new AtomicReference<>(Pose2d.kZero);
@@ -108,7 +110,10 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
         new RepulsorSetpoint(
             new MutablePoseSetpoint(
                 "SHUTTLE_RECOVERY_SHOOT_ROUTE", SetpointType.kScore, shuttleBluePoseRef),
-            shotProfileOpt.map(ShuttleShotProfile::routeHeight).orElse(HeightSetpoint.NONE));
+            shotProfileOpt.map(ProjectileShotAction::routeLevel).orElse("none"),
+            shotProfileOpt
+                .map(ProjectileShotAction::routeMechanismSetpoint)
+                .orElse(HeightSetpoint.NONE));
 
     AtomicReference<Pose2d> lastRobotPose = new AtomicReference<>(null);
     AtomicLong lastRobotPoseNs = new AtomicLong(0L);
@@ -230,13 +235,15 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
             .nextAllianceShuttleRecoveryGoalBlue(robotPoseBlue, cap, RECOVERY_GOAL_UNITS);
     if (nextBlue == null) {
       return new Pose2d(
-          geometry.lengthMeters() * 0.25, geometry.widthMeters() * 0.5, robotPoseBlue.getRotation());
+          geometry.lengthMeters() * 0.25,
+          geometry.widthMeters() * 0.5,
+          robotPoseBlue.getRotation());
     }
     return new Pose2d(nextBlue.getTranslation(), nextBlue.getRotation());
   }
 
   private ShuttleAim computeShuttleAim(
-      ShuttleShotProfile profile,
+      ProjectileShotAction profile,
       FieldGeometry geometry,
       Pose2d robotPose,
       SetpointContext spCtx,
@@ -286,14 +293,15 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
       return new ShuttleAim(new Pose2d(solution.shooterPosition(), solution.shooterYaw()), solved);
     }
 
-    return new ShuttleAim(fallbackShuttlePose(hubTarget, alliance, profile, geometry), Optional.empty());
+    return new ShuttleAim(
+        fallbackShuttlePose(hubTarget, alliance, profile, geometry), Optional.empty());
   }
 
   private Optional<ShotSolution> solveShuttleShot(
       Translation2d robotPos,
       Translation2d hubTarget,
       Translation2d compensatedTarget,
-      ShuttleShotProfile profile,
+      ProjectileShotAction profile,
       FieldGeometry geometry,
       List<Obstacle> staticObstacles,
       double shooterReleaseHeightMeters,
@@ -410,7 +418,7 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
   private static Pose2d fallbackShuttlePose(
       Translation2d hubTarget,
       DriverStation.Alliance alliance,
-      ShuttleShotProfile profile,
+      ProjectileShotAction profile,
       FieldGeometry geometry) {
     Translation2d behind = behindDirection(alliance);
     Translation2d shooterPos =
