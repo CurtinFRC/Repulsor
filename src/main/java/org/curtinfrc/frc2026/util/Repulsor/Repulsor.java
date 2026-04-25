@@ -58,6 +58,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointContext;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointType;
 import org.curtinfrc.frc2026.util.Repulsor.State.SimMatchDriver;
 import org.curtinfrc.frc2026.util.Repulsor.State.StateManager;
+import org.curtinfrc.frc2026.util.Repulsor.Strategy.StrategyDirective;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
@@ -90,6 +91,7 @@ public class Repulsor {
   private RepulsorSetpoint m_currentGoal;
 
   private RepulsorSetpoint m_nextScore;
+  private volatile StrategyDirective m_strategyDirective = StrategyDirective.none();
 
   private final List<FieldVision> m_fieldVisions = new ArrayList<>();
 
@@ -143,6 +145,14 @@ public class Repulsor {
   public Repulsor setReasoner(Reasoner<BehaviourFlag, BehaviourContext> reasoner) {
     m_behaviourManager.setReasoner(reasoner);
     return this;
+  }
+
+  public void setStrategyDirective(StrategyDirective directive) {
+    m_strategyDirective = directive == null ? StrategyDirective.none() : directive;
+  }
+
+  public StrategyDirective getStrategyDirective() {
+    return m_strategyDirective;
   }
 
   public boolean isInScoringGate() {

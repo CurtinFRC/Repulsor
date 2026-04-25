@@ -87,6 +87,7 @@ public class FieldProfileConfig {
     if (overlay.enabled != null) base.enabled = overlay.enabled;
     if (overlay.role != null) base.role = overlay.role;
     if (overlay.gamePieceId != null) base.gamePieceId = overlay.gamePieceId;
+    mergeTarget(base.target, overlay.target);
     if (overlay.targetHeightMeters != null) base.targetHeightMeters = overlay.targetHeightMeters;
     if (overlay.routeLevel != null) base.routeLevel = overlay.routeLevel;
     if (overlay.routeMechanismSetpoint != null)
@@ -106,6 +107,13 @@ public class FieldProfileConfig {
         base.fallbackGamePiece.dragCoefficient = overlay.fallbackGamePiece.dragCoefficient;
       }
     }
+  }
+
+  private static void mergeTarget(TargetConfig base, TargetConfig overlay) {
+    if (base == null || overlay == null) return;
+    if (overlay.kind != null) base.kind = overlay.kind;
+    if (overlay.blueXMeters != null) base.blueXMeters = overlay.blueXMeters;
+    if (overlay.blueYMeters != null) base.blueYMeters = overlay.blueYMeters;
   }
 
   private static void mergeCorridor(RebuiltCorridorConfig base, RebuiltCorridorConfig overlay) {
@@ -180,6 +188,7 @@ public class FieldProfileConfig {
     public Boolean enabled;
     public String role;
     public String gamePieceId;
+    public TargetConfig target = new TargetConfig();
     public Double targetHeightMeters;
     public String routeLevel;
     public String routeMechanismSetpoint;
@@ -191,6 +200,12 @@ public class FieldProfileConfig {
 
   /** Compatibility config for older profile YAML. Prefer projectileShots. */
   public static class ShuttleShotConfig extends ProjectileShotConfig {}
+
+  public static class TargetConfig {
+    public String kind;
+    public Double blueXMeters;
+    public Double blueYMeters;
+  }
 
   public static class GamePiecePhysicsConfig {
     public Double massKg;

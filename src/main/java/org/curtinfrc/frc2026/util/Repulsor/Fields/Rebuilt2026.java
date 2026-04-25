@@ -25,8 +25,10 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.wpilibj.DriverStation;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.CorridorCenterlineRail;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.GatedAttractorObstacle;
@@ -40,6 +42,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Heatmap;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.HeightSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
+import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointUtil;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.Setpoints;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.Specific._Rebuilt2026;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.DragShotPlanner;
@@ -86,21 +89,41 @@ public final class Rebuilt2026 implements FieldDefinition {
     fuel.sigmaMeters = 0.95;
     cfg.resources.put("fuel", fuel);
 
-    FieldProfileConfig.ProjectileShotConfig fuelReturn =
+    FieldProfileConfig.ProjectileShotConfig fuelTransfer =
         new FieldProfileConfig.ProjectileShotConfig();
-    fuelReturn.enabled = true;
-    fuelReturn.role = ActionRole.TRANSFER_TO_SCORE.name();
-    fuelReturn.gamePieceId = _Rebuilt2026.GAME_PIECE_ID_FUEL;
-    fuelReturn.targetHeightMeters = _Rebuilt2026.HUB_OPENING_FRONT_EDGE_HEIGHT_M;
-    fuelReturn.routeLevel = "hub";
-    fuelReturn.routeMechanismSetpoint = HeightSetpoint.NET.name();
-    fuelReturn.behindTargetMeters = 2.95;
-    fuelReturn.lateralOffsetsMeters = new double[] {0.0, 0.45, -0.45, 0.9, -0.9};
-    fuelReturn.fieldMarginMeters = 0.28;
-    fuelReturn.fallbackGamePiece.massKg = 0.27;
-    fuelReturn.fallbackGamePiece.crossSectionAreaM2 = 0.014;
-    fuelReturn.fallbackGamePiece.dragCoefficient = 0.95;
-    cfg.projectileShots.put("fuelReturnToHub", fuelReturn);
+    fuelTransfer.enabled = true;
+    fuelTransfer.role = ActionRole.TRANSFER_TO_SCORE.name();
+    fuelTransfer.gamePieceId = _Rebuilt2026.GAME_PIECE_ID_FUEL;
+    fuelTransfer.target.kind = "alliance_side";
+    fuelTransfer.target.blueXMeters = FIELD_LENGTH_M * 0.25;
+    fuelTransfer.target.blueYMeters = FIELD_WIDTH_M * 0.5;
+    fuelTransfer.targetHeightMeters = 0.35;
+    fuelTransfer.routeLevel = "alliance.transfer";
+    fuelTransfer.routeMechanismSetpoint = HeightSetpoint.NET.name();
+    fuelTransfer.behindTargetMeters = 2.3;
+    fuelTransfer.lateralOffsetsMeters = new double[] {0.0, 0.45, -0.45, 0.9, -0.9};
+    fuelTransfer.fieldMarginMeters = 0.28;
+    fuelTransfer.fallbackGamePiece.massKg = 0.27;
+    fuelTransfer.fallbackGamePiece.crossSectionAreaM2 = 0.014;
+    fuelTransfer.fallbackGamePiece.dragCoefficient = 0.95;
+    cfg.projectileShots.put("fuelTransferToAllianceSide", fuelTransfer);
+
+    FieldProfileConfig.ProjectileShotConfig fuelScore =
+        new FieldProfileConfig.ProjectileShotConfig();
+    fuelScore.enabled = true;
+    fuelScore.role = ActionRole.SCORE.name();
+    fuelScore.gamePieceId = _Rebuilt2026.GAME_PIECE_ID_FUEL;
+    fuelScore.target.kind = "hub";
+    fuelScore.targetHeightMeters = _Rebuilt2026.HUB_OPENING_FRONT_EDGE_HEIGHT_M;
+    fuelScore.routeLevel = "hub";
+    fuelScore.routeMechanismSetpoint = HeightSetpoint.NET.name();
+    fuelScore.behindTargetMeters = 2.95;
+    fuelScore.lateralOffsetsMeters = new double[] {0.0, 0.45, -0.45, 0.9, -0.9};
+    fuelScore.fieldMarginMeters = 0.28;
+    fuelScore.fallbackGamePiece.massKg = 0.27;
+    fuelScore.fallbackGamePiece.crossSectionAreaM2 = 0.014;
+    fuelScore.fallbackGamePiece.dragCoefficient = 0.95;
+    cfg.projectileShots.put("fuelScoreHub", fuelScore);
 
     FieldProfileConfig.RebuiltCorridorConfig corridor = cfg.rebuiltCorridor;
     corridor.rectWidthMeters = 0.5929315;
@@ -289,12 +312,12 @@ public final class Rebuilt2026 implements FieldDefinition {
     return new FieldActionProfile(actions);
   }
 
-  private static ProjectileShotAction projectileShotAction(
+  private ProjectileShotAction projectileShotAction(
       String id, FieldProfileConfig.ProjectileShotConfig shot) {
     return new ProjectileShotAction(
         id,
         actionRole(shot.role),
-        _Rebuilt2026::hubAimpointForAlliance,
+        targetForAlliance(shot),
         loadProjectileGamePiece(shot),
         shot.targetHeightMeters,
         _Rebuilt2026.HUB_SHOT_CONSTRAINTS,
@@ -303,6 +326,30 @@ public final class Rebuilt2026 implements FieldDefinition {
         shot.behindTargetMeters,
         shot.lateralOffsetsMeters,
         shot.fieldMarginMeters);
+  }
+
+  private Function<DriverStation.Alliance, Translation2d> targetForAlliance(
+      FieldProfileConfig.ProjectileShotConfig shot) {
+    return alliance -> projectileTarget(shot, alliance);
+  }
+
+  private Translation2d projectileTarget(
+      FieldProfileConfig.ProjectileShotConfig shot, DriverStation.Alliance alliance) {
+    FieldProfileConfig.TargetConfig target = shot.target;
+    String kind = target == null || target.kind == null ? "hub" : target.kind.trim().toLowerCase();
+    if ("hub".equals(kind)) {
+      return _Rebuilt2026.hubAimpointForAlliance(alliance);
+    }
+
+    Translation2d blueTarget;
+    if (target != null && target.blueXMeters != null && target.blueYMeters != null) {
+      blueTarget = new Translation2d(target.blueXMeters, target.blueYMeters);
+    } else if ("alliance_side".equals(kind)) {
+      blueTarget = new Translation2d(geometry.lengthMeters() * 0.25, geometry.widthMeters() * 0.5);
+    } else {
+      blueTarget = geometry.center();
+    }
+    return alliance == DriverStation.Alliance.Red ? SetpointUtil.flipToRed(blueTarget) : blueTarget;
   }
 
   private static ActionRole actionRole(String value) {

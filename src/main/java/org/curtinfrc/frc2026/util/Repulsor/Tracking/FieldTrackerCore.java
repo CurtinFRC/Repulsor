@@ -26,7 +26,9 @@ import edu.wpi.first.wpilibj.DriverStation;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
@@ -40,6 +42,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateRuntime;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
+import org.curtinfrc.frc2026.util.Repulsor.Strategy.ResourceRegionSummary;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerCollectPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Internal.ObjectiveCache;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
@@ -56,6 +59,7 @@ public class FieldTrackerCore {
   private final ObjectiveCache collectCache;
   private final FieldTrackerDynamicTracker dynamicTracker = new FieldTrackerDynamicTracker();
   private final FieldTrackerCollectPlanner collectPlanner;
+  private final Map<String, ResourceSpec> collectResourceSpecs = new ConcurrentHashMap<>();
 
   private final ConcurrentHashMap<String, String> typeAliases = new ConcurrentHashMap<>();
 
@@ -141,11 +145,13 @@ public class FieldTrackerCore {
   public void configureCollectResourceProfile(String type, ResourceSpec resourceSpec) {
     if (type == null || type.isEmpty()) throw new IllegalArgumentException("type cannot be empty");
     if (resourceSpec == null) throw new IllegalArgumentException("resourceSpec cannot be null");
+    collectResourceSpecs.put(type, resourceSpec);
     predictor.registerResourceSpec(type, resourceSpec);
     predictor.addCollectResourceType(type);
   }
 
   public void setCollectResourceTypes(Set<String> types) {
+    collectResourceSpecs.keySet().removeIf(type -> types == null || !types.contains(type));
     predictor.setCollectResourceTypes(types == null ? Set.of() : types);
   }
 
@@ -257,6 +263,58 @@ public class FieldTrackerCore {
 
   private List<DynamicObject> snapshotDynamics() {
     return dynamicTracker.snapshotDynamics();
+  }
+
+  public ResourceRegionSummary summarizeCollectResources(
+      String id, Pose2d robotPoseBlue, Predicate<Translation2d> region) {
+    if (robotPoseBlue == null || region == null) {
+      return ResourceRegionSummary.empty(id);
+    }
+
+    Translation2d robot = robotPoseBlue.getTranslation();
+    List<DynamicObject> dynamics = snapshotDynamics();
+    if (dynamics.isEmpty()) {
+      return ResourceRegionSummary.empty(id);
+    }
+
+    double units = 0.0;
+    double value = 0.0;
+    Translation2d nearest = null;
+    double nearestDist = Double.POSITIVE_INFINITY;
+    double trafficRisk = 0.0;
+    HashMap<String, Integer> resourceSeen = new HashMap<>();
+
+    for (DynamicObject object : dynamics) {
+      if (object == null || object.pos == null || !region.test(object.pos)) {
+        continue;
+      }
+      String type = canonicalizeType(object.type);
+      if (isCollectResourceType(type)) {
+        units += 1.0;
+        value +=
+            collectResourceSpecs.getOrDefault(type, new ResourceSpec(0.075, 1.0, 0.95)).unitValue;
+        resourceSeen.merge(type, 1, Integer::sum);
+        double d = robot.getDistance(object.pos);
+        if (d < nearestDist) {
+          nearestDist = d;
+          nearest = object.pos;
+        }
+      } else {
+        trafficRisk += trafficRisk(robot, object.pos, object.vel);
+      }
+    }
+
+    double obstacleRisk = Math.min(3.0, 0.08 * resourceSeen.size());
+    return new ResourceRegionSummary(
+        id, units, value, nearest, nearestDist, Math.min(6.0, trafficRisk), obstacleRisk);
+  }
+
+  private static double trafficRisk(
+      Translation2d robot, Translation2d object, Translation2d velocity) {
+    double distance = robot == null || object == null ? 4.0 : robot.getDistance(object);
+    double proximity = 1.0 / Math.max(0.35, distance);
+    double speed = velocity == null ? 0.0 : Math.hypot(velocity.getX(), velocity.getY());
+    return Math.min(2.0, proximity * (1.0 + 0.25 * speed));
   }
 
   private List<ShuttleRecoveryDynamicObjectDTO> snapshotRecoveryDynamics() {

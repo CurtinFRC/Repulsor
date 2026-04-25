@@ -13,10 +13,30 @@ resources:
     sigmaMeters: 0.95
 
 projectileShots:
-  fuelReturnToHub:
+  fuelTransferToAllianceSide:
     enabled: true
     role: TRANSFER_TO_SCORE
     gamePieceId: fuel
+    target:
+      kind: alliance_side
+      blueXMeters: 4.135247
+      blueYMeters: 4.105618
+    targetHeightMeters: 0.35
+    routeLevel: alliance.transfer
+    routeMechanismSetpoint: NET
+    behindTargetMeters: 2.3
+    lateralOffsetsMeters: [0.0, 0.45, -0.45, 0.9, -0.9]
+    fieldMarginMeters: 0.28
+    fallbackGamePiece:
+      massKg: 0.27
+      crossSectionAreaM2: 0.014
+      dragCoefficient: 0.95
+  fuelScoreHub:
+    enabled: true
+    role: SCORE
+    gamePieceId: fuel
+    target:
+      kind: hub
     targetHeightMeters: 1.43
     routeLevel: hub
     routeMechanismSetpoint: NET

@@ -53,6 +53,10 @@ public record FieldActionProfile(Map<String, ProjectileShotAction> projectileSho
     return firstProjectileShot(ActionRole.TRANSFER_TO_SCORE);
   }
 
+  public Optional<ProjectileShotAction> scoreProjectileShot() {
+    return firstProjectileShot(ActionRole.SCORE);
+  }
+
   /** Compatibility shim for older 2026-specific behavior code. Prefer transferProjectileShot(). */
   @Deprecated(forRemoval = false)
   public Optional<ProjectileShotAction> shuttleShot() {

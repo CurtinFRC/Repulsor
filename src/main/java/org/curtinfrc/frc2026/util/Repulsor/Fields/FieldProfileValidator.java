@@ -133,6 +133,10 @@ public final class FieldProfileValidator {
       return;
     }
     if (!Boolean.TRUE.equals(shot.enabled)) return;
+    if (shot.target != null) {
+      requireOptionalNonNegative(shot.target.blueXMeters, prefix + ".target.blueXMeters", errors);
+      requireOptionalNonNegative(shot.target.blueYMeters, prefix + ".target.blueYMeters", errors);
+    }
     requirePositive(shot.targetHeightMeters, prefix + ".targetHeightMeters", errors);
     requireNonNegative(shot.behindTargetMeters, prefix + ".behindTargetMeters", errors);
     requireNonNegative(shot.fieldMarginMeters, prefix + ".fieldMarginMeters", errors);
@@ -151,6 +155,12 @@ public final class FieldProfileValidator {
           shot.fallbackGamePiece.dragCoefficient,
           prefix + ".fallbackGamePiece.dragCoefficient",
           errors);
+    }
+  }
+
+  private static void requireOptionalNonNegative(Double value, String name, List<String> errors) {
+    if (value != null && (!Double.isFinite(value) || value < 0.0)) {
+      errors.add(name + " must be finite and >= 0 when provided");
     }
   }
 }

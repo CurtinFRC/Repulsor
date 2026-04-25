@@ -19,14 +19,25 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Reasoning;
 
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DriverStation;
 import java.util.EnumSet;
 import org.curtinfrc.frc2026.util.Repulsor.Behaviours.BehaviourContext;
 import org.curtinfrc.frc2026.util.Repulsor.Behaviours.BehaviourFlag;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.Simulation.NetworkTablesValue;
 import org.curtinfrc.frc2026.util.Repulsor.State.GameState;
 import org.curtinfrc.frc2026.util.Repulsor.State.StateManager;
+import org.curtinfrc.frc2026.util.Repulsor.Strategy.CycleStrategyEvaluator;
+import org.curtinfrc.frc2026.util.Repulsor.Strategy.CycleStrategyEvaluator.Decision;
+import org.curtinfrc.frc2026.util.Repulsor.Strategy.CycleStrategyEvaluator.Inputs;
+import org.curtinfrc.frc2026.util.Repulsor.Strategy.CycleStrategyEvaluator.Intent;
+import org.curtinfrc.frc2026.util.Repulsor.Strategy.CycleStrategyEvaluator.Tuning;
+import org.curtinfrc.frc2026.util.Repulsor.Strategy.ResourceRegionSummary;
+import org.curtinfrc.frc2026.util.Repulsor.Strategy.StrategyDirective;
+import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
 
 public final class Rebuilt2026Reasoner
     implements Reasoner<BehaviourFlag, BehaviourContext>, AutoCloseable {
@@ -42,21 +53,36 @@ public final class Rebuilt2026Reasoner
       ReasoningKeys.boolKey("auto_want_shuttle_recovery");
   private static final SignalKey<Boolean> TRANSFER_ACTION_AVAILABLE =
       ReasoningKeys.boolKey("transfer_action_available");
+  private static final SignalKey<Boolean> SCORE_ACTION_AVAILABLE =
+      ReasoningKeys.boolKey("score_action_available");
   private static final SignalKey<Boolean> HUB_ACTIVE = ReasoningKeys.boolKey("hub_active");
   private static final SignalKey<Boolean> HAS_PIECE = ReasoningKeys.boolKey("has_piece");
   private static final SignalKey<Long> PIECE_COUNT = ReasoningKeys.longKey("piece_count");
   private static final SignalKey<Double> REMAINING_SHIFT_TIME =
       ReasoningKeys.doubleKey("remaining_shift_time");
   private static final SignalKey<String> SELECTED_MODE = ReasoningKeys.stringKey("selected_mode");
+  private static final SignalKey<String> CYCLE_INTENT = ReasoningKeys.stringKey("cycle_intent");
+  private static final SignalKey<Double> SCORE_OPTION_SCORE =
+      ReasoningKeys.doubleKey("score_option_score");
+  private static final SignalKey<Double> TRANSFER_OPTION_SCORE =
+      ReasoningKeys.doubleKey("transfer_option_score");
+  private static final SignalKey<Double> ALLIANCE_SIDE_FUEL_UNITS =
+      ReasoningKeys.doubleKey("alliance_side_fuel_units");
+  private static final SignalKey<Double> CENTER_FUEL_UNITS =
+      ReasoningKeys.doubleKey("center_fuel_units");
 
   private static final int PH_SHUTTLE = 0;
   private static final int PH_SHUTTLE_RECOVERY = 1;
   private static final int PH_AUTOPATH = 2;
   private static final int PH_DEFENSE = 3;
 
+  private static final double ALLIANCE_ZONE_X_FRACTION = 0.42;
+  private static final double CENTER_ZONE_HALF_WIDTH_FRACTION = 0.16;
+
   private final NetworkTablesSignals nt;
   private final NetworkTablesValue<Long> pieceCount;
   private final SequenceReasoner<BehaviourFlag, BehaviourContext> seq;
+  private Intent currentCycleIntent = Intent.FALLBACK;
 
   public Rebuilt2026Reasoner() {
     this(NetworkTableInstance.getDefault(), "/Repulsor/Reasoning");
@@ -76,11 +102,17 @@ public final class Rebuilt2026Reasoner
     nts.register(AUTO_WANT_SHUTTLE, false);
     nts.register(AUTO_WANT_SHUTTLE_RECOVERY, false);
     nts.register(TRANSFER_ACTION_AVAILABLE, false);
+    nts.register(SCORE_ACTION_AVAILABLE, false);
     nts.register(HUB_ACTIVE, false);
     nts.register(HAS_PIECE, false);
     nts.register(PIECE_COUNT, 0L);
     nts.register(REMAINING_SHIFT_TIME, 0.0);
     nts.register(SELECTED_MODE, "");
+    nts.register(CYCLE_INTENT, Intent.FALLBACK.name());
+    nts.register(SCORE_OPTION_SCORE, 0.0);
+    nts.register(TRANSFER_OPTION_SCORE, 0.0);
+    nts.register(ALLIANCE_SIDE_FUEL_UNITS, 0.0);
+    nts.register(CENTER_FUEL_UNITS, 0.0);
     this.nt = nts;
     this.pieceCount = NetworkTablesValue.ofInteger(inst, "/PieceCount", 0L);
 
@@ -154,6 +186,10 @@ public final class Rebuilt2026Reasoner
                 .actionProfile()
                 .transferProjectileShot()
                 .isPresent();
+    boolean scoringAvailable =
+        ctx != null
+            && ctx.repulsor != null
+            && ctx.repulsor.getFieldDefinition().actionProfile().scoreProjectileShot().isPresent();
 
     GameState gameState = StateManager.getState(GameState.class);
     boolean hubActive = gameState != null && gameState.isHubActive();
@@ -163,16 +199,36 @@ public final class Rebuilt2026Reasoner
     long currentPieceCount = safePieceCount();
     boolean hasPiece =
         (ctx != null && ctx.repulsor != null && ctx.repulsor.hasPiece()) || currentPieceCount > 0L;
+    Decision cycleDecision =
+        evaluateCycle(ctx, hubActive, remainingShiftTime, transferAvailable, scoringAvailable);
+    currentCycleIntent = cycleDecision.intent();
+    StrategyDirective directive =
+        directiveFor(ctx, cycleDecision, hubActive ? Math.max(0.0, remainingShiftTime) : 0.0);
+    if (ctx != null && ctx.repulsor != null) {
+      ctx.repulsor.setStrategyDirective(directive);
+    }
 
     signals.put(TRANSFER_ACTION_AVAILABLE, transferAvailable);
+    signals.put(SCORE_ACTION_AVAILABLE, scoringAvailable);
     signals.put(HUB_ACTIVE, hubActive);
     signals.put(HAS_PIECE, hasPiece);
     signals.put(PIECE_COUNT, currentPieceCount);
     signals.put(REMAINING_SHIFT_TIME, remainingShiftTime);
     signals.put(ReasoningKeys.ENDGAME, endgame);
+    signals.put(CYCLE_INTENT, cycleDecision.intent().name());
+    signals.put(SCORE_OPTION_SCORE, cycleDecision.scoringOption().score());
+    signals.put(TRANSFER_OPTION_SCORE, cycleDecision.transferOption().score());
+    signals.put(
+        ALLIANCE_SIDE_FUEL_UNITS, cycleDecision.scoringOption().resources().resourceUnits());
+    signals.put(CENTER_FUEL_UNITS, cycleDecision.transferOption().resources().resourceUnits());
 
-    boolean autoWantsRecovery = transferAvailable && hubActive;
-    boolean autoWantsShuttle = transferAvailable && !hubActive;
+    boolean autoWantsRecovery =
+        scoringAvailable
+            && hubActive
+            && (hasPiece || cycleDecision.intent() == Intent.SCORE_AVAILABLE_RESOURCES);
+    boolean autoWantsShuttle =
+        transferAvailable
+            && (!hubActive || cycleDecision.intent() == Intent.TRANSFER_FOR_LATER_SCORE);
     signals.put(AUTO_WANT_SHUTTLE, autoWantsShuttle);
     signals.put(AUTO_WANT_SHUTTLE_RECOVERY, autoWantsRecovery);
 
@@ -229,7 +285,8 @@ public final class Rebuilt2026Reasoner
   private static boolean wantsAutopath(Signals signals) {
     return signals.getOr(WANT_AUTOPATH, false)
         || signals.getOr(TESTING, false)
-        || !signals.getOr(TRANSFER_ACTION_AVAILABLE, false);
+        || (!signals.getOr(TRANSFER_ACTION_AVAILABLE, false)
+            && !signals.getOr(SCORE_ACTION_AVAILABLE, false));
   }
 
   private static boolean wantsShuttle(Signals signals) {
@@ -238,9 +295,126 @@ public final class Rebuilt2026Reasoner
   }
 
   private static boolean wantsShuttleRecovery(Signals signals) {
-    return signals.getOr(TRANSFER_ACTION_AVAILABLE, false)
+    return signals.getOr(SCORE_ACTION_AVAILABLE, false)
         && (signals.getOr(WANT_SHUTTLE_RECOVERY, false)
             || signals.getOr(AUTO_WANT_SHUTTLE_RECOVERY, false));
+  }
+
+  private Decision evaluateCycle(
+      BehaviourContext ctx,
+      boolean hubActive,
+      double remainingShiftTime,
+      boolean transferAvailable,
+      boolean scoringAvailable) {
+    if (ctx == null || ctx.repulsor == null || ctx.robotPose == null) {
+      return CycleStrategyEvaluator.decide(null, Tuning.defaults());
+    }
+
+    Pose2d robotPose = ctx.robotPose.get();
+    FieldGeometry geometry = ctx.repulsor.getFieldDefinition().geometry();
+    DriverStation.Alliance alliance =
+        DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue);
+    FieldTrackerCore tracker = FieldTrackerCore.getInstance();
+
+    ResourceRegionSummary scoringSide =
+        scoringAvailable
+            ? tracker.summarizeCollectResources(
+                "alliance_side", robotPose, p -> isAllianceSide(p, alliance, geometry))
+            : ResourceRegionSummary.empty("alliance_side");
+    ResourceRegionSummary center =
+        transferAvailable
+            ? tracker.summarizeCollectResources("center", robotPose, p -> isCenterZone(p, geometry))
+            : ResourceRegionSummary.empty("center");
+
+    Inputs inputs =
+        new Inputs(
+            hubActive,
+            hubActive ? Math.max(0.0, remainingShiftTime) : 0.0,
+            5.2,
+            scoringSide,
+            center,
+            distanceTo(robotPose, scoringSide, allianceSideFallback(alliance, geometry)),
+            distanceTo(robotPose, center, geometry.center()),
+            centerReturnMeters(center, alliance, geometry),
+            currentCycleIntent);
+    return CycleStrategyEvaluator.decide(inputs, Tuning.defaults());
+  }
+
+  private static StrategyDirective directiveFor(
+      BehaviourContext ctx, Decision decision, double deadlineSeconds) {
+    if (ctx == null || ctx.repulsor == null || decision == null || decision.bestOption() == null) {
+      return StrategyDirective.none();
+    }
+    var option = decision.bestOption();
+    var actionProfile = ctx.repulsor.getFieldDefinition().actionProfile();
+    String actionId =
+        switch (option.intent()) {
+          case TRANSFER_FOR_LATER_SCORE ->
+              actionProfile.transferProjectileShot().map(a -> a.id()).orElse("none");
+          case SCORE_AVAILABLE_RESOURCES ->
+              actionProfile.scoreProjectileShot().map(a -> a.id()).orElse("none");
+          case FALLBACK -> "none";
+        };
+    String actionRole =
+        switch (option.intent()) {
+          case TRANSFER_FOR_LATER_SCORE -> "TRANSFER_TO_SCORE";
+          case SCORE_AVAILABLE_RESOURCES -> "SCORE";
+          case FALLBACK -> "none";
+        };
+    return new StrategyDirective(
+        "rebuilt2026.cycle",
+        option.intent(),
+        option.resources().id(),
+        option.resources().nearestResource(),
+        actionRole,
+        actionId,
+        option.expectedUnits(),
+        option.cycleSeconds(),
+        deadlineSeconds,
+        option.score());
+  }
+
+  private static boolean isAllianceSide(
+      Translation2d point, DriverStation.Alliance alliance, FieldGeometry geometry) {
+    if (point == null || geometry == null) return false;
+    double boundary = geometry.lengthMeters() * ALLIANCE_ZONE_X_FRACTION;
+    if (alliance == DriverStation.Alliance.Red) {
+      return point.getX() >= geometry.lengthMeters() - boundary;
+    }
+    return point.getX() <= boundary;
+  }
+
+  private static boolean isCenterZone(Translation2d point, FieldGeometry geometry) {
+    if (point == null || geometry == null) return false;
+    double halfWidth = geometry.lengthMeters() * CENTER_ZONE_HALF_WIDTH_FRACTION;
+    return Math.abs(point.getX() - geometry.lengthMeters() * 0.5) <= halfWidth;
+  }
+
+  private static Translation2d allianceSideFallback(
+      DriverStation.Alliance alliance, FieldGeometry geometry) {
+    double x =
+        alliance == DriverStation.Alliance.Red
+            ? geometry.lengthMeters() * 0.75
+            : geometry.lengthMeters() * 0.25;
+    return new Translation2d(x, geometry.widthMeters() * 0.5);
+  }
+
+  private static double distanceTo(
+      Pose2d robotPose, ResourceRegionSummary summary, Translation2d fallback) {
+    Translation2d target =
+        summary != null && summary.nearestResource() != null ? summary.nearestResource() : fallback;
+    return robotPose == null || target == null
+        ? 0.0
+        : robotPose.getTranslation().getDistance(target);
+  }
+
+  private static double centerReturnMeters(
+      ResourceRegionSummary center, DriverStation.Alliance alliance, FieldGeometry geometry) {
+    Translation2d source =
+        center != null && center.nearestResource() != null
+            ? center.nearestResource()
+            : geometry.center();
+    return source.getDistance(allianceSideFallback(alliance, geometry));
   }
 
   private static boolean isEndgameTime(double matchTimeSecondsRemaining) {
@@ -259,6 +433,7 @@ public final class Rebuilt2026Reasoner
   @Override
   public void reset() {
     seq.reset();
+    currentCycleIntent = Intent.FALLBACK;
     seq.signals().flush();
   }
 
