@@ -45,6 +45,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointUtil;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.Setpoints;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.Specific._Rebuilt2026;
+import org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.DragShotPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.GamePiecePhysics;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
@@ -65,6 +66,10 @@ public final class Rebuilt2026 implements FieldDefinition {
   private static final double GRID_Z_MAX_M = 0.35;
 
   private static final double GRID_CELL_M = 0.75;
+  private static final String GAME_PIECE_ID_FUEL = "fuel";
+  private static final double HUB_OPENING_FRONT_EDGE_HEIGHT_M = 1.43;
+  private static final Constraints DEFAULT_HUB_SHOT_CONSTRAINTS =
+      new Constraints(0, 30, 60, 90.0, Constraints.ShotStyle.ARC);
 
   public Rebuilt2026() {
     this(FieldProfileYamlLoader.loadOrDefault("rebuilt2026", defaultProfileConfig()));
@@ -93,7 +98,7 @@ public final class Rebuilt2026 implements FieldDefinition {
         new FieldProfileConfig.ProjectileShotConfig();
     fuelTransfer.enabled = true;
     fuelTransfer.role = ActionRole.TRANSFER_TO_SCORE.name();
-    fuelTransfer.gamePieceId = _Rebuilt2026.GAME_PIECE_ID_FUEL;
+    fuelTransfer.gamePieceId = GAME_PIECE_ID_FUEL;
     fuelTransfer.target.kind = "alliance_side";
     fuelTransfer.target.blueXMeters = FIELD_LENGTH_M * 0.25;
     fuelTransfer.target.blueYMeters = FIELD_WIDTH_M * 0.5;
@@ -114,16 +119,16 @@ public final class Rebuilt2026 implements FieldDefinition {
         new FieldProfileConfig.ProjectileShotConfig();
     fuelScore.enabled = true;
     fuelScore.role = ActionRole.SCORE.name();
-    fuelScore.gamePieceId = _Rebuilt2026.GAME_PIECE_ID_FUEL;
+    fuelScore.gamePieceId = GAME_PIECE_ID_FUEL;
     fuelScore.target.kind = "hub";
-    fuelScore.targetHeightMeters = _Rebuilt2026.HUB_OPENING_FRONT_EDGE_HEIGHT_M;
+    fuelScore.targetHeightMeters = HUB_OPENING_FRONT_EDGE_HEIGHT_M;
     configureDefaultShotConstraints(
         fuelScore,
-        _Rebuilt2026.HUB_SHOT_CONSTRAINTS.minLaunchSpeedMetersPerSecond(),
-        _Rebuilt2026.HUB_SHOT_CONSTRAINTS.maxLaunchSpeedMetersPerSecond(),
-        _Rebuilt2026.HUB_SHOT_CONSTRAINTS.minLaunchAngleDeg(),
-        _Rebuilt2026.HUB_SHOT_CONSTRAINTS.maxLaunchAngleDeg(),
-        _Rebuilt2026.HUB_SHOT_CONSTRAINTS.shotStyle().name());
+        DEFAULT_HUB_SHOT_CONSTRAINTS.minLaunchSpeedMetersPerSecond(),
+        DEFAULT_HUB_SHOT_CONSTRAINTS.maxLaunchSpeedMetersPerSecond(),
+        DEFAULT_HUB_SHOT_CONSTRAINTS.minLaunchAngleDeg(),
+        DEFAULT_HUB_SHOT_CONSTRAINTS.maxLaunchAngleDeg(),
+        DEFAULT_HUB_SHOT_CONSTRAINTS.shotStyle().name());
     fuelScore.routeLevel = "hub";
     fuelScore.routeMechanismSetpoint = HeightSetpoint.NET.name();
     fuelScore.behindTargetMeters = 2.95;
@@ -331,8 +336,8 @@ public final class Rebuilt2026 implements FieldDefinition {
         loadProjectileGamePiece(shot),
         shot.targetHeightMeters,
         shot.constraints != null
-            ? shot.constraints.constraints(_Rebuilt2026.HUB_SHOT_CONSTRAINTS)
-            : _Rebuilt2026.HUB_SHOT_CONSTRAINTS,
+            ? shot.constraints.constraints(DEFAULT_HUB_SHOT_CONSTRAINTS)
+            : DEFAULT_HUB_SHOT_CONSTRAINTS,
         shot.routeLevel,
         routeMechanismSetpoint(shot.routeMechanismSetpoint),
         shot.behindTargetMeters,
@@ -416,7 +421,7 @@ public final class Rebuilt2026 implements FieldDefinition {
     try {
       String gamePieceId =
           cfg.gamePieceId == null || cfg.gamePieceId.isBlank()
-              ? _Rebuilt2026.GAME_PIECE_ID_FUEL
+              ? GAME_PIECE_ID_FUEL
               : cfg.gamePieceId.trim();
       return DragShotPlanner.loadGamePieceFromDeployYaml(gamePieceId);
     } catch (Throwable ignored) {
