@@ -39,6 +39,10 @@ public final class ReasoningKeys {
     return new SignalKey<>(name, Integer.class);
   }
 
+  public static SignalKey<Long> longKey(String name) {
+    return new SignalKey<>(name, Long.class);
+  }
+
   public static SignalKey<String> stringKey(String name) {
     return new SignalKey<>(name, String.class);
   }

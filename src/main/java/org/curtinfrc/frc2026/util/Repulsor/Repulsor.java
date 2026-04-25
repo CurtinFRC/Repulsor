@@ -113,6 +113,10 @@ public class Repulsor {
     return this;
   }
 
+  public boolean hasPiece() {
+    return Boolean.TRUE.equals(m_hasPiece.get());
+  }
+
   public Repulsor withShooterReleaseHeightMetersSupplier(Supplier<Double> supplier) {
     this.shooterReleaseHeightMeters = supplier == null ? () -> 0.0 : supplier;
     return this;

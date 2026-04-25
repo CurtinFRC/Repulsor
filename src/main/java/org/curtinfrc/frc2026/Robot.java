@@ -221,10 +221,8 @@ public class Robot extends LoggedRobot {
             () -> 5.2));
 
     Rebuilt2026Reasoner reasoner = new Rebuilt2026Reasoner();
-    reasoner.setTesting(true);
     repulsor.setReasoner(reasoner);
 
-    repulsor.disableBehaviours();
     repulsor.setup();
 
     StaticInstance.initialize(repulsor);
