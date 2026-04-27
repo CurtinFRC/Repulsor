@@ -22,14 +22,33 @@ package org.curtinfrc.frc2026.util.Repulsor.Setpoints;
 import edu.wpi.first.math.geometry.Pose2d;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * Provides mutable pose setpoint functionality for the Repulsor game setpoint abstraction layer for
+ * field-relative goals and mechanisms. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class MutablePoseSetpoint extends GameSetpoint {
   private final AtomicReference<Pose2d> bluePoseRef;
 
+  /**
+   * Returns the mutable pose setpoint value maintained by this Repulsor component.
+   *
+   * @param name value used by this operation.
+   * @param type value used by this operation.
+   * @param bluePoseRef value used by this operation.
+   */
   public MutablePoseSetpoint(String name, SetpointType type, AtomicReference<Pose2d> bluePoseRef) {
     super(name, type == null ? SetpointType.kOther : type, false);
     this.bluePoseRef = bluePoseRef == null ? new AtomicReference<>(Pose2d.kZero) : bluePoseRef;
   }
 
+  /**
+   * Returns the blue pose value maintained by this Repulsor component.
+   *
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   * @return value produced by this operation.
+   */
   @Override
   public Pose2d bluePose(SetpointContext ctx) {
     Pose2d p = bluePoseRef.get();

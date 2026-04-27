@@ -24,6 +24,12 @@ import java.util.ArrayList;
 import java.util.List;
 import org.curtinfrc.frc2026.util.Repulsor.Profiler.Profiler;
 
+/**
+ * Provides shot library builder functionality for the Repulsor projectile and shot-planning layer.
+ * Use this type from robot code, field profiles, or tests when integrating the corresponding
+ * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+ * motion.
+ */
 public final class ShotLibraryBuilder {
   private final GamePiecePhysics gamePiece;
   private final Translation2d targetFieldPosition;
@@ -52,6 +58,22 @@ public final class ShotLibraryBuilder {
 
   private int publishCounter;
 
+  /**
+   * Returns the shot library builder value maintained by this Repulsor component.
+   *
+   * @param gamePiece value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param targetHeightMeters distance or field-coordinate value in meters.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @param robotHalfLengthMeters distance or field-coordinate value in meters.
+   * @param robotHalfWidthMeters distance or field-coordinate value in meters.
+   * @param constraints value used by this operation.
+   * @param speedStep velocity input, normally field-relative unless the caller documents
+   *     robot-relative motion.
+   * @param angleStepDeg value used by this operation.
+   * @param radialStep value used by this operation.
+   * @param bearingStepDeg value used by this operation.
+   */
   public ShotLibraryBuilder(
       GamePiecePhysics gamePiece,
       Translation2d targetFieldPosition,
@@ -95,14 +117,30 @@ public final class ShotLibraryBuilder {
     }
   }
 
+  /**
+   * Returns the done value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public boolean done() {
     return done;
   }
 
+  /**
+   * Returns the size value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public int size() {
     return entries.size();
   }
 
+  /**
+   * Returns the snapshot value maintained by this Repulsor component.
+   *
+   * @param completeFlag value used by this operation.
+   * @return shot library result for snapshot.
+   */
   public ShotLibrary snapshot(boolean completeFlag) {
     AutoCloseable _p = Profiler.section("DragShotPlanner.ShotLibraryBuilder.snapshot");
     try {
@@ -120,6 +158,12 @@ public final class ShotLibraryBuilder {
     }
   }
 
+  /**
+   * Returns the maybe step value maintained by this Repulsor component.
+   *
+   * @param budgetNanos value used by this operation.
+   * @return shot library result for maybe step.
+   */
   public ShotLibrary maybeStep(long budgetNanos) {
     AutoCloseable _p = Profiler.section("DragShotPlanner.ShotLibraryBuilder.maybeStep");
     try {

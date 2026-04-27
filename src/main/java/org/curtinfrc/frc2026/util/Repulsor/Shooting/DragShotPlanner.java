@@ -26,13 +26,35 @@ import java.util.concurrent.CompletableFuture;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Offload.DragShotPlannerOffloadEntrypoints_Offloaded;
 
+/**
+ * Provides drag shot planner functionality for the Repulsor projectile and shot-planning layer. Use
+ * this type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+ * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public final class DragShotPlanner {
   private DragShotPlanner() {}
 
+  /**
+   * Returns the load game piece from deploy yaml value maintained by this Repulsor component.
+   *
+   * @param id value used by this operation.
+   * @return game piece physics result for load game piece from deploy yaml.
+   */
   public static GamePiecePhysics loadGamePieceFromDeployYaml(String id) {
     return DragShotPlannerCore.loadGamePieceFromDeployYaml(id);
   }
 
+  /**
+   * Returns the is shooter pose valid value maintained by this Repulsor component.
+   *
+   * @param shooterPos value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param robotHalfLengthMeters distance or field-coordinate value in meters.
+   * @param robotHalfWidthMeters distance or field-coordinate value in meters.
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   * @param checkBounds value used by this operation.
+   * @return value produced by this operation.
+   */
   public static boolean isShooterPoseValid(
       Translation2d shooterPos,
       Translation2d targetFieldPosition,
@@ -49,6 +71,21 @@ public final class DragShotPlanner {
         checkBounds);
   }
 
+  /**
+   * Computes the find best shot from library value for the current Repulsor planning state.
+   *
+   * @param library distance or field-coordinate value in meters.
+   * @param gamePiece value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param targetHeightMeters distance or field-coordinate value in meters.
+   * @param robotPose WPILib Pose2d in field-relative coordinates.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @param robotHalfLengthMeters distance or field-coordinate value in meters.
+   * @param robotHalfWidthMeters distance or field-coordinate value in meters.
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   * @param constraints value used by this operation.
+   * @return optional shot solution produced by this operation.
+   */
   public static Optional<ShotSolution> findBestShotFromLibrary(
       ShotLibrary library,
       GamePiecePhysics gamePiece,
@@ -73,6 +110,20 @@ public final class DragShotPlanner {
         constraints);
   }
 
+  /**
+   * Computes the find best shot auto value for the current Repulsor planning state.
+   *
+   * @param gamePiece value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param targetHeightMeters distance or field-coordinate value in meters.
+   * @param robotPose WPILib Pose2d in field-relative coordinates.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @param robotHalfLengthMeters distance or field-coordinate value in meters.
+   * @param robotHalfWidthMeters distance or field-coordinate value in meters.
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   * @param constraints value used by this operation.
+   * @return optional shot solution produced by this operation.
+   */
   public static Optional<ShotSolution> findBestShotAuto(
       GamePiecePhysics gamePiece,
       Translation2d targetFieldPosition,
@@ -95,6 +146,20 @@ public final class DragShotPlanner {
         constraints);
   }
 
+  /**
+   * Computes the find best shot auto async value for the current Repulsor planning state.
+   *
+   * @param gamePiece value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param targetHeightMeters distance or field-coordinate value in meters.
+   * @param robotPose WPILib Pose2d in field-relative coordinates.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @param robotHalfLengthMeters distance or field-coordinate value in meters.
+   * @param robotHalfWidthMeters distance or field-coordinate value in meters.
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   * @param constraints value used by this operation.
+   * @return completable future containing an optional shot solution.
+   */
   public static CompletableFuture<Optional<ShotSolution>> findBestShotAutoAsync(
       GamePiecePhysics gamePiece,
       Translation2d targetFieldPosition,
@@ -117,6 +182,20 @@ public final class DragShotPlanner {
         constraints);
   }
 
+  /**
+   * Computes the find best shot auto local value for the current Repulsor planning state.
+   *
+   * @param gamePiece value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param targetHeightMeters distance or field-coordinate value in meters.
+   * @param robotPose WPILib Pose2d in field-relative coordinates.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @param robotHalfLengthMeters distance or field-coordinate value in meters.
+   * @param robotHalfWidthMeters distance or field-coordinate value in meters.
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   * @param constraints value used by this operation.
+   * @return optional shot solution produced by this operation.
+   */
   public static Optional<ShotSolution> findBestShotAutoLocal(
       GamePiecePhysics gamePiece,
       Translation2d targetFieldPosition,
@@ -139,6 +218,22 @@ public final class DragShotPlanner {
         constraints);
   }
 
+  /**
+   * Computes the find best shot online refine value for the current Repulsor planning state.
+   *
+   * @param gamePiece value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param targetHeightMeters distance or field-coordinate value in meters.
+   * @param robotPose WPILib Pose2d in field-relative coordinates.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @param robotHalfLengthMeters distance or field-coordinate value in meters.
+   * @param robotHalfWidthMeters distance or field-coordinate value in meters.
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   * @param constraints value used by this operation.
+   * @param state value used by this operation.
+   * @param budgetNanos value used by this operation.
+   * @return optional shot solution produced by this operation.
+   */
   public static Optional<ShotSolution> findBestShotOnlineRefine(
       GamePiecePhysics gamePiece,
       Translation2d targetFieldPosition,
@@ -165,6 +260,19 @@ public final class DragShotPlanner {
         budgetNanos);
   }
 
+  /**
+   * Computes the calculate static shot angle and speed value for the current Repulsor planning
+   * state. Call this from periodic planning or tests when a fresh decision is required; inputs
+   * should already be expressed in the coordinate frame expected by the parameter names.
+   *
+   * @param gamePiece value used by this operation.
+   * @param shooterFieldPosition value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param targetHeightMeters distance or field-coordinate value in meters.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @param constraints value used by this operation.
+   * @return optional shot solution produced by this operation.
+   */
   public static Optional<ShotSolution> calculateStaticShotAngleAndSpeed(
       GamePiecePhysics gamePiece,
       Translation2d shooterFieldPosition,
@@ -181,6 +289,20 @@ public final class DragShotPlanner {
         constraints);
   }
 
+  /**
+   * Computes the calculate static shot angle and speed async value for the current Repulsor
+   * planning state. Call this from periodic planning or tests when a fresh decision is required;
+   * inputs should already be expressed in the coordinate frame expected by the parameter names.
+   *
+   * @param gamePiece value used by this operation.
+   * @param shooterFieldPosition value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param targetHeightMeters distance or field-coordinate value in meters.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @param constraints value used by this operation.
+   * @return completable future containing an optional shot solution for calculate static shot angle
+   *     and speed async.
+   */
   public static CompletableFuture<Optional<ShotSolution>> calculateStaticShotAngleAndSpeedAsync(
       GamePiecePhysics gamePiece,
       Translation2d shooterFieldPosition,
@@ -198,6 +320,19 @@ public final class DragShotPlanner {
             constraints);
   }
 
+  /**
+   * Computes the calculate static shot angle and speed local value for the current Repulsor
+   * planning state. Call this from periodic planning or tests when a fresh decision is required;
+   * inputs should already be expressed in the coordinate frame expected by the parameter names.
+   *
+   * @param gamePiece value used by this operation.
+   * @param shooterFieldPosition value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param targetHeightMeters distance or field-coordinate value in meters.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @param constraints value used by this operation.
+   * @return optional shot solution produced by this operation.
+   */
   public static Optional<ShotSolution> calculateStaticShotAngleAndSpeedLocal(
       GamePiecePhysics gamePiece,
       Translation2d shooterFieldPosition,

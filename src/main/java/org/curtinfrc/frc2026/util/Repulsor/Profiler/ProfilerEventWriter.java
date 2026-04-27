@@ -34,6 +34,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.zip.GZIPOutputStream;
 
+/**
+ * Provides profiler event writer functionality for the Repulsor low-overhead profiling and event
+ * recording layer. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 final class ProfilerEventWriter implements AutoCloseable {
   private final ArrayBlockingQueue<String> q;
   private final Thread thread;
@@ -42,6 +48,13 @@ final class ProfilerEventWriter implements AutoCloseable {
   private final LongAdder dropped = new LongAdder();
   private final Path path;
 
+  /**
+   * Creates a profiler event writer instance with the dependencies and tuning values used by this
+   * Repulsor component.
+   *
+   * @param queueCapacity distance or field-coordinate value in meters.
+   * @param gzip value used by this operation.
+   */
   ProfilerEventWriter(int queueCapacity, boolean gzip) {
     this.q = new ArrayBlockingQueue<>(queueCapacity);
     this.path = makePath(gzip);
@@ -84,10 +97,20 @@ final class ProfilerEventWriter implements AutoCloseable {
     writeRaw("{\"t\":\"m\",\"ts\":" + nowMs() + ",\"f\":\"" + escape(path.toString()) + "\"}");
   }
 
+  /**
+   * Returns the path value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   Path path() {
     return path;
   }
 
+  /**
+   * Runs write raw in the Repulsor runtime.
+   *
+   * @param line value used by this operation.
+   */
   void writeRaw(String line) {
     if (!running) return;
     if (!q.offer(line)) {
@@ -95,10 +118,16 @@ final class ProfilerEventWriter implements AutoCloseable {
     }
   }
 
+  /** Runs flush now in the Repulsor runtime. */
   void flushNow() {
     writeRaw("{\"t\":\"f\",\"ts\":" + nowMs() + "}");
   }
 
+  /**
+   * Returns the dropped count value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   long droppedCount() {
     return dropped.sum();
   }
@@ -121,6 +150,7 @@ final class ProfilerEventWriter implements AutoCloseable {
     }
   }
 
+  /** Runs close in the Repulsor runtime. */
   @Override
   public void close() {
     running = false;
@@ -150,6 +180,12 @@ final class ProfilerEventWriter implements AutoCloseable {
     return base.resolve("profiler-" + ts + ext);
   }
 
+  /**
+   * Returns the escape value maintained by this Repulsor component.
+   *
+   * @param s value used by this operation.
+   * @return value produced by this operation.
+   */
   static String escape(String s) {
     if (s == null) return "";
     StringBuilder b = new StringBuilder(s.length() + 16);

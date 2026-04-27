@@ -22,8 +22,18 @@ package org.curtinfrc.frc2026.util.Repulsor.Shooting;
 import java.util.concurrent.ConcurrentHashMap;
 import org.curtinfrc.frc2026.util.Repulsor.Profiler.Profiler;
 
+/**
+ * Provides drag shot planner simulation functionality for the Repulsor projectile and shot-planning
+ * layer. Use this type from robot code, field profiles, or tests when integrating the corresponding
+ * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+ * motion.
+ */
 final class DragShotPlannerSimulation {
   private static final class SimParams {
+    /**
+     * Configuration value for k over m. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     final double kOverM;
 
     SimParams(double kOverM) {
@@ -31,6 +41,11 @@ final class DragShotPlannerSimulation {
     }
   }
 
+  /**
+   * Provides sim out functionality for the Repulsor projectile and shot-planning layer. Use this
+   * type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+   * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+   */
   static final class SimOut {
     boolean hitPlane;
     double timeAtPlaneSeconds;
@@ -56,10 +71,26 @@ final class DragShotPlannerSimulation {
 
   private DragShotPlannerSimulation() {}
 
+  /**
+   * Returns the sim out value maintained by this Repulsor component.
+   *
+   * @return sim out result for sim out.
+   */
   static SimOut simOut() {
     return SIM_OUT_TL.get();
   }
 
+  /**
+   * Runs simulate to target plane into in the Repulsor runtime.
+   *
+   * @param out value used by this operation.
+   * @param gamePiece value used by this operation.
+   * @param vx0 value used by this operation.
+   * @param vy0 value used by this operation.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @param targetHorizontalDistanceMeters distance or field-coordinate value in meters.
+   * @param targetHeightMeters distance or field-coordinate value in meters.
+   */
   static void simulateToTargetPlaneInto(
       SimOut out,
       GamePiecePhysics gamePiece,
@@ -79,6 +110,17 @@ final class DragShotPlannerSimulation {
         false);
   }
 
+  /**
+   * Runs simulate to target plane into fast in the Repulsor runtime.
+   *
+   * @param out value used by this operation.
+   * @param gamePiece value used by this operation.
+   * @param vx0 value used by this operation.
+   * @param vy0 value used by this operation.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @param targetHorizontalDistanceMeters distance or field-coordinate value in meters.
+   * @param targetHeightMeters distance or field-coordinate value in meters.
+   */
   static void simulateToTargetPlaneIntoFast(
       SimOut out,
       GamePiecePhysics gamePiece,

@@ -36,6 +36,11 @@ import org.curtinfrc.frc2026.util.Repulsor.Setpoints.GameSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.Setpoints;
 import org.curtinfrc.frc2026.util.Repulsor.Vision.RepulsorVision;
 
+/**
+ * Provides vision sim test functionality for the Repulsor simulation test harness layer. Use this
+ * type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+ * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public class VisionSimTest implements RepulsorVision {
   private static final boolean USE_CONTROLLER = true;
   private static final boolean USE_KEYBOARD = true;
@@ -57,6 +62,7 @@ public class VisionSimTest implements RepulsorVision {
   private boolean timeInitialized;
 
   @SuppressWarnings("unchecked")
+  /** Returns the vision sim test value maintained by this Repulsor component. */
   public VisionSimTest() {
     ArrayList<GameSetpoint> scoreTargets = new ArrayList<>();
     scoreTargets.add(Setpoints.Rebuilt2026.HUB_SHOOT);
@@ -122,6 +128,11 @@ public class VisionSimTest implements RepulsorVision {
     lastY[index] = repl.y;
   }
 
+  /**
+   * Returns the get obstacles value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public Obstacle[] getObstacles() {
     if (!USE_CONTROLLER) {
@@ -159,6 +170,7 @@ public class VisionSimTest implements RepulsorVision {
     return out;
   }
 
+  /** Runs tick in the Repulsor runtime. */
   @Override
   public void tick() {
     double now = Timer.getFPGATimestamp();
@@ -277,6 +289,13 @@ public class VisionSimTest implements RepulsorVision {
     }
   }
 
+  /**
+   * Updates set self pose state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param p value used by this operation.
+   */
   public static void setSelfPose(Pose2d p) {
     VisionSimWorld.setSelfPose(p);
   }

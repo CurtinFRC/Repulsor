@@ -23,18 +23,48 @@ import edu.wpi.first.math.geometry.Translation2d;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Force;
 
+/**
+ * Provides horizontal obstacle functionality for the Repulsor field-obstacle model used by the
+ * repulsor planner. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public class HorizontalObstacle extends Obstacle {
+  /**
+   * Configuration value for y. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public double y;
 
+  /**
+   * Returns the horizontal obstacle value maintained by this Repulsor component.
+   *
+   * @param y distance or field-coordinate value in meters.
+   * @param strength value used by this operation.
+   * @param positive value used by this operation.
+   */
   public HorizontalObstacle(double y, double strength, boolean positive) {
     super(strength, positive);
     this.y = y;
   }
 
+  /**
+   * Returns the get force at position value maintained by this Repulsor component.
+   *
+   * @param position value used by this operation.
+   * @param target value used by this operation.
+   * @return value produced by this operation.
+   */
   public Force getForceAtPosition(Translation2d position, Translation2d target) {
     return new Force(0, distToForceMag(y - position.getY(), 1));
   }
 
+  /**
+   * Returns the intersects rectangle value maintained by this Repulsor component.
+   *
+   * @param rectCorners value used by this operation.
+   * @return value produced by this operation.
+   */
   @Override
   public boolean intersectsRectangle(Translation2d[] rectCorners) {
     for (Translation2d a : rectCorners) if (Math.abs(a.getY() - y) < 0.1) return true;

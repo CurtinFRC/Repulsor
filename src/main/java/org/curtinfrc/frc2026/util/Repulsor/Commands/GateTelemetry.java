@@ -33,7 +33,18 @@ import java.util.function.DoubleSupplier;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+/**
+ * Provides gate telemetry functionality for the Repulsor WPILib command and Trigger integration
+ * layer. Use this type from robot code, field profiles, or tests when integrating the corresponding
+ * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+ * motion.
+ */
 public final class GateTelemetry implements AutoCloseable {
+  /**
+   * Defines the mode values used by the Repulsor WPILib command and Trigger integration layer. Use
+   * this type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+   * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+   */
   public enum Mode {
     ON_CHANGE,
     PERIODIC
@@ -50,6 +61,11 @@ public final class GateTelemetry implements AutoCloseable {
   private double lastPush = 0.0;
   private final List<Notifier> heartbeatNotifiers = new ArrayList<>();
 
+  /**
+   * Returns the gate telemetry value maintained by this Repulsor component.
+   *
+   * @param rootPath value used by this operation.
+   */
   public GateTelemetry(String rootPath) {
     this.root = NetworkTableInstance.getDefault().getTable(rootPath);
     setInfo("schema", "gate-telemetry");
@@ -57,14 +73,29 @@ public final class GateTelemetry implements AutoCloseable {
     setInfo("started_at", Timer.getFPGATimestamp());
   }
 
+  /**
+   * Updates set mode state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   *
+   * @param m value used by this operation.
+   */
   public void setMode(Mode m) {
     this.mode = m;
   }
 
+  /**
+   * Updates set rate limit state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param minPeriodSec time value in seconds.
+   */
   public void setRateLimit(double minPeriodSec) {
     this.minPeriodSec = Math.max(0.0, minPeriodSec);
   }
 
+  /** Updates poll state or telemetry as part of the Repulsor runtime loop. */
   public void poll() {
     if (mode == Mode.PERIODIC) {
       double now = Timer.getFPGATimestamp();
@@ -79,12 +110,24 @@ public final class GateTelemetry implements AutoCloseable {
     for (var r : updaters) r.run();
   }
 
+  /**
+   * Updates start periodic state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param periodSec time value in seconds.
+   */
   public void startPeriodic(double periodSec) {
     if (notifier != null) return;
     notifier = new Notifier(this::poll);
     notifier.startPeriodic(Math.max(0.02, periodSec));
   }
 
+  /**
+   * Updates stop state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   */
   public void stop() {
     if (notifier != null) {
       notifier.close();
@@ -100,6 +143,7 @@ public final class GateTelemetry implements AutoCloseable {
     heartbeatNotifiers.clear();
   }
 
+  /** Runs close in the Repulsor runtime. */
   @Override
   public void close() {
     stop();
@@ -117,6 +161,15 @@ public final class GateTelemetry implements AutoCloseable {
     infoDbl.computeIfAbsent(key, k -> root.getDoubleTopic(k).publish()).set(value);
   }
 
+  /**
+   * Updates register phase state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param name value used by this operation.
+   * @param gate value used by this operation.
+   * @param encoder value used by this operation.
+   */
   public <T> void registerPhase(
       String name, Triggers.PhaseGate<T> gate, Function<T, String> encoder) {
     NetworkTable tbl = root.getSubTable(name);
@@ -185,6 +238,15 @@ public final class GateTelemetry implements AutoCloseable {
         });
   }
 
+  /**
+   * Updates register phase enum state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param name value used by this operation.
+   * @param gate value used by this operation.
+   * @param enumClass value used by this operation.
+   */
   public <T> void registerPhaseEnum(
       String name, Triggers.PhaseGate<T> gate, Class<? extends Enum<?>> enumClass) {
     registerPhase(name, gate, t -> t != null ? ((Enum<?>) t).name() : "null");
@@ -195,6 +257,15 @@ public final class GateTelemetry implements AutoCloseable {
     }
   }
 
+  /**
+   * Updates register phase int state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param name value used by this operation.
+   * @param gate value used by this operation.
+   * @param encoder value used by this operation.
+   */
   public <T> void registerPhaseInt(
       String name, Triggers.PhaseGate<T> gate, Function<T, Integer> encoder) {
     NetworkTable tbl = root.getSubTable(name);
@@ -226,6 +297,14 @@ public final class GateTelemetry implements AutoCloseable {
         });
   }
 
+  /**
+   * Updates register parallel state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param name value used by this operation.
+   * @param gate value used by this operation.
+   */
   public <E extends Enum<E>> void registerParallel(String name, Triggers.ParallelGate<E> gate) {
     Class<E> cls = gate.cls();
     NetworkTable tbl = root.getSubTable(name);
@@ -299,6 +378,14 @@ public final class GateTelemetry implements AutoCloseable {
         });
   }
 
+  /**
+   * Updates register trigger state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param name value used by this operation.
+   * @param t value used by this operation.
+   */
   public void registerTrigger(String name, Trigger t) {
     NetworkTable tbl = root.getSubTable(name);
     BooleanPublisher level = tbl.getBooleanTopic("level").publish();
@@ -334,18 +421,42 @@ public final class GateTelemetry implements AutoCloseable {
         });
   }
 
+  /**
+   * Updates register derived state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param name value used by this operation.
+   * @param boolFn value used by this operation.
+   */
   public void registerDerived(String name, Supplier<Boolean> boolFn) {
     NetworkTable tbl = root.getSubTable(name);
     BooleanPublisher p = tbl.getBooleanTopic("value").publish();
     updaters.add(() -> p.set(boolFn.get()));
   }
 
+  /**
+   * Updates register derived number state or telemetry as part of the Repulsor runtime loop. This
+   * may mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param name value used by this operation.
+   * @param dblFn value used by this operation.
+   */
   public void registerDerivedNumber(String name, DoubleSupplier dblFn) {
     NetworkTable tbl = root.getSubTable(name);
     DoublePublisher p = tbl.getDoubleTopic("value").publish();
     updaters.add(() -> p.set(dblFn.getAsDouble()));
   }
 
+  /**
+   * Updates register enum catalog state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param name value used by this operation.
+   * @param enumClass value used by this operation.
+   */
   public void registerEnumCatalog(String name, Class<? extends Enum<?>> enumClass) {
     NetworkTable tbl = root.getSubTable(name);
     StringPublisher list = tbl.getStringTopic("catalog").publish();
@@ -354,6 +465,14 @@ public final class GateTelemetry implements AutoCloseable {
     list.set(String.join(",", all));
   }
 
+  /**
+   * Updates register heartbeat state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param name value used by this operation.
+   * @param periodSec time value in seconds.
+   */
   public void registerHeartbeat(String name, double periodSec) {
     NetworkTable tbl = root.getSubTable(name);
     DoublePublisher hb = tbl.getDoubleTopic("t").publish();

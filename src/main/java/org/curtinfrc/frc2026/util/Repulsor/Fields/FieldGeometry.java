@@ -22,6 +22,15 @@ package org.curtinfrc.frc2026.util.Repulsor.Fields;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Translation2d;
 
+/**
+ * Immutable data record for field geometry values passed through the Repulsor field/profile
+ * definition layer used to tune Repulsor for a specific game. Use this type from robot code, field
+ * profiles, or tests when integrating the corresponding Repulsor subsystem. Coordinates are
+ * field-relative unless a method documents robot-relative motion.
+ *
+ * @param lengthMeters component of the field geometry model
+ * @param widthMeters record component for the field geometry snapshot
+ */
 public record FieldGeometry(double lengthMeters, double widthMeters) {
   public FieldGeometry {
     if (!Double.isFinite(lengthMeters) || lengthMeters <= 0.0) {
@@ -32,14 +41,30 @@ public record FieldGeometry(double lengthMeters, double widthMeters) {
     }
   }
 
+  /**
+   * Returns the center value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Translation2d center() {
     return new Translation2d(lengthMeters * 0.5, widthMeters * 0.5);
   }
 
+  /**
+   * Returns the diagonal meters value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public double diagonalMeters() {
     return Math.hypot(lengthMeters, widthMeters);
   }
 
+  /**
+   * Returns the contains value maintained by this Repulsor component.
+   *
+   * @param point value used by this operation.
+   * @return value produced by this operation.
+   */
   public boolean contains(Translation2d point) {
     if (point == null) return false;
     double x = point.getX();
@@ -52,6 +77,13 @@ public record FieldGeometry(double lengthMeters, double widthMeters) {
         && y <= widthMeters;
   }
 
+  /**
+   * Returns the clamp value maintained by this Repulsor component.
+   *
+   * @param point value used by this operation.
+   * @param marginMeters distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   public Translation2d clamp(Translation2d point, double marginMeters) {
     if (point == null) return center();
     double margin = MathUtil.clamp(marginMeters, 0.0, Math.min(lengthMeters, widthMeters) * 0.5);

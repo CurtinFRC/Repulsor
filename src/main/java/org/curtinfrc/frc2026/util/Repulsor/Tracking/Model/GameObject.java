@@ -21,15 +21,34 @@ package org.curtinfrc.frc2026.util.Repulsor.Tracking.Model;
 
 import edu.wpi.first.math.geometry.Pose3d;
 
+/**
+ * Provides game object functionality for the Repulsor typed model layer for field objects and
+ * prediction inputs. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public final class GameObject {
   private final String id;
   private final String type;
   private final Pose3d position;
 
+  /**
+   * Returns the game object value maintained by this Repulsor component.
+   *
+   * @param id value used by this operation.
+   * @param type value used by this operation.
+   */
   public GameObject(String id, String type) {
     this(id, type, null);
   }
 
+  /**
+   * Returns the game object value maintained by this Repulsor component.
+   *
+   * @param id value used by this operation.
+   * @param type value used by this operation.
+   * @param position value used by this operation.
+   */
   public GameObject(String id, String type, Pose3d position) {
     if (id == null || id.isEmpty()) throw new IllegalArgumentException("id cannot be null/empty");
     if (type == null || type.isEmpty())
@@ -39,14 +58,29 @@ public final class GameObject {
     this.position = position;
   }
 
+  /**
+   * Returns the get id value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public String getId() {
     return id;
   }
 
+  /**
+   * Returns the get type value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public String getType() {
     return type;
   }
 
+  /**
+   * Returns the get position value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Pose3d getPosition() {
     return position;
   }

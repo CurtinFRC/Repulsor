@@ -41,11 +41,32 @@ import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
 
+/**
+ * Provides reefscape2025 functionality for the Repulsor field/profile definition layer used to tune
+ * Repulsor for a specific game. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class Reefscape2025 implements FieldDefinition {
+  /**
+   * Configuration value for april tag layout. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   public static final AprilTagFieldLayout APRIL_TAG_LAYOUT =
       AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeWelded);
+
+  /**
+   * Configuration value for field length m. Distances use meters in WPILib field coordinates and
+   * should be treated as tunable when sourced from profiles.
+   */
   public static final double FIELD_LENGTH_M = 17.548;
+
+  /**
+   * Configuration value for field width m. Distances use meters in WPILib field coordinates and
+   * should be treated as tunable when sourced from profiles.
+   */
   public static final double FIELD_WIDTH_M = 8.052;
+
   private final FieldProfileConfig profile;
   private final FieldGeometry geometry;
 
@@ -56,10 +77,17 @@ public final class Reefscape2025 implements FieldDefinition {
           new TeardropObstacle(new Translation2d(4.49, 4.00), 1.2, 2.2, 1.03, 3.0, 2.0),
           new TeardropObstacle(new Translation2d(13.08, 4.00), 1.2, 2.2, 1.03, 3.0, 2.0));
 
+  /** Returns the reefscape2025 value maintained by this Repulsor component. */
   public Reefscape2025() {
     this(FieldProfileYamlLoader.loadOrDefault("reefscape2025", defaultProfileConfig()));
   }
 
+  /**
+   * Creates a reefscape2025 instance with the dependencies and tuning values used by this Repulsor
+   * component.
+   *
+   * @param profile value used by this operation.
+   */
   Reefscape2025(FieldProfileConfig profile) {
     this.profile = profile;
     this.geometry = profile.fieldGeometry(FIELD_LENGTH_M, FIELD_WIDTH_M);
@@ -81,11 +109,21 @@ public final class Reefscape2025 implements FieldDefinition {
     return cfg;
   }
 
+  /**
+   * Returns the field obstacles value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public List<Obstacle> fieldObstacles() {
     return FIELD_OBSTACLES;
   }
 
+  /**
+   * Returns the walls value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public List<Obstacle> walls() {
     return List.of(
@@ -115,6 +153,12 @@ public final class Reefscape2025 implements FieldDefinition {
             2.0));
   }
 
+  /**
+   * Builds the WPILib command sequence for the current behaviour context.
+   *
+   * @param ft value used by this operation.
+   * @return game element[] result for build.
+   */
   @Override
   public GameElement[] build(FieldTrackerCore ft) {
     var b = new FieldMapBuilder(ft);
@@ -241,41 +285,81 @@ public final class Reefscape2025 implements FieldDefinition {
     return b.build();
   }
 
+  /**
+   * Returns the get heatmap value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public Heatmap getHeatmap() {
     return Heatmap.builder().build();
   }
 
+  /**
+   * Returns the game name value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public String gameName() {
     return profile.gameName;
   }
 
+  /**
+   * Returns the game year value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public int gameYear() {
     return profile.gameYear;
   }
 
+  /**
+   * Returns the april tag layout value maintained by this Repulsor component.
+   *
+   * @return april tag field layout result for april tag layout.
+   */
   @Override
   public AprilTagFieldLayout aprilTagLayout() {
     return APRIL_TAG_LAYOUT;
   }
 
+  /**
+   * Returns the field length meters value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public double fieldLengthMeters() {
     return geometry.lengthMeters();
   }
 
+  /**
+   * Returns the field width meters value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public double fieldWidthMeters() {
     return geometry.widthMeters();
   }
 
+  /**
+   * Returns the geometry value maintained by this Repulsor component.
+   *
+   * @return field geometry result for geometry.
+   */
   @Override
   public FieldGeometry geometry() {
     return geometry;
   }
 
+  /**
+   * Returns the default collect setpoint value maintained by this Repulsor component.
+   *
+   * @return optional repulsor setpoint produced by this operation.
+   */
   @Override
   public Optional<RepulsorSetpoint> defaultCollectSetpoint() {
     return Optional.of(
@@ -283,12 +367,24 @@ public final class Reefscape2025 implements FieldDefinition {
             Setpoints.Reefscape2025.LEFT_HP, "coral.station", HeightSetpoint.CORAL_STATION));
   }
 
+  /**
+   * Returns the default score setpoint value maintained by this Repulsor component.
+   *
+   * @return optional repulsor setpoint produced by this operation.
+   */
   @Override
   public Optional<RepulsorSetpoint> defaultScoreSetpoint() {
     return Optional.of(
         new RepulsorSetpoint(Setpoints.Reefscape2025.A, "reef.l2", HeightSetpoint.L2));
   }
 
+  /**
+   * Updates configure tracker state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param ft value used by this operation.
+   */
   @Override
   public void configureTracker(FieldTrackerCore ft) {
     ft.setCollectResourceTypes(profile.resources.keySet());

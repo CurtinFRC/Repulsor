@@ -25,9 +25,26 @@ import edu.wpi.first.math.geometry.Translation2d;
 import java.util.function.Function;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 
+/**
+ * Provides reactive bypass probing functionality for the Repulsor runtime helper layer shared by
+ * behaviours and planners. Use this type from robot code, field profiles, or tests when integrating
+ * the corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 final class ReactiveBypassProbing {
   private ReactiveBypassProbing() {}
 
+  /**
+   * Returns the robot touch dynamic value maintained by this Repulsor component.
+   *
+   * @param cfg value used by this operation.
+   * @param pose WPILib Pose2d in field-relative coordinates.
+   * @param heading value used by this operation.
+   * @param robotX distance or field-coordinate value in meters.
+   * @param robotY distance or field-coordinate value in meters.
+   * @param intersectsDynamicOnly distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   static boolean robotTouchDynamic(
       ReactiveBypassConfig cfg,
       Pose2d pose,
@@ -41,12 +58,31 @@ final class ReactiveBypassProbing {
     return intersectsDynamicOnly.apply(rect);
   }
 
+  /**
+   * Returns the hysteresis blocked value maintained by this Repulsor component.
+   *
+   * @param cfg value used by this operation.
+   * @param hasLatchedSubgoal value used by this operation.
+   * @param occNow value used by this operation.
+   * @return value produced by this operation.
+   */
   static boolean hysteresisBlocked(
       ReactiveBypassConfig cfg, boolean hasLatchedSubgoal, double occNow) {
     if (hasLatchedSubgoal) return occNow >= cfg.occLow;
     return occNow >= cfg.occHigh;
   }
 
+  /**
+   * Returns the corridor occ value maintained by this Repulsor component.
+   *
+   * @param cfg value used by this operation.
+   * @param pose WPILib Pose2d in field-relative coordinates.
+   * @param heading value used by this operation.
+   * @param robotX distance or field-coordinate value in meters.
+   * @param robotY distance or field-coordinate value in meters.
+   * @param intersectsDynamicOnly distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   static double corridorOcc(
       ReactiveBypassConfig cfg,
       Pose2d pose,
@@ -73,6 +109,19 @@ final class ReactiveBypassProbing {
     return (tot == 0) ? 0.0 : ((double) hit / (double) tot);
   }
 
+  /**
+   * Returns the look ahead clear value maintained by this Repulsor component.
+   *
+   * @param cfg value used by this operation.
+   * @param pose WPILib Pose2d in field-relative coordinates.
+   * @param heading value used by this operation.
+   * @param robotX distance or field-coordinate value in meters.
+   * @param robotY distance or field-coordinate value in meters.
+   * @param intersectsDynamicOnly distance or field-coordinate value in meters.
+   * @param aheadMeters distance or field-coordinate value in meters.
+   * @param widthMeters distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   static boolean lookAheadClear(
       ReactiveBypassConfig cfg,
       Pose2d pose,
@@ -100,6 +149,17 @@ final class ReactiveBypassProbing {
     return true;
   }
 
+  /**
+   * Returns the local occ at value maintained by this Repulsor component.
+   *
+   * @param cfg value used by this operation.
+   * @param center value used by this operation.
+   * @param heading value used by this operation.
+   * @param robotX distance or field-coordinate value in meters.
+   * @param robotY distance or field-coordinate value in meters.
+   * @param intersectsDynamicOnly distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   static double localOccAt(
       ReactiveBypassConfig cfg,
       Translation2d center,
@@ -113,6 +173,21 @@ final class ReactiveBypassProbing {
     return intersectsDynamicOnly.apply(rect) ? 1.0 : 0.0;
   }
 
+  /**
+   * Computes the choose freer side value for the current Repulsor planning state. Call this from
+   * periodic planning or tests when a fresh decision is required; inputs should already be
+   * expressed in the coordinate frame expected by the parameter names.
+   *
+   * @param cfg value used by this operation.
+   * @param sideConfidence value used by this operation.
+   * @param preferredSide value used by this operation.
+   * @param pose WPILib Pose2d in field-relative coordinates.
+   * @param heading value used by this operation.
+   * @param robotX distance or field-coordinate value in meters.
+   * @param robotY distance or field-coordinate value in meters.
+   * @param intersectsDynamicOnly distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   static int chooseFreerSide(
       ReactiveBypassConfig cfg,
       double sideConfidence,
@@ -133,6 +208,17 @@ final class ReactiveBypassProbing {
     return (diff < 0) ? +1 : -1;
   }
 
+  /**
+   * Returns the leg occ value maintained by this Repulsor component.
+   *
+   * @param cfg value used by this operation.
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @param robotX distance or field-coordinate value in meters.
+   * @param robotY distance or field-coordinate value in meters.
+   * @param intersectsDynamicOnly distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   static double legOcc(
       ReactiveBypassConfig cfg,
       Translation2d a,

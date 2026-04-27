@@ -32,15 +32,61 @@ import java.util.function.ToDoubleBiFunction;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerCollectObjectiveLoop;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerCollectObjectiveMath;
 
+/**
+ * Provides field tracker collect pass sticky step functionality for the Repulsor runtime helper
+ * layer shared by behaviours and planners. Use this type from robot code, field profiles, or tests
+ * when integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+ * method documents robot-relative motion.
+ */
 public final class FieldTrackerCollectPassStickyStep {
   private FieldTrackerCollectPassStickyStep() {}
 
+  /**
+   * Configuration value for sticky prefer ranked score margin. Distances use meters in WPILib field
+   * coordinates and should be treated as tunable when sourced from profiles.
+   */
   static final double STICKY_PREFER_RANKED_SCORE_MARGIN = 0.06;
+
+  /**
+   * Configuration value for far switch lock dist m. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   static final double FAR_SWITCH_LOCK_DIST_M = 2.8;
+
+  /**
+   * Configuration value for far switch force mult. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   static final double FAR_SWITCH_FORCE_MULT = 2.1;
+
+  /**
+   * Configuration value for close switch easy dist m. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   static final double CLOSE_SWITCH_EASY_DIST_M = 1.35;
+
+  /**
+   * Configuration value for close switch margin scale. Distances use meters in WPILib field
+   * coordinates and should be treated as tunable when sourced from profiles.
+   */
   static final double CLOSE_SWITCH_MARGIN_SCALE = 0.55;
 
+  /**
+   * Returns the should block far switch value maintained by this Repulsor component.
+   *
+   * @param distToCurrent value used by this operation.
+   * @param currentScore value used by this operation.
+   * @param bestScore value used by this operation.
+   * @param margin value used by this operation.
+   * @param currentIsTrap value used by this operation.
+   * @param bestIsTrap value used by this operation.
+   * @param currentValid value used by this operation.
+   * @param bestValid value used by this operation.
+   * @param stillSec time value in seconds.
+   * @param movedSinceLastSwitchM value used by this operation.
+   * @param sinceLastSwitchS value used by this operation.
+   * @return value produced by this operation.
+   */
   static boolean shouldBlockFarSwitch(
       double distToCurrent,
       double currentScore,
@@ -65,12 +111,28 @@ public final class FieldTrackerCollectPassStickyStep {
     return bestScore <= currentScore + (margin * FAR_SWITCH_FORCE_MULT);
   }
 
+  /**
+   * Returns the adapt switch margin for distance value maintained by this Repulsor component.
+   *
+   * @param margin value used by this operation.
+   * @param distToCurrent value used by this operation.
+   * @return value produced by this operation.
+   */
   static double adaptSwitchMarginForDistance(double margin, double distToCurrent) {
     if (!Double.isFinite(distToCurrent)) return margin;
     if (distToCurrent <= CLOSE_SWITCH_EASY_DIST_M) return margin * CLOSE_SWITCH_MARGIN_SCALE;
     return margin;
   }
 
+  /**
+   * Returns the should hold previous for too soon value maintained by this Repulsor component.
+   *
+   * @param tooSoon value used by this operation.
+   * @param stillSec time value in seconds.
+   * @param opposite value used by this operation.
+   * @param distToCurrent value used by this operation.
+   * @return value produced by this operation.
+   */
   static boolean shouldHoldPreviousForTooSoon(
       boolean tooSoon, double stillSec, boolean opposite, double distToCurrent) {
     if (!tooSoon) return false;
@@ -79,6 +141,14 @@ public final class FieldTrackerCollectPassStickyStep {
     return stillSec < 0.10;
   }
 
+  /**
+   * Returns the prefer ranked candidate for sticky value maintained by this Repulsor component.
+   *
+   * @param bestCandidate value used by this operation.
+   * @param cand value used by this operation.
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   * @return value produced by this operation.
+   */
   static Translation2d preferRankedCandidateForSticky(
       Translation2d bestCandidate,
       FieldTrackerCollectPassCandidateResult cand,
@@ -105,6 +175,17 @@ public final class FieldTrackerCollectPassStickyStep {
     return bestCandidate;
   }
 
+  /**
+   * Computes the select and prime value for the current Repulsor planning state. Call this from
+   * periodic planning or tests when a fresh decision is required; inputs should already be
+   * expressed in the coordinate frame expected by the parameter names.
+   *
+   * @param loop value used by this operation.
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   * @param cand value used by this operation.
+   * @param pass value used by this operation.
+   * @return field tracker collect pass sticky result result for select and prime.
+   */
   public static FieldTrackerCollectPassStickyResult selectAndPrime(
       FieldTrackerCollectObjectiveLoop loop,
       FieldTrackerCollectPassContext ctx,

@@ -66,8 +66,18 @@ import org.curtinfrc.frc2026.util.Repulsor.Tracking.Vision.FieldVision;
 import org.curtinfrc.frc2026.util.Repulsor.Tuning.DriveTuningHeat;
 import org.curtinfrc.frc2026.util.Repulsor.Vision.RepulsorVision;
 
+/**
+ * Provides repulsor functionality for the Repulsor core Repulsor coordination layer. Use this type
+ * from robot code, field profiles, or tests when integrating the corresponding Repulsor subsystem.
+ * Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public class Repulsor {
 
+  /**
+   * Defines the usage type values used by the Repulsor core Repulsor coordination layer. Use this
+   * type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+   * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+   */
   public enum UsageType {
     kFullAuto,
     kAutoDrive
@@ -84,6 +94,12 @@ public class Repulsor {
   private UsageType m_usageType = UsageType.kAutoDrive;
   private FieldDefinition m_fieldDefinition = Constants.FIELD;
 
+  /**
+   * Returns the is same drive value maintained by this Repulsor component.
+   *
+   * @param other value used by this operation.
+   * @return value produced by this operation.
+   */
   public boolean isSameDrive(DriveRepulsor other) {
     return this.m_drive == other;
   }
@@ -103,6 +119,11 @@ public class Repulsor {
   private BehaviourManager m_behaviourManager;
   private FlagManager<BehaviourFlag> m_behaviourFlags;
 
+  /**
+   * Returns the at setpoint value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public boolean atSetpoint() {
     Optional<Distance> err = m_planner.getErr();
     if (err.isEmpty()) return false;
@@ -110,25 +131,55 @@ public class Repulsor {
     return err.isPresent() && err.get().lt(Meters.of(0.1));
   }
 
+  /**
+   * Returns the with has piece supplier value maintained by this Repulsor component.
+   *
+   * @param hasPiece value used by this operation.
+   * @return value produced by this operation.
+   */
   public Repulsor withHasPieceSupplier(Supplier<Boolean> hasPiece) {
     this.m_hasPiece = hasPiece;
     return this;
   }
 
+  /**
+   * Returns the has piece value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public boolean hasPiece() {
     return Boolean.TRUE.equals(m_hasPiece.get());
   }
 
+  /**
+   * Returns the with shooter release height meters supplier value maintained by this Repulsor
+   * component.
+   *
+   * @param supplier value used by this operation.
+   * @return value produced by this operation.
+   */
   public Repulsor withShooterReleaseHeightMetersSupplier(Supplier<Double> supplier) {
     this.shooterReleaseHeightMeters = supplier == null ? () -> 0.0 : supplier;
     return this;
   }
 
+  /**
+   * Returns the add behaviour value maintained by this Repulsor component.
+   *
+   * @param behaviour value used by this operation.
+   * @return value produced by this operation.
+   */
   public Repulsor addBehaviour(Behaviour behaviour) {
     m_behaviourManager.add(Objects.requireNonNull(behaviour, "behaviour"));
     return this;
   }
 
+  /**
+   * Returns the add behaviours value maintained by this Repulsor component.
+   *
+   * @param behaviours value used by this operation.
+   * @return value produced by this operation.
+   */
   public Repulsor addBehaviours(Behaviour... behaviours) {
     if (behaviours == null) return this;
     for (Behaviour behaviour : behaviours) {
@@ -137,36 +188,86 @@ public class Repulsor {
     return this;
   }
 
+  /**
+   * Updates clear behaviours state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @return value produced by this operation.
+   */
   public Repulsor clearBehaviours() {
     m_behaviourManager.clear();
     return this;
   }
 
+  /**
+   * Updates set reasoner state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param reasoner value used by this operation.
+   * @return value produced by this operation.
+   */
   public Repulsor setReasoner(Reasoner<BehaviourFlag, BehaviourContext> reasoner) {
     m_behaviourManager.setReasoner(reasoner);
     return this;
   }
 
+  /**
+   * Updates set strategy directive state or telemetry as part of the Repulsor runtime loop. This
+   * may mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param directive value used by this operation.
+   */
   public void setStrategyDirective(StrategyDirective directive) {
     m_strategyDirective = directive == null ? StrategyDirective.none() : directive;
   }
 
+  /**
+   * Returns the get strategy directive value maintained by this Repulsor component.
+   *
+   * @return strategy directive result for get strategy directive.
+   */
   public StrategyDirective getStrategyDirective() {
     return m_strategyDirective;
   }
 
+  /**
+   * Returns the is in scoring gate value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public boolean isInScoringGate() {
     return m_gateInScoring.map(Trigger::getAsBoolean).orElse(true);
   }
 
+  /**
+   * Returns the is in collecting gate value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public boolean isInCollectingGate() {
     return m_gateInCollecting.map(Trigger::getAsBoolean).orElse(false);
   }
 
+  /**
+   * Returns the get next score value maintained by this Repulsor component.
+   *
+   * @return repulsor setpoint result for get next score.
+   */
   public RepulsorSetpoint getNextScore() {
     return m_nextScore;
   }
 
+  /**
+   * Returns the follow gate value maintained by this Repulsor component.
+   *
+   * @param gate value used by this operation.
+   * @param collecting value used by this operation.
+   * @param scoring value used by this operation.
+   * @return value produced by this operation.
+   */
   public <T> Repulsor followGate(Triggers.PhaseGate<T> gate, T collecting, T scoring) {
     Trigger inScoring = gate.when(scoring);
     Trigger inCollecting = gate.when(collecting);
@@ -176,6 +277,14 @@ public class Repulsor {
     return this;
   }
 
+  /**
+   * Returns the follow gate value maintained by this Repulsor component.
+   *
+   * @param gate value used by this operation.
+   * @param collectingTags value used by this operation.
+   * @param scoringTags value used by this operation.
+   * @return value produced by this operation.
+   */
   public <E extends Enum<E>> Repulsor followGate(
       Triggers.ParallelGate<E> gate, EnumSet<E> collectingTags, EnumSet<E> scoringTags) {
 
@@ -197,6 +306,15 @@ public class Repulsor {
     return this;
   }
 
+  /**
+   * Returns the repulsor value maintained by this Repulsor component.
+   *
+   * @param drive value used by this operation.
+   * @param usageType value used by this operation.
+   * @param robot_x distance or field-coordinate value in meters.
+   * @param robot_y distance or field-coordinate value in meters.
+   * @param hasPiece value used by this operation.
+   */
   public Repulsor(
       DriveRepulsor drive,
       UsageType usageType,
@@ -206,6 +324,16 @@ public class Repulsor {
     this(drive, usageType, robot_x, robot_y, hasPiece, Constants.FIELD);
   }
 
+  /**
+   * Returns the repulsor value maintained by this Repulsor component.
+   *
+   * @param drive value used by this operation.
+   * @param usageType value used by this operation.
+   * @param robot_x distance or field-coordinate value in meters.
+   * @param robot_y distance or field-coordinate value in meters.
+   * @param hasPiece value used by this operation.
+   * @param fieldDefinition value used by this operation.
+   */
   public Repulsor(
       DriveRepulsor drive,
       UsageType usageType,
@@ -236,10 +364,27 @@ public class Repulsor {
     SimMatchDriver.simInit(false);
   }
 
+  /**
+   * Returns the repulsor value maintained by this Repulsor component.
+   *
+   * @param drive value used by this operation.
+   * @param robot_x distance or field-coordinate value in meters.
+   * @param robot_y distance or field-coordinate value in meters.
+   * @param hasPiece value used by this operation.
+   */
   public Repulsor(DriveRepulsor drive, double robot_x, double robot_y, Supplier<Boolean> hasPiece) {
     this(drive, UsageType.kFullAuto, robot_x, robot_y, hasPiece);
   }
 
+  /**
+   * Returns the repulsor value maintained by this Repulsor component.
+   *
+   * @param drive value used by this operation.
+   * @param robot_x distance or field-coordinate value in meters.
+   * @param robot_y distance or field-coordinate value in meters.
+   * @param hasPiece value used by this operation.
+   * @param fieldDefinition value used by this operation.
+   */
   public Repulsor(
       DriveRepulsor drive,
       double robot_x,
@@ -249,6 +394,12 @@ public class Repulsor {
     this(drive, UsageType.kFullAuto, robot_x, robot_y, hasPiece, fieldDefinition);
   }
 
+  /**
+   * Returns the with initial next value maintained by this Repulsor component.
+   *
+   * @param setpoint value used by this operation.
+   * @return value produced by this operation.
+   */
   public Repulsor withInitialNext(RepulsorSetpoint setpoint) {
     if (setpoint != null && setpoint.point().type() == SetpointType.kHumanPlayer) {
       throw new Error("Next score setpoint cannot be a human-player one");
@@ -257,6 +408,12 @@ public class Repulsor {
     return this;
   }
 
+  /**
+   * Returns the with initial hp value maintained by this Repulsor component.
+   *
+   * @param setpoint value used by this operation.
+   * @return value produced by this operation.
+   */
   public Repulsor withInitialHP(RepulsorSetpoint setpoint) {
     if (setpoint != null && setpoint.point().type() != SetpointType.kHumanPlayer) {
       throw new Error("Next collect setpoint must be a human-player/collect one");
@@ -265,6 +422,13 @@ public class Repulsor {
     return this;
   }
 
+  /**
+   * Updates set next score state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param next value used by this operation.
+   */
   public void setNextScore(RepulsorSetpoint next) {
     if (next != null && next.point().type() == SetpointType.kHumanPlayer) {
       throw new Error("Next score setpoint cannot be a human-player one");
@@ -272,37 +436,80 @@ public class Repulsor {
     m_nextScore = next;
   }
 
+  /**
+   * Returns the with fallback value maintained by this Repulsor component.
+   *
+   * @param fallback value used by this operation.
+   * @return value produced by this operation.
+   */
   public Repulsor withFallback(PlannerFallback fallback) {
     m_planner = m_planner.withFallback(fallback);
     return this;
   }
 
+  /**
+   * Returns the with vision value maintained by this Repulsor component.
+   *
+   * @param vision value used by this operation.
+   * @return value produced by this operation.
+   */
   public Repulsor withVision(RepulsorVision vision) {
     m_visionPlanner.addVision(vision);
     return this;
   }
 
+  /**
+   * Returns the with field vision value maintained by this Repulsor component.
+   *
+   * @param vision value used by this operation.
+   * @return value produced by this operation.
+   */
   public Repulsor withFieldVision(FieldVision vision) {
     m_fieldVisions.add(vision);
     return this;
   }
 
+  /**
+   * Runs add field vision in the Repulsor runtime.
+   *
+   * @param vision value used by this operation.
+   */
   public void addFieldVision(FieldVision vision) {
     m_fieldVisions.add(vision);
   }
 
+  /**
+   * Returns the get field planner value maintained by this Repulsor component.
+   *
+   * @return field planner result for get field planner.
+   */
   public FieldPlanner getFieldPlanner() {
     return m_planner;
   }
 
+  /**
+   * Returns the get field definition value maintained by this Repulsor component.
+   *
+   * @return field definition result for get field definition.
+   */
   public FieldDefinition getFieldDefinition() {
     return m_fieldDefinition;
   }
 
+  /**
+   * Returns the get vision planner value maintained by this Repulsor component.
+   *
+   * @return vision planner result for get vision planner.
+   */
   public VisionPlanner getVisionPlanner() {
     return m_visionPlanner;
   }
 
+  /**
+   * Updates update state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   */
   public void update() {
     DeltaTime.update();
 
@@ -338,14 +545,25 @@ public class Repulsor {
             this, m_planner, m_visionPlanner, m_drive, robot_x, robot_y, m_drive::getPose));
   }
 
+  /** Runs disable behaviours in the Repulsor runtime. */
   public void disableBehaviours() {
     m_usageType = UsageType.kAutoDrive;
   }
 
+  /**
+   * Returns the get drive value maintained by this Repulsor component.
+   *
+   * @return drive repulsor result for get drive.
+   */
   public DriveRepulsor getDrive() {
     return m_drive;
   }
 
+  /**
+   * Updates setup state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   */
   public void setup() {
     if (m_usageType != UsageType.kFullAuto) return;
   }
@@ -420,45 +638,121 @@ public class Repulsor {
     return cmd;
   }
 
+  /**
+   * Returns the align to value maintained by this Repulsor component.
+   *
+   * @param point value used by this operation.
+   * @param until value used by this operation.
+   * @param cat value used by this operation.
+   * @return value produced by this operation.
+   */
   public Command alignTo(Supplier<RepulsorSetpoint> point, Trigger until, CategorySpec cat) {
     return alignCore(point, Optional.of(until), cat, false);
   }
 
+  /**
+   * Returns the align to value maintained by this Repulsor component.
+   *
+   * @param point value used by this operation.
+   * @param until value used by this operation.
+   * @param cat value used by this operation.
+   * @return value produced by this operation.
+   */
   public Command alignTo(RepulsorSetpoint point, Trigger until, CategorySpec cat) {
     return alignCore(() -> point, Optional.of(until), cat, false);
   }
 
+  /**
+   * Returns the align to value maintained by this Repulsor component.
+   *
+   * @param point value used by this operation.
+   * @param cat value used by this operation.
+   * @return value produced by this operation.
+   */
   public Command alignTo(RepulsorSetpoint point, CategorySpec cat) {
     return alignCore(() -> point, Optional.empty(), cat, false);
   }
 
+  /**
+   * Returns the align to value maintained by this Repulsor component.
+   *
+   * @param point value used by this operation.
+   * @param cat value used by this operation.
+   * @return value produced by this operation.
+   */
   public Command alignTo(Supplier<RepulsorSetpoint> point, CategorySpec cat) {
     return alignCore(point, Optional.empty(), cat, false);
   }
 
+  /**
+   * Returns the align to value maintained by this Repulsor component.
+   *
+   * @param point value used by this operation.
+   * @param until value used by this operation.
+   * @param cat value used by this operation.
+   * @param suppressFallback value used by this operation.
+   * @return value produced by this operation.
+   */
   public Command alignTo(
       Supplier<RepulsorSetpoint> point, Trigger until, CategorySpec cat, boolean suppressFallback) {
     return alignCore(point, Optional.of(until), cat, suppressFallback);
   }
 
+  /**
+   * Returns the align to value maintained by this Repulsor component.
+   *
+   * @param point value used by this operation.
+   * @param until value used by this operation.
+   * @param cat value used by this operation.
+   * @param suppressFallback value used by this operation.
+   * @return value produced by this operation.
+   */
   public Command alignTo(
       RepulsorSetpoint point, Trigger until, CategorySpec cat, boolean suppressFallback) {
     return alignCore(() -> point, Optional.of(until), cat, suppressFallback);
   }
 
+  /**
+   * Returns the align to value maintained by this Repulsor component.
+   *
+   * @param point value used by this operation.
+   * @param cat value used by this operation.
+   * @param suppressFallback value used by this operation.
+   * @return value produced by this operation.
+   */
   public Command alignTo(RepulsorSetpoint point, CategorySpec cat, boolean suppressFallback) {
     return alignCore(() -> point, Optional.empty(), cat, suppressFallback);
   }
 
+  /**
+   * Returns the align to value maintained by this Repulsor component.
+   *
+   * @param point value used by this operation.
+   * @param cat value used by this operation.
+   * @param suppressFallback value used by this operation.
+   * @return value produced by this operation.
+   */
   public Command alignTo(
       Supplier<RepulsorSetpoint> point, CategorySpec cat, boolean suppressFallback) {
     return alignCore(point, Optional.empty(), cat, suppressFallback);
   }
 
+  /**
+   * Updates set current goal state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param sp value used by this operation.
+   */
   public void setCurrentGoal(RepulsorSetpoint sp) {
     m_currentGoal = sp;
   }
 
+  /**
+   * Returns the get target height value maintained by this Repulsor component.
+   *
+   * @return height setpoint result for get target height.
+   */
   public HeightSetpoint getTargetHeight() {
     return m_currentGoal == null ? HeightSetpoint.NONE : m_currentGoal.height();
   }
@@ -483,14 +777,34 @@ public class Repulsor {
         });
   }
 
+  /**
+   * Returns the within value maintained by this Repulsor component.
+   *
+   * @param d value used by this operation.
+   * @return value produced by this operation.
+   */
   public Trigger within(Distance d) {
     return withinCore(d, Optional.empty(), Optional.empty());
   }
 
+  /**
+   * Returns the within value maintained by this Repulsor component.
+   *
+   * @param d value used by this operation.
+   * @param t value used by this operation.
+   * @return value produced by this operation.
+   */
   public Trigger within(Distance d, SetpointType t) {
     return withinCore(d, Optional.of(t), Optional.empty());
   }
 
+  /**
+   * Returns the within value maintained by this Repulsor component.
+   *
+   * @param d value used by this operation.
+   * @param p value used by this operation.
+   * @return value produced by this operation.
+   */
   public Trigger within(Distance d, GameSetpoint p) {
     return withinCore(d, Optional.empty(), Optional.of(p));
   }

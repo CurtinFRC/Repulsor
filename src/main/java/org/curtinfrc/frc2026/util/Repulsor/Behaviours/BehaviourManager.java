@@ -26,6 +26,12 @@ import java.util.EnumSet;
 import java.util.List;
 import org.curtinfrc.frc2026.util.Repulsor.Reasoning.Reasoner;
 
+/**
+ * Provides behaviour manager functionality for the Repulsor command-behaviour layer that converts
+ * strategy and state into WPILib commands. Use this type from robot code, field profiles, or tests
+ * when integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+ * method documents robot-relative motion.
+ */
 public class BehaviourManager {
   private final List<Behaviour> behaviours = new ArrayList<>();
   private Behaviour active = null;
@@ -33,26 +39,59 @@ public class BehaviourManager {
 
   private Reasoner<BehaviourFlag, BehaviourContext> reasoner = null;
 
+  /**
+   * Returns the add value maintained by this Repulsor component.
+   *
+   * @param b value used by this operation.
+   * @return behaviour manager result for add.
+   */
   public BehaviourManager add(Behaviour b) {
     behaviours.add(b);
     return this;
   }
 
+  /**
+   * Returns the active value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Behaviour active() {
     return active;
   }
 
+  /**
+   * Updates set reasoner state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param reasoner value used by this operation.
+   * @return behaviour manager result for set reasoner.
+   */
   public BehaviourManager setReasoner(Reasoner<BehaviourFlag, BehaviourContext> reasoner) {
     this.reasoner = reasoner;
     return this;
   }
 
+  /**
+   * Updates clear state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   *
+   * @return behaviour manager result for clear.
+   */
   public BehaviourManager clear() {
     stop();
     behaviours.clear();
     return this;
   }
 
+  /**
+   * Updates update state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   *
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   */
   public void update(BehaviourContext ctx) {
     EnumSet<BehaviourFlag> flags =
         reasoner != null ? reasoner.update(ctx) : EnumSet.noneOf(BehaviourFlag.class);
@@ -60,6 +99,14 @@ public class BehaviourManager {
     update(flags, ctx);
   }
 
+  /**
+   * Updates update state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   *
+   * @param flags value used by this operation.
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   */
   public void update(EnumSet<BehaviourFlag> flags, BehaviourContext ctx) {
     Behaviour best = null;
     int bestP = Integer.MIN_VALUE;
@@ -82,6 +129,11 @@ public class BehaviourManager {
     }
   }
 
+  /**
+   * Updates stop state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   */
   public void stop() {
     if (running != null) running.cancel();
     running = null;

@@ -30,13 +30,40 @@ import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointType;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.StaticPoseSetpoint;
 
+/**
+ * Provides drive repulsor functionality for the Repulsor core Repulsor coordination layer. Use this
+ * type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+ * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public abstract class DriveRepulsor extends SubsystemBase {
+  /**
+   * Runs run velocity in the Repulsor runtime.
+   *
+   * @param speeds velocity input, normally field-relative unless the caller documents
+   *     robot-relative motion.
+   */
   public abstract void runVelocity(ChassisSpeeds speeds);
 
+  /**
+   * Returns the get pose value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public abstract Pose2d getPose();
 
+  /**
+   * Returns the get omega pid value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public abstract PIDController getOmegaPID();
 
+  /**
+   * Returns the align to value maintained by this Repulsor component.
+   *
+   * @param targetPose value used by this operation.
+   * @return value produced by this operation.
+   */
   public Command alignTo(Pose2d targetPose) {
     Repulsor re = StaticInstance.getInstance();
 

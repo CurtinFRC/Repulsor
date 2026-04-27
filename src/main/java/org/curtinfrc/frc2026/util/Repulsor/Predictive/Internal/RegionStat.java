@@ -18,8 +18,28 @@
  */
 package org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal;
 
+/**
+ * Provides region stat functionality for the Repulsor package-internal data structures used by the
+ * surrounding Repulsor subsystem. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class RegionStat {
+  /**
+   * Configuration value for attempts. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public int attempts;
+
+  /**
+   * Configuration value for successes. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public int successes;
+
+  /**
+   * Configuration value for last attempt ts. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   public double lastAttemptTs;
 }

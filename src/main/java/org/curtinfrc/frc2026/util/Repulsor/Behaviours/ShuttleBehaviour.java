@@ -50,6 +50,12 @@ import org.curtinfrc.frc2026.util.Repulsor.Strategy.StrategyDirective;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
 import org.littletonrobotics.junction.Logger;
 
+/**
+ * Provides shuttle behaviour functionality for the Repulsor command-behaviour layer that converts
+ * strategy and state into WPILib commands. Use this type from robot code, field profiles, or tests
+ * when integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+ * method documents robot-relative motion.
+ */
 public class ShuttleBehaviour extends Behaviour {
   private static final double SHOOT_POS_TOL_METERS = 0.34;
   private static final double SHOOT_YAW_TOL_DEG = 13.0;
@@ -84,10 +90,25 @@ public class ShuttleBehaviour extends Behaviour {
 
   private Pose2d lastCollectBluePose;
 
+  /**
+   * Returns the shuttle behaviour value maintained by this Repulsor component.
+   *
+   * @param priority distance or field-coordinate value in meters.
+   * @param hasPiece value used by this operation.
+   * @param ourSpeedCap value used by this operation.
+   */
   public ShuttleBehaviour(int priority, Supplier<Boolean> hasPiece, Supplier<Double> ourSpeedCap) {
     this(priority, hasPiece, ourSpeedCap, () -> true);
   }
 
+  /**
+   * Returns the shuttle behaviour value maintained by this Repulsor component.
+   *
+   * @param priority distance or field-coordinate value in meters.
+   * @param hasPiece value used by this operation.
+   * @param ourSpeedCap value used by this operation.
+   * @param mechanismReady distance or field-coordinate value in meters.
+   */
   public ShuttleBehaviour(
       int priority,
       Supplier<Boolean> hasPiece,
@@ -99,22 +120,45 @@ public class ShuttleBehaviour extends Behaviour {
     this.mechanismReady = mechanismReady == null ? () -> true : mechanismReady;
   }
 
+  /**
+   * Returns the name value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public String name() {
     return "Shuttle";
   }
 
+  /**
+   * Returns the priority value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public int priority() {
     return prio;
   }
 
+  /**
+   * Returns the should run value maintained by this Repulsor component.
+   *
+   * @param flags value used by this operation.
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   * @return value produced by this operation.
+   */
   @Override
   public boolean shouldRun(EnumSet<BehaviourFlag> flags, BehaviourContext ctx) {
     return flags.contains(BehaviourFlag.SHUTTLE_MODE)
         && ctx.repulsor.getFieldDefinition().actionProfile().transferProjectileShot().isPresent();
   }
 
+  /**
+   * Builds the WPILib command sequence for the current behaviour context.
+   *
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   * @return value produced by this operation.
+   */
   @Override
   public Command build(BehaviourContext ctx) {
     Optional<ProjectileShotAction> shotProfileOpt = selectedTransferAction(ctx);

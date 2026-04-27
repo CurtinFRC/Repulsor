@@ -27,14 +27,38 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal.ResourceRegions;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PointCandidate;
 import org.littletonrobotics.junction.Logger;
 
+/**
+ * Provides predictive collect secondary rankers functionality for the Repulsor predictive
+ * field-state and collection-planning layer. Use this type from robot code, field profiles, or
+ * tests when integrating the corresponding Repulsor subsystem. Coordinates are field-relative
+ * unless a method documents robot-relative motion.
+ */
 public final class PredictiveCollectSecondaryRankers {
+  /**
+   * Contract for api implementations used by the Repulsor predictive field-state and
+   * collection-planning layer. Use this type from robot code, field profiles, or tests when
+   * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+   * method documents robot-relative motion.
+   */
   public interface Api {
+    /**
+     * Returns the cached dyn value maintained by this Repulsor component.
+     *
+     * @return spatial dyn result for cached dyn.
+     */
     SpatialDyn cachedDyn();
 
     void setCollectContext(Translation2d ourPos, double ourSpeedCap, int goalUnits, double cellM);
 
     void sweepDepletedMarks();
 
+    /**
+     * Returns the build collect candidates value maintained by this Repulsor component.
+     *
+     * @param gridPoints value used by this operation.
+     * @param dyn value used by this operation.
+     * @return value produced by this operation.
+     */
     Translation2d[] buildCollectCandidates(Translation2d[] gridPoints, SpatialDyn dyn);
 
     double dynamicMinUnits(double totalEvidence);
@@ -43,14 +67,46 @@ public final class PredictiveCollectSecondaryRankers {
 
     double minEvidence(double totalEvidence);
 
+    /**
+     * Returns the build resource regions value maintained by this Repulsor component.
+     *
+     * @param dyn value used by this operation.
+     * @param maxRegions value used by this operation.
+     * @return resource regions result for build resource regions.
+     */
     ResourceRegions buildResourceRegions(SpatialDyn dyn, int maxRegions);
 
+    /**
+     * Returns the enemy intent to regions value maintained by this Repulsor component.
+     *
+     * @param regs value used by this operation.
+     * @return intent agg cont result for enemy intent to regions.
+     */
     IntentAggCont enemyIntentToRegions(ResourceRegions regs);
 
+    /**
+     * Returns the ally intent to regions value maintained by this Repulsor component.
+     *
+     * @param regs value used by this operation.
+     * @return intent agg cont result for ally intent to regions.
+     */
     IntentAggCont allyIntentToRegions(ResourceRegions regs);
 
     double estimateTravelTime(Translation2d a, Translation2d b, double speed);
 
+    /**
+     * Returns the eval collect point value maintained by this Repulsor component.
+     *
+     * @param ourPos value used by this operation.
+     * @param ourSpeedCap value used by this operation.
+     * @param p value used by this operation.
+     * @param goalUnits value used by this operation.
+     * @param cellM value used by this operation.
+     * @param dyn value used by this operation.
+     * @param enemyIntent value used by this operation.
+     * @param allyIntent value used by this operation.
+     * @return collect eval result for eval collect point.
+     */
     CollectEval evalCollectPoint(
         Translation2d ourPos,
         double ourSpeedCap,
@@ -148,6 +204,16 @@ public final class PredictiveCollectSecondaryRankers {
     return best;
   }
 
+  /**
+   * Returns the anchor hierarchical point to fuel value maintained by this Repulsor component.
+   *
+   * @param dyn value used by this operation.
+   * @param seed value used by this operation.
+   * @param cellM value used by this operation.
+   * @param minUnits value used by this operation.
+   * @param minEv value used by this operation.
+   * @return value produced by this operation.
+   */
   static Translation2d anchorHierarchicalPointToFuel(
       SpatialDyn dyn, Translation2d seed, double cellM, double minUnits, double minEv) {
     if (dyn == null || seed == null) return null;
@@ -182,6 +248,19 @@ public final class PredictiveCollectSecondaryRankers {
         dyn, anchored, Math.max(0.10, rCore * 2.0), SECONDARY_RETURN_MAX_AGE_S);
   }
 
+  /**
+   * Returns the rank collect hierarchical value maintained by this Repulsor component.
+   *
+   * @param api value used by this operation.
+   * @param ourPos value used by this operation.
+   * @param ourSpeedCap value used by this operation.
+   * @param points value used by this operation.
+   * @param cellM value used by this operation.
+   * @param goalUnits value used by this operation.
+   * @param coarseTopK value used by this operation.
+   * @param refineGrid value used by this operation.
+   * @return point candidate result for rank collect hierarchical.
+   */
   static PointCandidate rankCollectHierarchical(
       Api api,
       Translation2d ourPos,
@@ -307,6 +386,10 @@ public final class PredictiveCollectSecondaryRankers {
       bestScore[0] = -1e12;
     }
 
+    /**
+     * Configuration value for max tries. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     final int MAX_TRIES = 10;
 
     double[] candScore = new double[MAX_TRIES];
@@ -469,6 +552,14 @@ public final class PredictiveCollectSecondaryRankers {
     return null;
   }
 
+  /**
+   * Returns the best collect hotspot value maintained by this Repulsor component.
+   *
+   * @param api value used by this operation.
+   * @param points value used by this operation.
+   * @param cellM value used by this operation.
+   * @return value produced by this operation.
+   */
   static Translation2d bestCollectHotspot(Api api, Translation2d[] points, double cellM) {
     if (points == null || points.length == 0) return null;
     SpatialDyn dyn = api.cachedDyn();
@@ -508,6 +599,17 @@ public final class PredictiveCollectSecondaryRankers {
     return bestU >= min ? best : null;
   }
 
+  /**
+   * Returns the rank collect points value maintained by this Repulsor component.
+   *
+   * @param api value used by this operation.
+   * @param ourPos value used by this operation.
+   * @param ourSpeedCap value used by this operation.
+   * @param points value used by this operation.
+   * @param goalUnits value used by this operation.
+   * @param limit value used by this operation.
+   * @return point candidate result for rank collect points.
+   */
   static PointCandidate rankCollectPoints(
       Api api,
       Translation2d ourPos,

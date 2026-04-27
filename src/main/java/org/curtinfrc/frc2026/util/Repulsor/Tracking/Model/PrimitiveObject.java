@@ -21,6 +21,18 @@ package org.curtinfrc.frc2026.util.Repulsor.Tracking.Model;
 
 import edu.wpi.first.math.geometry.Pose3d;
 
+/**
+ * Provides primitive object functionality for the Repulsor typed model layer for field objects and
+ * prediction inputs. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public abstract class PrimitiveObject {
+  /**
+   * Returns the intersects value maintained by this Repulsor component.
+   *
+   * @param pos value used by this operation.
+   * @return value produced by this operation.
+   */
   public abstract boolean intersects(Pose3d pos);
 }

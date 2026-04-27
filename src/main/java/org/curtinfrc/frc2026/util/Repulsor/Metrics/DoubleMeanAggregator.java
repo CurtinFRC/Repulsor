@@ -19,10 +19,21 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Metrics;
 
+/**
+ * Provides double mean aggregator functionality for the Repulsor metric aggregation and
+ * NetworkTables recording layer. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public class DoubleMeanAggregator implements MetricAggregator<Double> {
   private double sum = 0.0;
   private long n = 0;
 
+  /**
+   * Runs add sample in the Repulsor runtime.
+   *
+   * @param value value used by this operation.
+   */
   @Override
   public void addSample(Double value) {
     if (value == null) return;
@@ -30,11 +41,21 @@ public class DoubleMeanAggregator implements MetricAggregator<Double> {
     n += 1;
   }
 
+  /**
+   * Returns the get overall value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public Double getOverall() {
     return n == 0 ? null : (sum / n);
   }
 
+  /**
+   * Updates reset state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   */
   @Override
   public void reset() {
     sum = 0.0;

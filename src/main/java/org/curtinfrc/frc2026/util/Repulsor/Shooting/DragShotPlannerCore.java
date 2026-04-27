@@ -24,13 +24,36 @@ import java.util.List;
 import java.util.Optional;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 
+/**
+ * Provides drag shot planner core functionality for the Repulsor projectile and shot-planning
+ * layer. Use this type from robot code, field profiles, or tests when integrating the corresponding
+ * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+ * motion.
+ */
 final class DragShotPlannerCore {
   private DragShotPlannerCore() {}
 
+  /**
+   * Returns the load game piece from deploy yaml value maintained by this Repulsor component.
+   *
+   * @param id value used by this operation.
+   * @return game piece physics result for load game piece from deploy yaml.
+   */
   static GamePiecePhysics loadGamePieceFromDeployYaml(String id) {
     return DragShotPlannerGamePieceLoader.loadGamePieceFromDeployYaml(id);
   }
 
+  /**
+   * Returns the is shooter pose valid value maintained by this Repulsor component.
+   *
+   * @param shooterPos value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param robotHalfLengthMeters distance or field-coordinate value in meters.
+   * @param robotHalfWidthMeters distance or field-coordinate value in meters.
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   * @param checkBounds value used by this operation.
+   * @return value produced by this operation.
+   */
   static boolean isShooterPoseValid(
       Translation2d shooterPos,
       Translation2d targetFieldPosition,
@@ -47,6 +70,21 @@ final class DragShotPlannerCore {
         checkBounds);
   }
 
+  /**
+   * Computes the find best shot from library value for the current Repulsor planning state.
+   *
+   * @param library distance or field-coordinate value in meters.
+   * @param gamePiece value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param targetHeightMeters distance or field-coordinate value in meters.
+   * @param robotPose WPILib Pose2d in field-relative coordinates.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @param robotHalfLengthMeters distance or field-coordinate value in meters.
+   * @param robotHalfWidthMeters distance or field-coordinate value in meters.
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   * @param constraints value used by this operation.
+   * @return optional shot solution produced by this operation.
+   */
   static Optional<ShotSolution> findBestShotFromLibrary(
       ShotLibrary library,
       GamePiecePhysics gamePiece,
@@ -71,6 +109,20 @@ final class DragShotPlannerCore {
         constraints);
   }
 
+  /**
+   * Computes the find best shot auto value for the current Repulsor planning state.
+   *
+   * @param gamePiece value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param targetHeightMeters distance or field-coordinate value in meters.
+   * @param robotPose WPILib Pose2d in field-relative coordinates.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @param robotHalfLengthMeters distance or field-coordinate value in meters.
+   * @param robotHalfWidthMeters distance or field-coordinate value in meters.
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   * @param constraints value used by this operation.
+   * @return optional shot solution produced by this operation.
+   */
   static Optional<ShotSolution> findBestShotAuto(
       GamePiecePhysics gamePiece,
       Translation2d targetFieldPosition,
@@ -93,6 +145,22 @@ final class DragShotPlannerCore {
         constraints);
   }
 
+  /**
+   * Computes the find best shot online refine value for the current Repulsor planning state.
+   *
+   * @param gamePiece value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param targetHeightMeters distance or field-coordinate value in meters.
+   * @param robotPose WPILib Pose2d in field-relative coordinates.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @param robotHalfLengthMeters distance or field-coordinate value in meters.
+   * @param robotHalfWidthMeters distance or field-coordinate value in meters.
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   * @param constraints value used by this operation.
+   * @param state value used by this operation.
+   * @param budgetNanos value used by this operation.
+   * @return optional shot solution produced by this operation.
+   */
   static Optional<ShotSolution> findBestShotOnlineRefine(
       GamePiecePhysics gamePiece,
       Translation2d targetFieldPosition,
@@ -119,6 +187,19 @@ final class DragShotPlannerCore {
         budgetNanos);
   }
 
+  /**
+   * Computes the calculate static shot angle and speed value for the current Repulsor planning
+   * state. Call this from periodic planning or tests when a fresh decision is required; inputs
+   * should already be expressed in the coordinate frame expected by the parameter names.
+   *
+   * @param gamePiece value used by this operation.
+   * @param shooterFieldPosition value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param targetHeightMeters distance or field-coordinate value in meters.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @param constraints value used by this operation.
+   * @return optional shot solution produced by this operation.
+   */
   static Optional<ShotSolution> calculateStaticShotAngleAndSpeed(
       GamePiecePhysics gamePiece,
       Translation2d shooterFieldPosition,

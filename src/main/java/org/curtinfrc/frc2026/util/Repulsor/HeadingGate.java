@@ -21,7 +21,17 @@ package org.curtinfrc.frc2026.util.Repulsor;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 
+/**
+ * Provides heading gate functionality for the Repulsor core Repulsor coordination layer. Use this
+ * type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+ * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public final class HeadingGate {
+  /**
+   * Provides config functionality for the Repulsor core Repulsor coordination layer. Use this type
+   * from robot code, field profiles, or tests when integrating the corresponding Repulsor
+   * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+   */
   public static final class Config {
     public double deadbandDeg = 6.0;
     public double releaseDeg = 9.0;
@@ -33,15 +43,37 @@ public final class HeadingGate {
   private Rotation2d held;
   private boolean latched = false;
 
+  /**
+   * Updates configure state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param c value used by this operation.
+   */
   public void configure(java.util.function.Consumer<Config> c) {
     c.accept(cfg);
   }
 
+  /**
+   * Updates reset state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   *
+   * @param current value used by this operation.
+   */
   public void reset(Rotation2d current) {
     held = current;
     latched = false;
   }
 
+  /**
+   * Returns the filter value maintained by this Repulsor component.
+   *
+   * @param currentYaw value used by this operation.
+   * @param desiredYaw value used by this operation.
+   * @param dtSeconds time value in seconds.
+   * @return value produced by this operation.
+   */
   public Rotation2d filter(Rotation2d currentYaw, Rotation2d desiredYaw, double dtSeconds) {
     if (held == null) held = currentYaw;
 

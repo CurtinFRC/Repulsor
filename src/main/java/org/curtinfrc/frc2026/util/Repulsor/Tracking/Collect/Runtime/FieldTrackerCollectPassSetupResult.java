@@ -20,5 +20,14 @@ package org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.Runtime;
 
 import edu.wpi.first.math.geometry.Pose2d;
 
+/**
+ * Immutable data record for field tracker collect pass setup result values passed through the
+ * Repulsor runtime helper layer shared by behaviours and planners. Use this type from robot code,
+ * field profiles, or tests when integrating the corresponding Repulsor subsystem. Coordinates are
+ * field-relative unless a method documents robot-relative motion.
+ *
+ * @param context component of the field tracker collect pass setup result model
+ * @param immediatePose record component for the field tracker collect pass setup result snapshot
+ */
 public record FieldTrackerCollectPassSetupResult(
     FieldTrackerCollectPassContext context, Pose2d immediatePose) {}

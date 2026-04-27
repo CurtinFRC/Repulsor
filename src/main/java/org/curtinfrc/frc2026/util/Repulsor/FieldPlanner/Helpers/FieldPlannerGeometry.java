@@ -21,18 +21,44 @@ package org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers;
 
 import edu.wpi.first.math.geometry.Translation2d;
 
+/**
+ * Provides field planner geometry functionality for the Repulsor repulsor-field planner that
+ * combines goals, obstacles, and force samples. Use this type from robot code, field profiles, or
+ * tests when integrating the corresponding Repulsor subsystem. Coordinates are field-relative
+ * unless a method documents robot-relative motion.
+ */
 public final class FieldPlannerGeometry {
   private FieldPlannerGeometry() {}
 
+  /**
+   * Returns the clamp01 value maintained by this Repulsor component.
+   *
+   * @param x distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   public static double clamp01(double x) {
     return Math.max(0.0, Math.min(1.0, x));
   }
 
+  /**
+   * Returns the smooth01 value maintained by this Repulsor component.
+   *
+   * @param x distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   public static double smooth01(double x) {
     x = clamp01(x);
     return x * x * (3.0 - 2.0 * x);
   }
 
+  /**
+   * Returns the segment intersects polygon outer value maintained by this Repulsor component.
+   *
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @param poly distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   public static boolean segmentIntersectsPolygonOuter(
       Translation2d a, Translation2d b, Translation2d[] poly) {
     if (isPointInPolygon(a, poly) || isPointInPolygon(b, poly)) return true;
@@ -73,6 +99,13 @@ public final class FieldPlannerGeometry {
     return false;
   }
 
+  /**
+   * Returns the is point in polygon value maintained by this Repulsor component.
+   *
+   * @param point value used by this operation.
+   * @param polygon value used by this operation.
+   * @return value produced by this operation.
+   */
   public static boolean isPointInPolygon(Translation2d point, Translation2d[] polygon) {
     int crossings = 0;
     for (int i = 0; i < polygon.length; i++) {
@@ -86,10 +119,25 @@ public final class FieldPlannerGeometry {
     return (crossings % 2 == 1);
   }
 
+  /**
+   * Returns the dot value maintained by this Repulsor component.
+   *
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @return value produced by this operation.
+   */
   public static double dot(Translation2d a, Translation2d b) {
     return a.getX() * b.getX() + a.getY() * b.getY();
   }
 
+  /**
+   * Returns the distance from point to segment value maintained by this Repulsor component.
+   *
+   * @param p value used by this operation.
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @return value produced by this operation.
+   */
   public static double distanceFromPointToSegment(
       Translation2d p, Translation2d a, Translation2d b) {
     Translation2d ap = p.minus(a);

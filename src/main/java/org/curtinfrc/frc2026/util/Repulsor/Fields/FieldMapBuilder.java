@@ -40,13 +40,31 @@ import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameObject;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Pipe;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.PrimitiveObject;
 
+/**
+ * Provides field map builder functionality for the Repulsor field/profile definition layer used to
+ * tune Repulsor for a specific game. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class FieldMapBuilder {
+  /**
+   * Defines the category spec values used by the Repulsor field/profile definition layer used to
+   * tune Repulsor for a specific game. Use this type from robot code, field profiles, or tests when
+   * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+   * method documents robot-relative motion.
+   */
   public enum CategorySpec {
     kScore,
     kCollect,
     kEndgame
   }
 
+  /**
+   * Provides element spec functionality for the Repulsor field/profile definition layer used to
+   * tune Repulsor for a specific game. Use this type from robot code, field profiles, or tests when
+   * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+   * method documents robot-relative motion.
+   */
   public static final class ElementSpec {
     Alliance alliance = Alliance.kBlue;
     int capacity = 1;
@@ -61,6 +79,11 @@ public final class FieldMapBuilder {
   private final List<GameElement> elements = new ArrayList<>();
   private ElementSpec spec;
 
+  /**
+   * Returns the field map builder value maintained by this Repulsor component.
+   *
+   * @param ft value used by this operation.
+   */
   public FieldMapBuilder(FieldTrackerCore ft) {
     this.ft = Objects.requireNonNull(ft);
   }
@@ -70,43 +93,97 @@ public final class FieldMapBuilder {
     return spec;
   }
 
+  /**
+   * Returns the begin value maintained by this Repulsor component.
+   *
+   * @return field map builder result for begin.
+   */
   public FieldMapBuilder begin() {
     spec = new ElementSpec();
     return this;
   }
 
+  /**
+   * Returns the alliance value maintained by this Repulsor component.
+   *
+   * @param a value used by this operation.
+   * @return field map builder result for alliance.
+   */
   public FieldMapBuilder alliance(Alliance a) {
     s().alliance = a;
     return this;
   }
 
+  /**
+   * Returns the capacity value maintained by this Repulsor component.
+   *
+   * @param c value used by this operation.
+   * @return field map builder result for capacity.
+   */
   public FieldMapBuilder capacity(int c) {
     s().capacity = c;
     return this;
   }
 
+  /**
+   * Returns the pose value maintained by this Repulsor component.
+   *
+   * @param p value used by this operation.
+   * @return field map builder result for pose.
+   */
   public FieldMapBuilder pose(Pose3d p) {
     s().pose = p;
     return this;
   }
 
+  /**
+   * Returns the rotate value maintained by this Repulsor component.
+   *
+   * @param rollRad value used by this operation.
+   * @param pitchRad value used by this operation.
+   * @param yawRad value used by this operation.
+   * @return field map builder result for rotate.
+   */
   public FieldMapBuilder rotate(double rollRad, double pitchRad, double yawRad) {
     Pose3d p = s().pose;
     s().pose = new Pose3d(p.getX(), p.getY(), p.getZ(), new Rotation3d(rollRad, pitchRad, yawRad));
     return this;
   }
 
+  /**
+   * Returns the translate value maintained by this Repulsor component.
+   *
+   * @param dx distance or field-coordinate value in meters.
+   * @param dy distance or field-coordinate value in meters.
+   * @param dz value used by this operation.
+   * @return field map builder result for translate.
+   */
   public FieldMapBuilder translate(double dx, double dy, double dz) {
     Pose3d p = s().pose;
     s().pose = new Pose3d(p.getX() + dx, p.getY() + dy, p.getZ() + dz, p.getRotation());
     return this;
   }
 
+  /**
+   * Returns the category value maintained by this Repulsor component.
+   *
+   * @param c value used by this operation.
+   * @return field map builder result for category.
+   */
   public FieldMapBuilder category(CategorySpec c) {
     s().category = c != null ? c : CategorySpec.kScore;
     return this;
   }
 
+  /**
+   * Returns the primitive pipe value maintained by this Repulsor component.
+   *
+   * @param radius value used by this operation.
+   * @param rollRad value used by this operation.
+   * @param pitchRad value used by this operation.
+   * @param yawRad value used by this operation.
+   * @return field map builder result for primitive pipe.
+   */
   public FieldMapBuilder primitivePipe(
       Distance radius, double rollRad, double pitchRad, double yawRad) {
     Pose3d p = s().pose;
@@ -119,6 +196,14 @@ public final class FieldMapBuilder {
     return this;
   }
 
+  /**
+   * Returns the primitive floor square value maintained by this Repulsor component.
+   *
+   * @param sideMeters distance or field-coordinate value in meters.
+   * @param zMinMeters distance or field-coordinate value in meters.
+   * @param zMaxMeters distance or field-coordinate value in meters.
+   * @return field map builder result for primitive floor square.
+   */
   public FieldMapBuilder primitiveFloorSquare(
       double sideMeters, double zMinMeters, double zMaxMeters) {
     if (sideMeters <= 0) throw new IllegalArgumentException("sideMeters must be > 0");
@@ -143,6 +228,12 @@ public final class FieldMapBuilder {
     return this;
   }
 
+  /**
+   * Returns the filter value maintained by this Repulsor component.
+   *
+   * @param f value used by this operation.
+   * @return field map builder result for filter.
+   */
   public FieldMapBuilder filter(Predicate<GameObject> f) {
     s().filter = f != null ? f : (go -> true);
     return this;
@@ -164,6 +255,12 @@ public final class FieldMapBuilder {
     return t;
   }
 
+  /**
+   * Returns the filter type value maintained by this Repulsor component.
+   *
+   * @param allowed value used by this operation.
+   * @return field map builder result for filter type.
+   */
   public FieldMapBuilder filterType(String... allowed) {
     Set<String> set = new HashSet<>();
     if (allowed != null) {
@@ -186,11 +283,22 @@ public final class FieldMapBuilder {
     return this;
   }
 
+  /**
+   * Returns the related value maintained by this Repulsor component.
+   *
+   * @param sp value used by this operation.
+   * @return field map builder result for related.
+   */
   public FieldMapBuilder related(RepulsorSetpoint sp) {
     s().related = sp;
     return this;
   }
 
+  /**
+   * Returns the add value maintained by this Repulsor component.
+   *
+   * @return field map builder result for add.
+   */
   public FieldMapBuilder add() {
     ElementSpec es = s();
     PrimitiveObject[] prim = es.primitives.toArray(new PrimitiveObject[0]);
@@ -201,6 +309,19 @@ public final class FieldMapBuilder {
     return this;
   }
 
+  /**
+   * Returns the bulk value maintained by this Repulsor component.
+   *
+   * @param poses value used by this operation.
+   * @param alliance value used by this operation.
+   * @param capacity distance or field-coordinate value in meters.
+   * @param radius value used by this operation.
+   * @param yawRad value used by this operation.
+   * @param filter value used by this operation.
+   * @param related value used by this operation.
+   * @param category distance or field-coordinate value in meters.
+   * @return field map builder result for bulk.
+   */
   public FieldMapBuilder bulk(
       List<Pose3d> poses,
       Alliance alliance,
@@ -227,6 +348,12 @@ public final class FieldMapBuilder {
     return this;
   }
 
+  /**
+   * Returns the mirror x value maintained by this Repulsor component.
+   *
+   * @param xAxis value used by this operation.
+   * @return field map builder result for mirror x.
+   */
   public FieldMapBuilder mirrorX(double xAxis) {
     List<GameElement> mirrored = new ArrayList<>();
     for (GameElement e : elements) {
@@ -260,22 +387,47 @@ public final class FieldMapBuilder {
     return this;
   }
 
+  /**
+   * Builds the WPILib command sequence for the current behaviour context.
+   *
+   * @return game element[] result for build.
+   */
   public GameElement[] build() {
     return elements.toArray(new GameElement[0]);
   }
 
+  /**
+   * Returns the small value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public static Distance small() {
     return Meters.of(0.20);
   }
 
+  /**
+   * Returns the medium value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public static Distance medium() {
     return Meters.of(0.30);
   }
 
+  /**
+   * Returns the large value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public static Distance large() {
     return Meters.of(0.40);
   }
 
+  /**
+   * Returns the tiny value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public static Distance tiny() {
     return Meters.of(0.10);
   }

@@ -22,13 +22,26 @@ package org.curtinfrc.frc2026.util.Repulsor.DriverStation;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import java.util.Objects;
 
+/**
+ * Provides repulsor driver station bootstrap functionality for the Repulsor driver-station and
+ * NetworkTables control surface. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class RepulsorDriverStationBootstrap {
   private RepulsorDriverStationBootstrap() {}
 
+  /** Runs use default nt in the Repulsor runtime. */
   public static void useDefaultNt() {
     useNt(NetworkTableInstance.getDefault(), "/Repulsor/DriverStation");
   }
 
+  /**
+   * Runs use nt in the Repulsor runtime.
+   *
+   * @param inst value used by this operation.
+   * @param root value used by this operation.
+   */
   public static void useNt(NetworkTableInstance inst, String root) {
     Objects.requireNonNull(inst, "inst");
     if (root == null || root.isEmpty()) throw new IllegalArgumentException("root");

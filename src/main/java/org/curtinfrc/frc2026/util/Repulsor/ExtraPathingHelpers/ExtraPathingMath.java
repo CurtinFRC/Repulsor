@@ -24,9 +24,23 @@ import java.util.ArrayList;
 import java.util.List;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 
+/**
+ * Provides extra pathing math functionality for the Repulsor extra pathing geometry and collision
+ * helper layer. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 final class ExtraPathingMath {
   private ExtraPathingMath() {}
 
+  /**
+   * Returns the trim end value maintained by this Repulsor component.
+   *
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @param trim value used by this operation.
+   * @return value produced by this operation.
+   */
   static Translation2d trimEnd(Translation2d a, Translation2d b, double trim) {
     Translation2d d = b.minus(a);
     double L = d.getNorm();
@@ -36,8 +50,25 @@ final class ExtraPathingMath {
     return a.plus(u.times(keep));
   }
 
+  /**
+   * Immutable data record for dist param values passed through the Repulsor extra pathing geometry
+   * and collision helper layer. Use this type from robot code, field profiles, or tests when
+   * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+   * method documents robot-relative motion.
+   *
+   * @param dist component of the dist param model
+   * @param t record component for the dist param snapshot
+   */
   record DistParam(double dist, double t) {}
 
+  /**
+   * Returns the point to seg dist param value maintained by this Repulsor component.
+   *
+   * @param p value used by this operation.
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @return dist param result for point to seg dist param.
+   */
   static DistParam pointToSegDistParam(Translation2d p, Translation2d a, Translation2d b) {
     Translation2d ap = p.minus(a);
     Translation2d ab = b.minus(a);
@@ -48,18 +79,43 @@ final class ExtraPathingMath {
     return new DistParam(p.getDistance(proj), t);
   }
 
+  /**
+   * Returns the param for yon segment value maintained by this Repulsor component.
+   *
+   * @param y distance or field-coordinate value in meters.
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @return value produced by this operation.
+   */
   static double paramForYOnSegment(double y, Translation2d a, Translation2d b) {
     double dy = b.getY() - a.getY();
     if (Math.abs(dy) < 1e-12) return Double.NaN;
     return (y - a.getY()) / dy;
   }
 
+  /**
+   * Returns the param for xon segment value maintained by this Repulsor component.
+   *
+   * @param x distance or field-coordinate value in meters.
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @return value produced by this operation.
+   */
   static double paramForXOnSegment(double x, Translation2d a, Translation2d b) {
     double dx = b.getX() - a.getX();
     if (Math.abs(dx) < 1e-12) return Double.NaN;
     return (x - a.getX()) / dx;
   }
 
+  /**
+   * Returns the offset around value maintained by this Repulsor component.
+   *
+   * @param c value used by this operation.
+   * @param R value used by this operation.
+   * @param start value used by this operation.
+   * @param goal value used by this operation.
+   * @return value produced by this operation.
+   */
   static List<Translation2d> offsetAround(
       Translation2d c, double R, Translation2d start, Translation2d goal) {
     List<Translation2d> out = new ArrayList<>(2);
@@ -74,6 +130,14 @@ final class ExtraPathingMath {
     return out;
   }
 
+  /**
+   * Returns the estimate curvature value maintained by this Repulsor component.
+   *
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @param c value used by this operation.
+   * @return value produced by this operation.
+   */
   static double estimateCurvature(Translation2d a, Translation2d b, Translation2d c) {
     double x1 = a.getX(), y1 = a.getY();
     double x2 = b.getX(), y2 = b.getY();

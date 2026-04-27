@@ -27,9 +27,23 @@ import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateRuntime;
 
+/**
+ * Provides field tracker collect planner functionality for the Repulsor collection objective
+ * runtime for tracked field resources. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class FieldTrackerCollectPlanner {
   private final FieldTrackerCollectObjectiveRuntime engine;
 
+  /**
+   * Returns the field tracker collect planner value maintained by this Repulsor component.
+   *
+   * @param predictor value used by this operation.
+   * @param collectObjectivePoints value used by this operation.
+   * @param dynamicsSupplier value used by this operation.
+   * @param collectTypePredicate value used by this operation.
+   */
   public FieldTrackerCollectPlanner(
       PredictiveFieldStateRuntime predictor,
       Supplier<Translation2d[]> collectObjectivePoints,
@@ -40,15 +54,34 @@ public final class FieldTrackerCollectPlanner {
             predictor, collectObjectivePoints, dynamicsSupplier, collectTypePredicate);
   }
 
+  /**
+   * Updates reset all state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   */
   public void resetAll() {
     engine.resetAll();
   }
 
+  /**
+   * Returns the next objective goal blue value maintained by this Repulsor component.
+   *
+   * @param robotPoseBlue value used by this operation.
+   * @param ourSpeedCap value used by this operation.
+   * @param goalUnits value used by this operation.
+   * @param cat value used by this operation.
+   * @return value produced by this operation.
+   */
   public Pose2d nextObjectiveGoalBlue(
       Pose2d robotPoseBlue, double ourSpeedCap, int goalUnits, CategorySpec cat) {
     return engine.nextObjectiveGoalBlue(robotPoseBlue, ourSpeedCap, goalUnits, cat);
   }
 
+  /**
+   * Updates clear state state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   */
   public void clearState() {
     engine.clearState();
   }

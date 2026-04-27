@@ -25,13 +25,25 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Provides vision custom functionality for the Repulsor vision integration and simulation layer.
+ * Use this type from robot code, field profiles, or tests when integrating the corresponding
+ * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+ * motion.
+ */
 public class VisionCustom implements RepulsorVision {
   private final NetworkTable table;
 
+  /** Returns the vision custom value maintained by this Repulsor component. */
   public VisionCustom() {
     this.table = NetworkTableInstance.getDefault().getTable("RepulsorVision");
   }
 
+  /**
+   * Returns the get obstacles value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public Obstacle[] getObstacles() {
     Set<String> keys = table.getKeys();

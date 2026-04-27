@@ -19,16 +19,73 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Profiler;
 
+/**
+ * Provides profiler config functionality for the Repulsor low-overhead profiling and event
+ * recording layer. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public final class ProfilerConfig {
+  /**
+   * Configuration value for enabled. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final boolean enabled;
+
+  /**
+   * Configuration value for write file. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final boolean writeFile;
+
+  /**
+   * Configuration value for gzip file. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final boolean gzipFile;
+
+  /**
+   * Configuration value for summary period ms. Time values use seconds and should be tuned against
+   * measured robot loop and mechanism latency.
+   */
   public final int summaryPeriodMs;
+
+  /**
+   * Configuration value for queue capacity. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   public final int queueCapacity;
+
+  /**
+   * Configuration value for top sections. Time values use seconds and should be tuned against
+   * measured robot loop and mechanism latency.
+   */
   public final int topSections;
+
+  /**
+   * Configuration value for top counters. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   public final int topCounters;
+
+  /**
+   * Configuration value for top gauges. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final int topGauges;
 
+  /**
+   * Returns the profiler config value maintained by this Repulsor component.
+   *
+   * @param enabled value used by this operation.
+   * @param writeFile value used by this operation.
+   * @param gzipFile value used by this operation.
+   * @param summaryPeriodMs value used by this operation.
+   * @param queueCapacity distance or field-coordinate value in meters.
+   * @param topSections value used by this operation.
+   * @param topCounters value used by this operation.
+   * @param topGauges value used by this operation.
+   */
   public ProfilerConfig(
       boolean enabled,
       boolean writeFile,
@@ -48,6 +105,12 @@ public final class ProfilerConfig {
     this.topGauges = clamp(topGauges, 0, 2000);
   }
 
+  /**
+   * Returns the from system properties value maintained by this Repulsor component.
+   *
+   * @param defaultEnabled value used by this operation.
+   * @return profiler config result for from system properties.
+   */
   public static ProfilerConfig fromSystemProperties(boolean defaultEnabled) {
     boolean enabled = boolProp("repulsor.profiler.enabled", defaultEnabled);
     boolean writeFile = boolProp("repulsor.profiler.file", true);

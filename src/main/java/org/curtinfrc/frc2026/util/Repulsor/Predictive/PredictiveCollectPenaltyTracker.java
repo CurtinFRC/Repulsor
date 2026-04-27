@@ -24,6 +24,12 @@ import java.util.HashMap;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal.DepletedMark;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal.RegionStat;
 
+/**
+ * Provides predictive collect penalty tracker functionality for the Repulsor predictive field-state
+ * and collection-planning layer. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class PredictiveCollectPenaltyTracker {
   private static final double DEPLETED_TTL_S = 3.25;
   private static final double DEPLETED_DECAY = 1.15;
@@ -33,6 +39,11 @@ public final class PredictiveCollectPenaltyTracker {
   private final ArrayList<DepletedMark> depletedMarks = new ArrayList<>(256);
   private final HashMap<Long, RegionStat> regionStats = new HashMap<>(512);
 
+  /**
+   * Runs sweep depleted marks in the Repulsor runtime.
+   *
+   * @param errorMode value used by this operation.
+   */
   void sweepDepletedMarks(boolean errorMode) {
     if (errorMode) return;
     if (depletedMarks.isEmpty()) return;
@@ -43,6 +54,16 @@ public final class PredictiveCollectPenaltyTracker {
     }
   }
 
+  /**
+   * Runs add depleted mark in the Repulsor runtime.
+   *
+   * @param p value used by this operation.
+   * @param radiusM value used by this operation.
+   * @param strength value used by this operation.
+   * @param ttlS value used by this operation.
+   * @param merge value used by this operation.
+   * @param errorMode value used by this operation.
+   */
   void addDepletedMark(
       Translation2d p,
       double radiusM,
@@ -76,6 +97,16 @@ public final class PredictiveCollectPenaltyTracker {
     if (depletedMarks.size() > DEPLETED_MARKS_MAX) depletedMarks.remove(0);
   }
 
+  /**
+   * Runs add depleted ring in the Repulsor runtime.
+   *
+   * @param p value used by this operation.
+   * @param r0 value used by this operation.
+   * @param r1 value used by this operation.
+   * @param strength value used by this operation.
+   * @param ttlS value used by this operation.
+   * @param errorMode value used by this operation.
+   */
   void addDepletedRing(
       Translation2d p, double r0, double r1, double strength, double ttlS, boolean errorMode) {
     if (errorMode) return;
@@ -86,6 +117,13 @@ public final class PredictiveCollectPenaltyTracker {
     if (depletedMarks.size() > DEPLETED_MARKS_MAX) depletedMarks.remove(0);
   }
 
+  /**
+   * Returns the depleted penalty soft value maintained by this Repulsor component.
+   *
+   * @param p value used by this operation.
+   * @param errorMode value used by this operation.
+   * @return value produced by this operation.
+   */
   double depletedPenaltySoft(Translation2d p, boolean errorMode) {
     if (errorMode) return 0.0;
     if (p == null || depletedMarks.isEmpty()) return 0.0;
@@ -117,6 +155,15 @@ public final class PredictiveCollectPenaltyTracker {
     return Math.min(2.25, sum);
   }
 
+  /**
+   * Updates record region attempt state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param p value used by this operation.
+   * @param now value used by this operation.
+   * @param success value used by this operation.
+   */
   public void recordRegionAttempt(Translation2d p, double now, boolean success) {
     if (p == null) return;
     long k = regionKey(p, 0.30);
@@ -131,6 +178,13 @@ public final class PredictiveCollectPenaltyTracker {
     st.lastAttemptTs = now;
   }
 
+  /**
+   * Returns the region bandit bonus value maintained by this Repulsor component.
+   *
+   * @param p value used by this operation.
+   * @param now value used by this operation.
+   * @return value produced by this operation.
+   */
   public double regionBanditBonus(Translation2d p, double now) {
     if (p == null) return 0.0;
     if (regionStats.isEmpty()) return 0.0;
@@ -154,6 +208,13 @@ public final class PredictiveCollectPenaltyTracker {
     return 0.22 * ucb * recW;
   }
 
+  /**
+   * Returns the region key value maintained by this Repulsor component.
+   *
+   * @param p value used by this operation.
+   * @param binM value used by this operation.
+   * @return value produced by this operation.
+   */
   static long regionKey(Translation2d p, double binM) {
     double inv = 1.0 / Math.max(1e-6, binM);
     int cx = (int) Math.floor(p.getX() * inv);
@@ -161,6 +222,11 @@ public final class PredictiveCollectPenaltyTracker {
     return SpatialDyn.key(cx, cy);
   }
 
+  /**
+   * Returns the get default depleted ttl s value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   double getDefaultDepletedTtlS() {
     return DEPLETED_TTL_S;
   }

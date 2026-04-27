@@ -26,6 +26,12 @@ import java.util.function.Predicate;
 import java.util.function.ToDoubleBiFunction;
 import java.util.function.ToDoubleFunction;
 
+/**
+ * Provides sticky target functionality for the Repulsor sticky-target filtering and
+ * target-selection layer. Use this type from robot code, field profiles, or tests when integrating
+ * the corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public final class StickyTarget<T> {
   private final double candidateStableSec;
   private final double maxStaleSec;
@@ -39,10 +45,26 @@ public final class StickyTarget<T> {
   private final StickyTargetHardLock hardLock = new StickyTargetHardLock();
   private final StickyTargetPingPong<T> pingPong = new StickyTargetPingPong<>();
 
+  /**
+   * Returns the sticky target value maintained by this Repulsor component.
+   *
+   * @param candidateStableSec time value in seconds.
+   * @param maxStaleSec time value in seconds.
+   * @param switchBackCooldownSec time value in seconds.
+   */
   public StickyTarget(double candidateStableSec, double maxStaleSec, double switchBackCooldownSec) {
     this(candidateStableSec, maxStaleSec, switchBackCooldownSec, Timer::getFPGATimestamp);
   }
 
+  /**
+   * Creates a sticky target instance with the dependencies and tuning values used by this Repulsor
+   * component.
+   *
+   * @param candidateStableSec time value in seconds.
+   * @param maxStaleSec time value in seconds.
+   * @param switchBackCooldownSec time value in seconds.
+   * @param nowSecSupplier value used by this operation.
+   */
   StickyTarget(
       double candidateStableSec,
       double maxStaleSec,
@@ -65,32 +87,66 @@ public final class StickyTarget<T> {
     return Double.isFinite(now) ? now : Timer.getFPGATimestamp();
   }
 
+  /**
+   * Returns the latest value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Optional<T> get() {
     return Optional.ofNullable(st.sticky);
   }
 
+  /**
+   * Updates set seen timeout sec state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param sec time value in seconds.
+   */
   public void setSeenTimeoutSec(double sec) {
     if (!Double.isFinite(sec)) return;
     seen.setTimeoutSec(Math.max(0.12, sec));
   }
 
+  /**
+   * Updates set ema evict sec state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param sec time value in seconds.
+   */
   public void setEmaEvictSec(double sec) {
     if (!Double.isFinite(sec)) return;
     ema.setEvictSec(Math.max(0.25, sec));
   }
 
+  /**
+   * Runs note seen in the Repulsor runtime.
+   *
+   * @param value value used by this operation.
+   */
   public void noteSeen(T value) {
     if (value == null) return;
     double now = nowSec();
     seen.noteSeen(now, value);
   }
 
+  /**
+   * Runs note seen in the Repulsor runtime.
+   *
+   * @param values value used by this operation.
+   */
   public void noteSeen(Iterable<T> values) {
     if (values == null) return;
     double now = nowSec();
     seen.noteSeen(now, values);
   }
 
+  /**
+   * Updates clear state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   */
   public void clear() {
     st.clear();
     ema.clear();
@@ -100,6 +156,11 @@ public final class StickyTarget<T> {
     pingPong.clear();
   }
 
+  /**
+   * Runs force in the Repulsor runtime.
+   *
+   * @param value value used by this operation.
+   */
   public void force(T value) {
     double now = nowSec();
 
@@ -128,6 +189,7 @@ public final class StickyTarget<T> {
     }
   }
 
+  /** Runs force invalidate in the Repulsor runtime. */
   public void forceInvalidate() {
     double now = nowSec();
 
@@ -206,6 +268,25 @@ public final class StickyTarget<T> {
     return null;
   }
 
+  /**
+   * Updates update state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   *
+   * @param best value used by this operation.
+   * @param bestScore value used by this operation.
+   * @param scoreFn value used by this operation.
+   * @param validFn value used by this operation.
+   * @param minHoldSec time value in seconds.
+   * @param keepMargin value used by this operation.
+   * @param immediateDelta value used by this operation.
+   * @param transitionExtraFn value used by this operation.
+   * @param distanceFn value used by this operation.
+   * @param sameEps value used by this operation.
+   * @param stillSec time value in seconds.
+   * @param robotFlickerSec time value in seconds.
+   * @return value produced by this operation.
+   */
   public T update(
       T best,
       double bestScore,

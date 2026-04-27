@@ -21,9 +21,27 @@ package org.curtinfrc.frc2026.util.Repulsor.Metrics;
 
 import java.util.Optional;
 
+/**
+ * Contract for metric codec implementations used by the Repulsor metric aggregation and
+ * NetworkTables recording layer. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public interface MetricCodec<T> {
+  /**
+   * Returns the encode value maintained by this Repulsor component.
+   *
+   * @param value value used by this operation.
+   * @return value produced by this operation.
+   */
   String encode(T value);
 
+  /**
+   * Returns the decode value maintained by this Repulsor component.
+   *
+   * @param raw value used by this operation.
+   * @return value produced by this operation.
+   */
   default Optional<T> decode(String raw) {
     return Optional.empty();
   }

@@ -18,13 +18,43 @@
  */
 package org.curtinfrc.frc2026.util.Repulsor.State;
 
+/**
+ * Contract for state implementations used by the Repulsor match-state storage and simulation driver
+ * layer. Use this type from robot code, field profiles, or tests when integrating the corresponding
+ * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+ * motion.
+ */
 public interface State extends Cloneable {
+  /**
+   * Updates update state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   *
+   * @param dt value used by this operation.
+   */
   void update(double dt);
 
+  /**
+   * Updates reset state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   */
   default void reset() {}
 
+  /**
+   * Returns the copy value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   State copy();
 
+  /**
+   * Updates set state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   *
+   * @param other value used by this operation.
+   */
   default void set(State other) {
     throw new UnsupportedOperationException("set(State) not implemented");
   }

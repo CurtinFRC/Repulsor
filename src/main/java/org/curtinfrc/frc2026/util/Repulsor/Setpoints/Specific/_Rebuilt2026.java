@@ -51,11 +51,31 @@ import org.curtinfrc.frc2026.util.Repulsor.Shooting.ShotLibrary;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.ShotLibraryBuilder;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.ShotSolution;
 
+/**
+ * Provides rebuilt2026 functionality for the Repulsor field-specific setpoint catalog bridged
+ * through generic setpoint abstractions. Use this type from robot code, field profiles, or tests
+ * when integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+ * method documents robot-relative motion.
+ */
 public class _Rebuilt2026 {
   protected _Rebuilt2026() {}
 
+  /**
+   * Configuration value for hub opening front edge height m. Distances use meters in WPILib field
+   * coordinates and should be treated as tunable when sourced from profiles.
+   */
   public static final double HUB_OPENING_FRONT_EDGE_HEIGHT_M = 1.43;
+
+  /**
+   * Configuration value for hub face to aimpoint meters. Distances use meters in WPILib field
+   * coordinates and should be treated as tunable when sourced from profiles.
+   */
   public static final double HUB_FACE_TO_AIMPOINT_METERS = 0.60;
+
+  /**
+   * Configuration value for game piece id fuel. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   public static final String GAME_PIECE_ID_FUEL = "fuel";
 
   private static final long HUB_CACHE_MAX_AGE_NS = 280_000_000L;
@@ -90,18 +110,70 @@ public class _Rebuilt2026 {
   }
 
   private static final class HubLastPoseCache {
+    /**
+     * Configuration value for robot xmm. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     volatile int robotXmm;
+
+    /**
+     * Configuration value for robot ymm. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     volatile int robotYmm;
+
+    /**
+     * Configuration value for obs hash. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     volatile int obsHash;
+
+    /**
+     * Configuration value for t ns. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     volatile long tNs;
+
+    /**
+     * Configuration value for pose. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     volatile Pose2d pose;
 
+    /**
+     * Configuration value for last solve ns. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     volatile long lastSolveNs;
+
+    /**
+     * Configuration value for last solve robot xmm. The valid range and tuning source are defined
+     * by the owning subsystem or field profile.
+     */
     volatile int lastSolveRobotXmm;
+
+    /**
+     * Configuration value for last solve robot ymm. The valid range and tuning source are defined
+     * by the owning subsystem or field profile.
+     */
     volatile int lastSolveRobotYmm;
+
+    /**
+     * Configuration value for last solve obs hash. The valid range and tuning source are defined by
+     * the owning subsystem or field profile.
+     */
     volatile int lastSolveObsHash;
 
+    /**
+     * Configuration value for last refine ns. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     volatile long lastRefineNs;
+
+    /**
+     * Configuration value for last solution. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     volatile ShotSolution lastSolution;
   }
 
@@ -221,21 +293,46 @@ public class _Rebuilt2026 {
     return safeValidFallback(targetFieldPos, halfL, halfW, obs);
   }
 
+  /**
+   * Configuration value for hub shot constraints. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   public static final Constraints HUB_SHOT_CONSTRAINTS =
       new Constraints(0, 30, 60, 90.0, Constraints.ShotStyle.ARC);
 
+  /**
+   * Configuration value for blue hub anchor tag id. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   public static final int BLUE_HUB_ANCHOR_TAG_ID = 25; // 20
+
+  /**
+   * Configuration value for blue outpost anchor tag id. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public static final int BLUE_OUTPOST_ANCHOR_TAG_ID = 13;
 
+  /**
+   * Configuration value for hub shoot. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public static final GameSetpoint HUB_SHOOT =
       new HubShootSetpoint("HUB_SHOOT", BLUE_HUB_ANCHOR_TAG_ID);
 
+  /**
+   * Configuration value for center collect. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   public static final GameSetpoint CENTER_COLLECT =
       new StaticPoseSetpoint(
           "CENTER_COLLECT",
           SetpointType.kOther,
           new Pose2d(Constants.FIELD_LENGTH / 2.0, Constants.FIELD_WIDTH / 2.0, Rotation2d.kZero));
 
+  /**
+   * Configuration value for outpost collect. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   public static final GameSetpoint OUTPOST_COLLECT =
       new ApproachFromTagSetpoint(
           "OUTPOST_COLLECT", SetpointType.kHumanPlayer, BLUE_OUTPOST_ANCHOR_TAG_ID, 1.25);
@@ -243,16 +340,33 @@ public class _Rebuilt2026 {
   private static final ConcurrentHashMap<Integer, Translation2d> HUB_AIMPOINT_BLUE_CACHE =
       new ConcurrentHashMap<>();
 
+  /**
+   * Returns the hub aimpoint blue value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public static Translation2d hubAimpointBlue() {
     return HUB_AIMPOINT_BLUE_CACHE.computeIfAbsent(
         BLUE_HUB_ANCHOR_TAG_ID, _Rebuilt2026::hubAimpointFromAnchorTagBlue);
   }
 
+  /**
+   * Returns the hub aimpoint for alliance value maintained by this Repulsor component.
+   *
+   * @param alliance value used by this operation.
+   * @return value produced by this operation.
+   */
   public static Translation2d hubAimpointForAlliance(Alliance alliance) {
     Translation2d blue = hubAimpointBlue();
     return alliance == Alliance.Red ? SetpointUtil.flipToRed(blue) : blue;
   }
 
+  /**
+   * Returns the get hub shot solution value maintained by this Repulsor component.
+   *
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   * @return optional shot solution produced by this operation.
+   */
   public static Optional<ShotSolution> getHubShotSolution(SetpointContext ctx) {
     if (ctx == null || ctx.robotPose().isEmpty()) {
       return Optional.empty();
@@ -294,15 +408,54 @@ public class _Rebuilt2026 {
   private static final AtomicLong HUB_LAST_LOG_NS = new AtomicLong(0L);
 
   private static final class HubShotLibraryState {
+    /**
+     * Configuration value for key. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     final HubShotCacheKey key;
+
+    /**
+     * Configuration value for physics. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     final GamePiecePhysics physics;
+
+    /**
+     * Configuration value for target field pos. The valid range and tuning source are defined by
+     * the owning subsystem or field profile.
+     */
     final Translation2d targetFieldPos;
+
+    /**
+     * Configuration value for release h. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     final double releaseH;
+
+    /**
+     * Configuration value for half l. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     final double halfL;
+
+    /**
+     * Configuration value for half w. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     final double halfW;
 
+    /**
+     * Configuration value for published. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     volatile ShotLibrary published;
+
+    /**
+     * Configuration value for done. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     volatile boolean done;
+
     final Object lock = new Object();
     ShotLibraryBuilder builder;
 
@@ -458,6 +611,12 @@ public class _Rebuilt2026 {
       this.standoffMeters = standoffMeters;
     }
 
+    /**
+     * Returns the blue pose value maintained by this Repulsor component.
+     *
+     * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+     * @return value produced by this operation.
+     */
     @Override
     public Pose2d bluePose(SetpointContext ctx) {
       Optional<Pose3d> pose3d = aprilTagLayout.getTagPose(tagId);
@@ -479,12 +638,24 @@ public class _Rebuilt2026 {
       this.blueHubAnchorTagId = blueHubAnchorTagId;
     }
 
+    /**
+     * Returns the blue pose value maintained by this Repulsor component.
+     *
+     * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+     * @return value produced by this operation.
+     */
     @Override
     public Pose2d bluePose(SetpointContext ctx) {
       Translation2d blueTarget = hubAimpointFromAnchorTagBlueCached(blueHubAnchorTagId);
       return computeShootPose(ctx, blueTarget);
     }
 
+    /**
+     * Returns the red pose value maintained by this Repulsor component.
+     *
+     * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+     * @return value produced by this operation.
+     */
     @Override
     public Pose2d redPose(SetpointContext ctx) {
       Translation2d blueTarget = hubAimpointFromAnchorTagBlueCached(blueHubAnchorTagId);
@@ -492,6 +663,11 @@ public class _Rebuilt2026 {
       return computeShootPose(ctx, redTarget);
     }
 
+    /**
+     * Returns the approximate blue pose value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     @Override
     public Pose2d approximateBluePose() {
       Translation2d target = hubAimpointFromAnchorTagBlueCached(blueHubAnchorTagId);

@@ -22,7 +22,17 @@ package org.curtinfrc.frc2026.util.Repulsor;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.networktables.NetworkTableInstance;
 
+/**
+ * Provides repulsor log functionality for the Repulsor core Repulsor coordination layer. Use this
+ * type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+ * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public class RepulsorLog {
+  /**
+   * Defines the log type values used by the Repulsor core Repulsor coordination layer. Use this
+   * type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+   * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+   */
   public static enum LogType {
     kSYSOUT,
     kNT4
@@ -31,14 +41,34 @@ public class RepulsorLog {
   private static LogType logType = LogType.kNT4;
   private static boolean enabled = true;
 
+  /**
+   * Updates set log type state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param type value used by this operation.
+   */
   public static void setLogType(LogType type) {
     logType = type;
   }
 
+  /**
+   * Updates set enabled state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param enable value used by this operation.
+   */
   public static void setEnabled(boolean enable) {
     enabled = enable;
   }
 
+  /**
+   * Runs log in the Repulsor runtime.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param value value used by this operation.
+   */
   public static void log(String key, String value) {
     if (!enabled) {
       return;
@@ -55,6 +85,12 @@ public class RepulsorLog {
     }
   }
 
+  /**
+   * Runs log in the Repulsor runtime.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param value value used by this operation.
+   */
   public static void log(String key, Pose2d value) {
     if (!enabled) {
       return;
@@ -83,6 +119,11 @@ public class RepulsorLog {
     }
   }
 
+  /**
+   * Runs log in the Repulsor runtime.
+   *
+   * @param message value used by this operation.
+   */
   public static void log(String message) {
     if (!enabled) {
       return;
@@ -105,6 +146,12 @@ public class RepulsorLog {
     }
   }
 
+  /**
+   * Runs log in the Repulsor runtime.
+   *
+   * @param message value used by this operation.
+   * @param type value used by this operation.
+   */
   public static void log(String message, LogType type) {
     if (!enabled) {
       return;

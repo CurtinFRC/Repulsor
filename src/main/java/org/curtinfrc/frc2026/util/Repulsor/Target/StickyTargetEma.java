@@ -23,6 +23,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+/**
+ * Provides sticky target ema functionality for the Repulsor sticky-target filtering and
+ * target-selection layer. Use this type from robot code, field profiles, or tests when integrating
+ * the corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 final class StickyTargetEma<T> {
   private static final double DEFAULT_TAU_SEC = 0.26;
 
@@ -30,15 +36,32 @@ final class StickyTargetEma<T> {
   private double tauSec = DEFAULT_TAU_SEC;
   private double evictSec = 3.5;
 
+  /**
+   * Updates set evict sec state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param sec time value in seconds.
+   */
   void setEvictSec(double sec) {
     if (!Double.isFinite(sec)) return;
     evictSec = Math.max(0.25, sec);
   }
 
+  /**
+   * Updates clear state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   */
   void clear() {
     emaScore.clear();
   }
 
+  /**
+   * Runs evict in the Repulsor runtime.
+   *
+   * @param now value used by this operation.
+   */
   void evict(double now) {
     if (emaScore.isEmpty()) return;
     double ttl = Math.max(0.25, evictSec);
@@ -51,6 +74,17 @@ final class StickyTargetEma<T> {
     }
   }
 
+  /**
+   * Updates update state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   *
+   * @param now value used by this operation.
+   * @param key distance or field-coordinate value in meters.
+   * @param raw value used by this operation.
+   * @param dt value used by this operation.
+   * @return value produced by this operation.
+   */
   double update(double now, T key, double raw, double dt) {
     if (key == null) return raw;
 
@@ -66,7 +100,16 @@ final class StickyTargetEma<T> {
   }
 
   private static final class EmaEntry {
+    /**
+     * Configuration value for v. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     final double v;
+
+    /**
+     * Configuration value for t. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     final double t;
 
     EmaEntry(double v, double t) {

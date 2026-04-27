@@ -22,7 +22,17 @@ package org.curtinfrc.frc2026.util.Repulsor;
 import java.util.Comparator;
 import java.util.Objects;
 
+/**
+ * Provides interval functionality for the Repulsor core Repulsor coordination layer. Use this type
+ * from robot code, field profiles, or tests when integrating the corresponding Repulsor subsystem.
+ * Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public final class Interval<T> {
+  /**
+   * Defines the bound type values used by the Repulsor core Repulsor coordination layer. Use this
+   * type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+   * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+   */
   public enum BoundType {
     OPEN,
     CLOSED
@@ -43,49 +53,118 @@ public final class Interval<T> {
     this.upperBound = Objects.requireNonNull(upperBound, "upperBound");
   }
 
+  /**
+   * Returns the closed value maintained by this Repulsor component.
+   *
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @return value produced by this operation.
+   */
   public static <T extends Comparable<? super T>> Interval<T> closed(T a, T b) {
     return new Interval<>(a, b, Comparator.naturalOrder(), BoundType.CLOSED, BoundType.CLOSED);
   }
 
+  /**
+   * Returns the open value maintained by this Repulsor component.
+   *
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @return value produced by this operation.
+   */
   public static <T extends Comparable<? super T>> Interval<T> open(T a, T b) {
     return new Interval<>(a, b, Comparator.naturalOrder(), BoundType.OPEN, BoundType.OPEN);
   }
 
+  /**
+   * Returns the closed open value maintained by this Repulsor component.
+   *
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @return value produced by this operation.
+   */
   public static <T extends Comparable<? super T>> Interval<T> closedOpen(T a, T b) {
     return new Interval<>(a, b, Comparator.naturalOrder(), BoundType.CLOSED, BoundType.OPEN);
   }
 
+  /**
+   * Returns the open closed value maintained by this Repulsor component.
+   *
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @return value produced by this operation.
+   */
   public static <T extends Comparable<? super T>> Interval<T> openClosed(T a, T b) {
     return new Interval<>(a, b, Comparator.naturalOrder(), BoundType.OPEN, BoundType.CLOSED);
   }
 
+  /**
+   * Returns the of value maintained by this Repulsor component.
+   *
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @param comparator value used by this operation.
+   * @param lowerBound value used by this operation.
+   * @param upperBound value used by this operation.
+   * @return value produced by this operation.
+   */
   public static <T> Interval<T> of(
       T a, T b, Comparator<? super T> comparator, BoundType lowerBound, BoundType upperBound) {
     return new Interval<>(a, b, comparator, lowerBound, upperBound);
   }
 
+  /**
+   * Returns the first value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public T first() {
     return first;
   }
 
+  /**
+   * Returns the second value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public T second() {
     return second;
   }
 
+  /**
+   * Returns the min value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public T min() {
     return cmp.compare(first, second) <= 0 ? first : second;
   }
 
+  /**
+   * Returns the max value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public T max() {
     return cmp.compare(first, second) <= 0 ? second : first;
   }
 
+  /**
+   * Returns the is empty value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public boolean isEmpty() {
     int c = cmp.compare(first, second);
     if (c == 0) return lowerBound == BoundType.OPEN || upperBound == BoundType.OPEN;
     return false;
   }
 
+  /**
+   * Returns the within value maintained by this Repulsor component.
+   *
+   * @param x distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   public boolean within(T x) {
     Objects.requireNonNull(x, "x");
 
@@ -101,10 +180,22 @@ public final class Interval<T> {
     return okLower && okUpper;
   }
 
+  /**
+   * Returns the contains value maintained by this Repulsor component.
+   *
+   * @param x distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   public boolean contains(T x) {
     return within(x);
   }
 
+  /**
+   * Returns the overlaps value maintained by this Repulsor component.
+   *
+   * @param other value used by this operation.
+   * @return value produced by this operation.
+   */
   public boolean overlaps(Interval<T> other) {
     Objects.requireNonNull(other, "other");
 

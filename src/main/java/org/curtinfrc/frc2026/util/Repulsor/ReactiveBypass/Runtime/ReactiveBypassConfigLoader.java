@@ -27,9 +27,21 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
+/**
+ * Provides reactive bypass config loader functionality for the Repulsor runtime helper layer shared
+ * by behaviours and planners. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 final class ReactiveBypassConfigLoader {
   private ReactiveBypassConfigLoader() {}
 
+  /**
+   * Runs load config from yaml in the Repulsor runtime.
+   *
+   * @param cfg value used by this operation.
+   * @param schemaClass value used by this operation.
+   */
   static void loadConfigFromYaml(Object cfg, Class<?> schemaClass) {
     try {
       Path deployDir = resolveDeployDirectory();

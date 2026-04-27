@@ -60,10 +60,22 @@ import org.curtinfrc.frc2026.util.Repulsor.Tuning.DriveTuning;
 import org.curtinfrc.frc2026.util.Repulsor.Tuning.TurnTuning;
 import org.littletonrobotics.junction.Logger;
 
+/**
+ * Provides field planner functionality for the Repulsor repulsor-field planner that combines goals,
+ * obstacles, and force samples. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public class FieldPlanner {
   private static final double FORCE_THROUGH_GOAL_DIST = 2.0;
   private static final double FORCE_THROUGH_WALL_DIST = 0.7;
+
+  /**
+   * Configuration value for goal strength. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   public static final double GOAL_STRENGTH = 2.2;
+
   private static final ThreadLocal<Alliance> OFFLOAD_FALLBACK_ALLIANCE = new ThreadLocal<>();
   private static final boolean OFFLOAD_PATHING_ENABLED =
       Boolean.parseBoolean(
@@ -91,18 +103,50 @@ public class FieldPlanner {
     }
   }
 
+  /**
+   * Contract for obstacle provider implementations used by the Repulsor repulsor-field planner that
+   * combines goals, obstacles, and force samples. Use this type from robot code, field profiles, or
+   * tests when integrating the corresponding Repulsor subsystem. Coordinates are field-relative
+   * unless a method documents robot-relative motion.
+   */
   public interface ObstacleProvider {
+    /**
+     * Returns the field obstacles value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     List<Obstacle> fieldObstacles();
 
+    /**
+     * Returns the walls value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     List<Obstacle> walls();
   }
 
+  /**
+   * Provides default obstacle provider functionality for the Repulsor repulsor-field planner that
+   * combines goals, obstacles, and force samples. Use this type from robot code, field profiles, or
+   * tests when integrating the corresponding Repulsor subsystem. Coordinates are field-relative
+   * unless a method documents robot-relative motion.
+   */
   public static final class DefaultObstacleProvider implements ObstacleProvider {
+    /**
+     * Returns the field obstacles value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     @Override
     public List<Obstacle> fieldObstacles() {
       return List.of();
     }
 
+    /**
+     * Returns the walls value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     @Override
     public List<Obstacle> walls() {
       return List.of();
@@ -129,26 +173,56 @@ public class FieldPlanner {
   private Optional<Distance> currentErr = Optional.empty();
   private Optional<PlannerFallback> fallback = Optional.empty();
 
+  /**
+   * Configuration value for suppress is clear path. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   public boolean suppressIsClearPath = false;
+
   private int stuckStepCount = 0;
   private static final int MAX_STUCK_STEPS = 40;
 
+  /**
+   * Returns the get obstacle provider value maintained by this Repulsor component.
+   *
+   * @return obstacle provider result for get obstacle provider.
+   */
   public ObstacleProvider getObstacleProvider() {
     return obstacleProvider;
   }
 
+  /** Returns the field planner value maintained by this Repulsor component. */
   public FieldPlanner() {
     this(new DefaultTurnTuning(), new DefaultDriveTuning(), Constants.FIELD);
   }
 
+  /**
+   * Returns the field planner value maintained by this Repulsor component.
+   *
+   * @param obstacleProvider obstacle set used for safety checks, costs, or replanning.
+   * @param driveTuning value used by this operation.
+   */
   public FieldPlanner(ObstacleProvider obstacleProvider, DriveTuning driveTuning) {
     this(new DefaultTurnTuning(), driveTuning, obstacleProvider);
   }
 
+  /**
+   * Returns the field planner value maintained by this Repulsor component.
+   *
+   * @param turnTuning value used by this operation.
+   * @param driveTuning value used by this operation.
+   */
   public FieldPlanner(TurnTuning turnTuning, DriveTuning driveTuning) {
     this(turnTuning, driveTuning, new DefaultObstacleProvider());
   }
 
+  /**
+   * Returns the field planner value maintained by this Repulsor component.
+   *
+   * @param turnTuning value used by this operation.
+   * @param driveTuning value used by this operation.
+   * @param obstacleProvider obstacle set used for safety checks, costs, or replanning.
+   */
   public FieldPlanner(
       TurnTuning turnTuning, DriveTuning driveTuning, ObstacleProvider obstacleProvider) {
     this.turnTuning = turnTuning;
@@ -192,11 +266,28 @@ public class FieldPlanner {
     // bypass.enableLogging(logName);
   }
 
+  /**
+   * Returns the segment intersects polygon outer value maintained by this Repulsor component.
+   *
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @param poly distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   public static boolean segmentIntersectsPolygonOuter(
       Translation2d a, Translation2d b, Translation2d[] poly) {
     return FieldPlannerGeometry.segmentIntersectsPolygonOuter(a, b, poly);
   }
 
+  /**
+   * Returns the robot rect value maintained by this Repulsor component.
+   *
+   * @param center value used by this operation.
+   * @param yaw value used by this operation.
+   * @param rx distance or field-coordinate value in meters.
+   * @param ry distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   public static Translation2d[] robotRect(
       Translation2d center, Rotation2d yaw, double rx, double ry) {
     return TurnTuning.robotRect(center, yaw, rx, ry);
@@ -214,77 +305,194 @@ public class FieldPlanner {
     return false;
   }
 
+  /**
+   * Returns the get obstacles value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public List<Obstacle> getObstacles() {
     return fieldObstacles;
   }
 
+  /**
+   * Returns the get goal value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Translation2d getGoal() {
     return goalManager.getGoalTranslation();
   }
 
+  /**
+   * Returns the get goal pose value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Pose2d getGoalPose() {
     return goalManager.getGoalPose();
   }
 
+  /**
+   * Returns the get requested goal pose value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Pose2d getRequestedGoalPose() {
     return goalManager.getRequestedGoalPose();
   }
 
+  /**
+   * Returns the with fallback value maintained by this Repulsor component.
+   *
+   * @param _fallback value used by this operation.
+   * @return field planner result for with fallback.
+   */
   public FieldPlanner withFallback(PlannerFallback _fallback) {
     fallback = Optional.of(_fallback);
     return this;
   }
 
+  /**
+   * Updates update arrows state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   */
   public void updateArrows(List<? extends Obstacle> dynamicObstacles) {
     forceModel.updateArrows(goalManager.getGoalTranslation(), dynamicObstacles);
   }
 
+  /**
+   * Returns the get arrows value maintained by this Repulsor component.
+   *
+   * @return array list of pose2d result for get arrows.
+   */
   public ArrayList<Pose2d> getArrows() {
     return forceModel.getArrows();
   }
 
+  /**
+   * Returns the get goal force value maintained by this Repulsor component.
+   *
+   * @param curLocation value used by this operation.
+   * @param goal value used by this operation.
+   * @return value produced by this operation.
+   */
   Force getGoalForce(Translation2d curLocation, Translation2d goal) {
     return forceModel.getGoalForce(curLocation, goal);
   }
 
+  /**
+   * Returns the get wall force value maintained by this Repulsor component.
+   *
+   * @param curLocation value used by this operation.
+   * @param target value used by this operation.
+   * @return value produced by this operation.
+   */
   Force getWallForce(Translation2d curLocation, Translation2d target) {
     return forceModel.getWallForce(curLocation, target);
   }
 
+  /**
+   * Returns the get obstacle force value maintained by this Repulsor component.
+   *
+   * @param curLocation value used by this operation.
+   * @param target value used by this operation.
+   * @param extra value used by this operation.
+   * @return value produced by this operation.
+   */
   Force getObstacleForce(
       Translation2d curLocation, Translation2d target, List<? extends Obstacle> extra) {
     return forceModel.getObstacleForce(curLocation, target, extra);
   }
 
+  /**
+   * Returns the get obstacle force value maintained by this Repulsor component.
+   *
+   * @param curLocation value used by this operation.
+   * @param target value used by this operation.
+   * @return value produced by this operation.
+   */
   Force getObstacleForce(Translation2d curLocation, Translation2d target) {
     return forceModel.getObstacleForce(curLocation, target);
   }
 
+  /**
+   * Returns the get force value maintained by this Repulsor component.
+   *
+   * @param curLocation value used by this operation.
+   * @param target value used by this operation.
+   * @return value produced by this operation.
+   */
   Force getForce(Translation2d curLocation, Translation2d target) {
     return forceModel.getForce(curLocation, target);
   }
 
+  /**
+   * Updates set requested goal state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param requested value used by this operation.
+   */
   public void setRequestedGoal(Pose2d requested) {
     goalManager.setRequestedGoal(requested);
     lastChosenSetpoint = Optional.empty();
   }
 
+  /**
+   * Runs sync goal manager state in the Repulsor runtime.
+   *
+   * @param requested value used by this operation.
+   * @param active value used by this operation.
+   */
   public void syncGoalManagerState(Pose2d requested, Pose2d active) {
     Pose2d requestedGoal = requested == null ? Pose2d.kZero : requested;
     setRequestedGoal(requestedGoal);
     setActiveGoal(active == null ? requestedGoal : active);
   }
 
+  /**
+   * Updates set active goal state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param active value used by this operation.
+   */
   void setActiveGoal(Pose2d active) {
     goalManager.setActiveGoal(active);
   }
 
+  /**
+   * Returns the get err value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Optional<Distance> getErr() {
     return currentErr;
   }
 
+  /**
+   * Updates clear committed state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   */
   public void clearCommitted() {}
 
+  /**
+   * Computes the calculate and clear value for the current Repulsor planning state. Call this from
+   * periodic planning or tests when a fresh decision is required; inputs should already be
+   * expressed in the coordinate frame expected by the parameter names.
+   *
+   * @param pose WPILib Pose2d in field-relative coordinates.
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   * @param robot_x distance or field-coordinate value in meters.
+   * @param robot_y distance or field-coordinate value in meters.
+   * @param cat value used by this operation.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @return repulsor sample result for calculate and clear.
+   */
   public RepulsorSample calculateAndClear(
       Pose2d pose,
       List<? extends Obstacle> dynamicObstacles,
@@ -296,6 +504,20 @@ public class FieldPlanner {
         pose, dynamicObstacles, robot_x, robot_y, cat, false, shooterReleaseHeightMeters);
   }
 
+  /**
+   * Computes the calculate value for the current Repulsor planning state. Call this from periodic
+   * planning or tests when a fresh decision is required; inputs should already be expressed in the
+   * coordinate frame expected by the parameter names.
+   *
+   * @param pose WPILib Pose2d in field-relative coordinates.
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   * @param robot_x distance or field-coordinate value in meters.
+   * @param robot_y distance or field-coordinate value in meters.
+   * @param cat value used by this operation.
+   * @param suppressFallback value used by this operation.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @return repulsor sample result for calculate.
+   */
   public RepulsorSample calculate(
       Pose2d pose,
       List<? extends Obstacle> dynamicObstacles,
@@ -520,14 +742,36 @@ public class FieldPlanner {
         Radians.of(turn.yaw.getRadians()));
   }
 
+  /**
+   * Returns the is point in polygon value maintained by this Repulsor component.
+   *
+   * @param point value used by this operation.
+   * @param polygon value used by this operation.
+   * @return value produced by this operation.
+   */
   public static boolean isPointInPolygon(Translation2d point, Translation2d[] polygon) {
     return FieldPlannerGeometry.isPointInPolygon(point, polygon);
   }
 
+  /**
+   * Returns the dot value maintained by this Repulsor component.
+   *
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @return value produced by this operation.
+   */
   public static double dot(Translation2d a, Translation2d b) {
     return FieldPlannerGeometry.dot(a, b);
   }
 
+  /**
+   * Returns the distance from point to segment value maintained by this Repulsor component.
+   *
+   * @param p value used by this operation.
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @return value produced by this operation.
+   */
   public static double distanceFromPointToSegment(
       Translation2d p, Translation2d a, Translation2d b) {
     return FieldPlannerGeometry.distanceFromPointToSegment(p, a, b);
@@ -594,6 +838,13 @@ public class FieldPlanner {
     return Thread.currentThread().getName().startsWith("offload-server-worker");
   }
 
+  /**
+   * Updates set offload fallback alliance state or telemetry as part of the Repulsor runtime loop.
+   * This may mutate local state, NetworkTables output, planner caches, or command-side runtime
+   * state depending on the owning type.
+   *
+   * @param alliance value used by this operation.
+   */
   public static void setOffloadFallbackAlliance(Alliance alliance) {
     if (alliance == null) {
       OFFLOAD_FALLBACK_ALLIANCE.remove();
@@ -602,6 +853,11 @@ public class FieldPlanner {
     }
   }
 
+  /**
+   * Updates clear offload fallback alliance state or telemetry as part of the Repulsor runtime
+   * loop. This may mutate local state, NetworkTables output, planner caches, or command-side
+   * runtime state depending on the owning type.
+   */
   public static void clearOffloadFallbackAlliance() {
     OFFLOAD_FALLBACK_ALLIANCE.remove();
   }
@@ -642,6 +898,11 @@ public class FieldPlanner {
         center, robotLengthMeters, robotWidthMeters, obstacles);
   }
 
+  /**
+   * Updates poll chosen setpoint state or telemetry as part of the Repulsor runtime loop.
+   *
+   * @return optional repulsor setpoint produced by this operation.
+   */
   public Optional<RepulsorSetpoint> pollChosenSetpoint() {
     var out = lastChosenSetpoint;
     lastChosenSetpoint = Optional.empty();

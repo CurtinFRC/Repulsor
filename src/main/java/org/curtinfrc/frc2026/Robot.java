@@ -606,7 +606,7 @@ public class Robot extends LoggedRobot {
     autoChooser.periodic();
   }
 
-  /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
+  /** This autonomous runs the autonomous command selected by the robot container. */
   @Override
   public void autonomousInit() {}
 

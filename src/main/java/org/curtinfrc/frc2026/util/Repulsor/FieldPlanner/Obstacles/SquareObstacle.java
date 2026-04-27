@@ -25,9 +25,29 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Force;
 
+/**
+ * Provides square obstacle functionality for the Repulsor field-obstacle model used by the repulsor
+ * planner. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public class SquareObstacle extends Obstacle {
+  /**
+   * Configuration value for center. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final Translation2d center;
+
+  /**
+   * Configuration value for half size. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final double halfSize;
+
+  /**
+   * Configuration value for max range. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final double maxRange;
 
   private static final double X_AXIS_ANGLE_BIAS_RAD = Math.toRadians(18.0);
@@ -36,6 +56,14 @@ public class SquareObstacle extends Obstacle {
   private static final double CORNER_FORCE_SCALE = 22.0;
   private static final double CORNER_FORCE_SOFTEN = 0.08;
 
+  /**
+   * Returns the square obstacle value maintained by this Repulsor component.
+   *
+   * @param center value used by this operation.
+   * @param sizeMeters distance or field-coordinate value in meters.
+   * @param strength value used by this operation.
+   * @param maxRange value used by this operation.
+   */
   public SquareObstacle(Translation2d center, double sizeMeters, double strength, double maxRange) {
     super(strength, true);
     this.center = center;
@@ -43,6 +71,13 @@ public class SquareObstacle extends Obstacle {
     this.maxRange = Math.max(0.0, maxRange);
   }
 
+  /**
+   * Returns the get force at position value maintained by this Repulsor component.
+   *
+   * @param position value used by this operation.
+   * @param target value used by this operation.
+   * @return value produced by this operation.
+   */
   @Override
   public Force getForceAtPosition(Translation2d position, Translation2d target) {
     double minX = center.getX() - halfSize;
@@ -306,6 +341,12 @@ public class SquareObstacle extends Obstacle {
     return d + occPenalty + progressPenalty + wallPenalty;
   }
 
+  /**
+   * Returns the intersects rectangle value maintained by this Repulsor component.
+   *
+   * @param rectCorners value used by this operation.
+   * @return value produced by this operation.
+   */
   @Override
   public boolean intersectsRectangle(Translation2d[] rectCorners) {
     double minX = center.getX() - halfSize;

@@ -24,9 +24,21 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.PointObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.SnowmanObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.VisionPlanner.VisionObstacle;
 
+/**
+ * Provides extra pathing obstacle util functionality for the Repulsor extra pathing geometry and
+ * collision helper layer. Use this type from robot code, field profiles, or tests when integrating
+ * the corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 final class ExtraPathingObstacleUtil {
   private ExtraPathingObstacleUtil() {}
 
+  /**
+   * Returns the is pushable obstacle value maintained by this Repulsor component.
+   *
+   * @param o value used by this operation.
+   * @return value produced by this operation.
+   */
   static boolean isPushableObstacle(Obstacle o) {
     return (o instanceof PointObstacle)
         || (o instanceof SnowmanObstacle)

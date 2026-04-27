@@ -18,20 +18,43 @@
  */
 package org.curtinfrc.frc2026.util.Repulsor.Tracking.Internal;
 
+/**
+ * Provides cell key functionality for the Repulsor package-internal data structures used by the
+ * surrounding Repulsor subsystem. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class _CellKey {
   private final int ix;
   private final int iy;
 
+  /**
+   * Returns the cell key value maintained by this Repulsor component.
+   *
+   * @param ix distance or field-coordinate value in meters.
+   * @param iy distance or field-coordinate value in meters.
+   */
   public _CellKey(int ix, int iy) {
     this.ix = ix;
     this.iy = iy;
   }
 
+  /**
+   * Returns the hash code value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public int hashCode() {
     return (ix * 73856093) ^ (iy * 19349663);
   }
 
+  /**
+   * Returns the equals value maintained by this Repulsor component.
+   *
+   * @param o value used by this operation.
+   * @return value produced by this operation.
+   */
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;

@@ -21,6 +21,15 @@ package org.curtinfrc.frc2026.util.Repulsor.Fields;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 
+/**
+ * Immutable data record for field model values passed through the Repulsor field/profile definition
+ * layer used to tune Repulsor for a specific game. Use this type from robot code, field profiles,
+ * or tests when integrating the corresponding Repulsor subsystem. Coordinates are field-relative
+ * unless a method documents robot-relative motion.
+ *
+ * @param geometry component of the field model model
+ * @param aprilTagLayout record component for the field model snapshot
+ */
 public record FieldModel(FieldGeometry geometry, AprilTagFieldLayout aprilTagLayout) {
   public FieldModel {
     if (geometry == null) {

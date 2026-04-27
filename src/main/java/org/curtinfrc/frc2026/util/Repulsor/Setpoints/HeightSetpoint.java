@@ -23,6 +23,12 @@ import static edu.wpi.first.units.Units.Meters;
 
 import edu.wpi.first.units.measure.Distance;
 
+/**
+ * Defines the height setpoint values used by the Repulsor game setpoint abstraction layer for
+ * field-relative goals and mechanisms. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public enum HeightSetpoint {
   L1(Meters.of(0.46)),
   L2(Meters.of(0.81)),
@@ -37,10 +43,21 @@ public enum HeightSetpoint {
 
   private final Distance height;
 
+  /**
+   * Creates a height setpoint instance with the dependencies and tuning values used by this
+   * Repulsor component.
+   *
+   * @param height value used by this operation.
+   */
   HeightSetpoint(Distance height) {
     this.height = height;
   }
 
+  /**
+   * Returns the get height value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Distance getHeight() {
     return height;
   }

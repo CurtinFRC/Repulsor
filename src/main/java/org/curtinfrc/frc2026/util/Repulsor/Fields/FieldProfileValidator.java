@@ -25,9 +25,21 @@ import java.util.Map;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointContext;
 
+/**
+ * Provides field profile validator functionality for the Repulsor field/profile definition layer
+ * used to tune Repulsor for a specific game. Use this type from robot code, field profiles, or
+ * tests when integrating the corresponding Repulsor subsystem. Coordinates are field-relative
+ * unless a method documents robot-relative motion.
+ */
 public final class FieldProfileValidator {
   private FieldProfileValidator() {}
 
+  /**
+   * Runs require valid in the Repulsor runtime.
+   *
+   * @param cfg value used by this operation.
+   * @param source value used by this operation.
+   */
   public static void requireValid(FieldProfileConfig cfg, String source) {
     List<String> errors = validate(cfg);
     if (!errors.isEmpty()) {
@@ -36,6 +48,12 @@ public final class FieldProfileValidator {
     }
   }
 
+  /**
+   * Returns the validate value maintained by this Repulsor component.
+   *
+   * @param cfg value used by this operation.
+   * @return value produced by this operation.
+   */
   public static List<String> validate(FieldProfileConfig cfg) {
     List<String> errors = new ArrayList<>();
     if (cfg == null) {
@@ -85,6 +103,12 @@ public final class FieldProfileValidator {
     return errors;
   }
 
+  /**
+   * Returns the validate value maintained by this Repulsor component.
+   *
+   * @param field value used by this operation.
+   * @return value produced by this operation.
+   */
   public static List<String> validate(FieldDefinition field) {
     List<String> errors = new ArrayList<>();
     if (field == null) {

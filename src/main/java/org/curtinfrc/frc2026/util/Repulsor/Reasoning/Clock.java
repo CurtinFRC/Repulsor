@@ -19,6 +19,17 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Reasoning;
 
+/**
+ * Contract for clock implementations used by the Repulsor rule-based strategy and signal reasoning
+ * layer. Use this type from robot code, field profiles, or tests when integrating the corresponding
+ * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+ * motion.
+ */
 public interface Clock {
+  /**
+   * Returns the now sec value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   double nowSec();
 }

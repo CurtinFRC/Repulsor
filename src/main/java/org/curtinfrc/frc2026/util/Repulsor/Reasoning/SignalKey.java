@@ -21,23 +21,51 @@ package org.curtinfrc.frc2026.util.Repulsor.Reasoning;
 
 import java.util.Objects;
 
+/**
+ * Provides signal key functionality for the Repulsor rule-based strategy and signal reasoning
+ * layer. Use this type from robot code, field profiles, or tests when integrating the corresponding
+ * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+ * motion.
+ */
 public final class SignalKey<T> {
   private final String name;
   private final Class<T> type;
 
+  /**
+   * Returns the signal key value maintained by this Repulsor component.
+   *
+   * @param name value used by this operation.
+   * @param type value used by this operation.
+   */
   public SignalKey(String name, Class<T> type) {
     this.name = Objects.requireNonNull(name);
     this.type = Objects.requireNonNull(type);
   }
 
+  /**
+   * Returns the name value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public String name() {
     return name;
   }
 
+  /**
+   * Returns the type value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Class<T> type() {
     return type;
   }
 
+  /**
+   * Returns the equals value maintained by this Repulsor component.
+   *
+   * @param o value used by this operation.
+   * @return value produced by this operation.
+   */
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
@@ -45,11 +73,21 @@ public final class SignalKey<T> {
     return name.equals(k.name) && type.equals(k.type);
   }
 
+  /**
+   * Returns the hash code value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public int hashCode() {
     return Objects.hash(name, type);
   }
 
+  /**
+   * Returns the to string value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public String toString() {
     return "SignalKey(" + name + ":" + type.getSimpleName() + ")";

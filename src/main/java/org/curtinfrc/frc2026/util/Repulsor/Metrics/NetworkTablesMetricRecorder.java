@@ -22,6 +22,12 @@ package org.curtinfrc.frc2026.util.Repulsor.Metrics;
 import edu.wpi.first.networktables.*;
 import java.util.Objects;
 
+/**
+ * Provides network tables metric recorder functionality for the Repulsor metric aggregation and
+ * NetworkTables recording layer. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public class NetworkTablesMetricRecorder<T> extends MetricRecorder<T> {
   private final MetricCodec<T> codec;
   private final NetworkTable table;
@@ -30,6 +36,13 @@ public class NetworkTablesMetricRecorder<T> extends MetricRecorder<T> {
   private final StringPublisher lastPub;
   private final StringPublisher overallPub;
 
+  /**
+   * Returns the network tables metric recorder value maintained by this Repulsor component.
+   *
+   * @param metricName value used by this operation.
+   * @param aggregator value used by this operation.
+   * @param codec value used by this operation.
+   */
   public NetworkTablesMetricRecorder(
       String metricName, MetricAggregator<T> aggregator, MetricCodec<T> codec) {
     super(metricName, aggregator);
@@ -51,6 +64,7 @@ public class NetworkTablesMetricRecorder<T> extends MetricRecorder<T> {
     overallPub.set(codec.encode(overall));
   }
 
+  /** Runs close in the Repulsor runtime. */
   @Override
   public void close() {
     enabledPub.close();

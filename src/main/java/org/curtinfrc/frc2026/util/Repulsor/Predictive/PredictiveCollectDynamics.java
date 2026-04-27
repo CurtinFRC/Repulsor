@@ -26,6 +26,12 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal.IntentAggCont;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal.ResourceRegions;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal.Track;
 
+/**
+ * Provides predictive collect dynamics functionality for the Repulsor predictive field-state and
+ * collection-planning layer. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 final class PredictiveCollectDynamics {
   private static final double ETA_FLOOR = 0.05;
   private static final int PATH_SAMPLES = 7;
@@ -35,11 +41,30 @@ final class PredictiveCollectDynamics {
 
   private PredictiveCollectDynamics() {}
 
+  /**
+   * Returns the eta path value maintained by this Repulsor component.
+   *
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @param speed value used by this operation.
+   * @return value produced by this operation.
+   */
   static double etaPath(Translation2d a, Translation2d b, double speed) {
     double d = a.getDistance(b);
     return Math.max(ETA_FLOOR, d / Math.max(0.1, speed));
   }
 
+  /**
+   * Returns the estimate travel time value maintained by this Repulsor component.
+   *
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @param speed value used by this operation.
+   * @param dyn value used by this operation.
+   * @param allyMap value used by this operation.
+   * @param enemyMap value used by this operation.
+   * @return value produced by this operation.
+   */
   static double estimateTravelTime(
       Translation2d a,
       Translation2d b,
@@ -75,6 +100,13 @@ final class PredictiveCollectDynamics {
     return Math.max(ETA_FLOOR, base * mult);
   }
 
+  /**
+   * Returns the min eta to target value maintained by this Repulsor component.
+   *
+   * @param map value used by this operation.
+   * @param t value used by this operation.
+   * @return value produced by this operation.
+   */
   static double minEtaToTarget(HashMap<Integer, Track> map, Translation2d t) {
     double best = Double.POSITIVE_INFINITY;
     for (Track r : map.values()) {
@@ -85,6 +117,13 @@ final class PredictiveCollectDynamics {
     return best;
   }
 
+  /**
+   * Returns the dot norm value maintained by this Repulsor component.
+   *
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @return value produced by this operation.
+   */
   static double dotNorm(Translation2d a, Translation2d b) {
     double an = a.getNorm();
     double bn = b.getNorm();
@@ -92,16 +131,37 @@ final class PredictiveCollectDynamics {
     return (a.getX() * b.getX() + a.getY() * b.getY()) / (an * bn);
   }
 
+  /**
+   * Returns the radial kernel value maintained by this Repulsor component.
+   *
+   * @param dist value used by this operation.
+   * @return value produced by this operation.
+   */
   static double radialKernel(double dist) {
     double s2 = KERNEL_SIGMA * KERNEL_SIGMA;
     return Math.exp(-0.5 * (dist * dist) / Math.max(1e-6, s2));
   }
 
+  /**
+   * Returns the density kernel value maintained by this Repulsor component.
+   *
+   * @param d value used by this operation.
+   * @param sigma value used by this operation.
+   * @return value produced by this operation.
+   */
   static double densityKernel(double d, double sigma) {
     double s2 = sigma * sigma;
     return Math.exp(-0.5 * (d * d) / Math.max(1e-6, s2));
   }
 
+  /**
+   * Returns the radial density value maintained by this Repulsor component.
+   *
+   * @param map value used by this operation.
+   * @param target value used by this operation.
+   * @param sigma value used by this operation.
+   * @return value produced by this operation.
+   */
   static double radialDensity(HashMap<Integer, Track> map, Translation2d target, double sigma) {
     if (map.isEmpty()) return 0.0;
     double agg = 0.0;
@@ -112,6 +172,13 @@ final class PredictiveCollectDynamics {
     return agg / Math.max(1.0, map.size());
   }
 
+  /**
+   * Returns the predict at value maintained by this Repulsor component.
+   *
+   * @param r value used by this operation.
+   * @param horizonS value used by this operation.
+   * @return value produced by this operation.
+   */
   static Translation2d predictAt(Track r, double horizonS) {
     if (r == null) return new Translation2d();
     double h = Math.max(0.0, horizonS);
@@ -119,6 +186,17 @@ final class PredictiveCollectDynamics {
     return r.pos.plus(r.vel.times(h));
   }
 
+  /**
+   * Returns the radial pressure value maintained by this Repulsor component.
+   *
+   * @param enemies value used by this operation.
+   * @param target value used by this operation.
+   * @param ourEtaS value used by this operation.
+   * @param reservationRadius value used by this operation.
+   * @param intentMass value used by this operation.
+   * @param count value used by this operation.
+   * @return value produced by this operation.
+   */
   static double radialPressure(
       HashMap<Integer, Track> enemies,
       Translation2d target,
@@ -139,6 +217,17 @@ final class PredictiveCollectDynamics {
     return base * (1.0 + 0.85 * intent);
   }
 
+  /**
+   * Returns the radial congestion value maintained by this Repulsor component.
+   *
+   * @param allies value used by this operation.
+   * @param target value used by this operation.
+   * @param ourEtaS value used by this operation.
+   * @param reservationRadius value used by this operation.
+   * @param intentMass value used by this operation.
+   * @param count value used by this operation.
+   * @return value produced by this operation.
+   */
   static double radialCongestion(
       HashMap<Integer, Track> allies,
       Translation2d target,
@@ -159,6 +248,15 @@ final class PredictiveCollectDynamics {
     return base * (1.0 + 0.75 * intent);
   }
 
+  /**
+   * Returns the heading affinity value maintained by this Repulsor component.
+   *
+   * @param ourPos value used by this operation.
+   * @param target value used by this operation.
+   * @param allies value used by this operation.
+   * @param enemies value used by this operation.
+   * @return value produced by this operation.
+   */
   static double headingAffinity(
       Translation2d ourPos,
       Translation2d target,
@@ -189,6 +287,13 @@ final class PredictiveCollectDynamics {
     return 0.6 * allyAlign + 0.4 * enemyMis;
   }
 
+  /**
+   * Returns the soft intent agg value maintained by this Repulsor component.
+   *
+   * @param map value used by this operation.
+   * @param targets value used by this operation.
+   * @return intent agg result for soft intent agg.
+   */
   static IntentAgg softIntentAgg(HashMap<Integer, Track> map, List<Translation2d> targets) {
     int m = targets.size();
     double[] accum = new double[m];
@@ -237,6 +342,13 @@ final class PredictiveCollectDynamics {
     return new IntentAgg(accum, n);
   }
 
+  /**
+   * Returns the build resource regions value maintained by this Repulsor component.
+   *
+   * @param dyn value used by this operation.
+   * @param maxRegions value used by this operation.
+   * @return resource regions result for build resource regions.
+   */
   static ResourceRegions buildResourceRegions(SpatialDyn dyn, int maxRegions) {
     if (dyn == null) return new ResourceRegions(new Translation2d[0], new double[0]);
     Translation2d[] c =
@@ -249,6 +361,14 @@ final class PredictiveCollectDynamics {
     return new ResourceRegions(c, m);
   }
 
+  /**
+   * Returns the enemy intent to regions value maintained by this Repulsor component.
+   *
+   * @param map value used by this operation.
+   * @param regs value used by this operation.
+   * @param sigma value used by this operation.
+   * @return intent agg cont result for enemy intent to regions.
+   */
   static IntentAggCont enemyIntentToRegions(
       HashMap<Integer, Track> map, ResourceRegions regs, double sigma) {
     int m = regs != null && regs.centers != null ? regs.centers.length : 0;
@@ -310,6 +430,14 @@ final class PredictiveCollectDynamics {
     return new IntentAggCont(regs.centers, accum, n, sigma);
   }
 
+  /**
+   * Returns the ally intent to regions value maintained by this Repulsor component.
+   *
+   * @param map value used by this operation.
+   * @param regs value used by this operation.
+   * @param sigma value used by this operation.
+   * @return intent agg cont result for ally intent to regions.
+   */
   static IntentAggCont allyIntentToRegions(
       HashMap<Integer, Track> map, ResourceRegions regs, double sigma) {
     int m = regs != null && regs.centers != null ? regs.centers.length : 0;

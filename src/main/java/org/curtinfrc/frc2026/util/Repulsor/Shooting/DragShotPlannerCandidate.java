@@ -22,15 +22,67 @@ package org.curtinfrc.frc2026.util.Repulsor.Shooting;
 import edu.wpi.first.math.geometry.Translation2d;
 import org.curtinfrc.frc2026.util.Repulsor.Profiler.Profiler;
 
+/**
+ * Provides drag shot planner candidate functionality for the Repulsor projectile and shot-planning
+ * layer. Use this type from robot code, field profiles, or tests when integrating the corresponding
+ * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+ * motion.
+ */
 final class DragShotPlannerCandidate {
+  /**
+   * Configuration value for shooter position. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   final Translation2d shooterPosition;
+
+  /**
+   * Configuration value for shooter yaw rad. Angles use WPILib rotation conventions; names ending
+   * in degrees are degrees, otherwise radians are assumed by the API.
+   */
   final double shooterYawRad;
+
+  /**
+   * Configuration value for speed. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   final double speed;
+
+  /**
+   * Configuration value for angle rad. Angles use WPILib rotation conventions; names ending in
+   * degrees are degrees, otherwise radians are assumed by the API.
+   */
   final double angleRad;
+
+  /**
+   * Configuration value for time to plane. Time values use seconds and should be tuned against
+   * measured robot loop and mechanism latency.
+   */
   final double timeToPlane;
+
+  /**
+   * Configuration value for vertical error. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   final double verticalError;
+
+  /**
+   * Configuration value for robot distance sq. Distances use meters in WPILib field coordinates and
+   * should be treated as tunable when sourced from profiles.
+   */
   final double robotDistanceSq;
 
+  /**
+   * Creates a drag shot planner candidate instance with the dependencies and tuning values used by
+   * this Repulsor component.
+   *
+   * @param shooterPosition value used by this operation.
+   * @param shooterYawRad value used by this operation.
+   * @param speed value used by this operation.
+   * @param angleRad value used by this operation.
+   * @param timeToPlane value used by this operation.
+   * @param verticalError value used by this operation.
+   * @param robotDistanceSq value used by this operation.
+   */
   DragShotPlannerCandidate(
       Translation2d shooterPosition,
       double shooterYawRad,
@@ -48,6 +100,14 @@ final class DragShotPlannerCandidate {
     this.robotDistanceSq = robotDistanceSq;
   }
 
+  /**
+   * Returns the is better candidate value maintained by this Repulsor component.
+   *
+   * @param best value used by this operation.
+   * @param next value used by this operation.
+   * @param style value used by this operation.
+   * @return value produced by this operation.
+   */
   static boolean isBetterCandidate(
       DragShotPlannerCandidate best, DragShotPlannerCandidate next, Constraints.ShotStyle style) {
     AutoCloseable _p = Profiler.section("DragShotPlanner.isBetterCandidate");

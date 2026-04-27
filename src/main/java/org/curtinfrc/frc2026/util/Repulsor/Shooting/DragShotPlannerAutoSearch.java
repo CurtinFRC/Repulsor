@@ -26,9 +26,29 @@ import java.util.Optional;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Profiler.Profiler;
 
+/**
+ * Provides drag shot planner auto search functionality for the Repulsor projectile and
+ * shot-planning layer. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 final class DragShotPlannerAutoSearch {
   private DragShotPlannerAutoSearch() {}
 
+  /**
+   * Computes the find best shot auto value for the current Repulsor planning state.
+   *
+   * @param gamePiece value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param targetHeightMeters distance or field-coordinate value in meters.
+   * @param robotPose WPILib Pose2d in field-relative coordinates.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @param robotHalfLengthMeters distance or field-coordinate value in meters.
+   * @param robotHalfWidthMeters distance or field-coordinate value in meters.
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   * @param constraints value used by this operation.
+   * @return optional shot solution produced by this operation.
+   */
   static Optional<ShotSolution> findBestShotAuto(
       GamePiecePhysics gamePiece,
       Translation2d targetFieldPosition,

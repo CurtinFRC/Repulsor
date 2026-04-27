@@ -91,6 +91,16 @@ public final class SimplePneumaticModel implements PressureModel {
     return timeConstantSeconds;
   }
 
+  /**
+   * Updates update state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   *
+   * @param dtSeconds time value in seconds.
+   * @param command value used by this operation.
+   * @param state value used by this operation.
+   * @return value produced by this operation.
+   */
   @Override
   public double update(double dtSeconds, double command, MechanismSimState state) {
     double clamped = MathUtil.clamp(command, -1.0, 1.0);
@@ -103,16 +113,31 @@ public final class SimplePneumaticModel implements PressureModel {
     return effort;
   }
 
+  /**
+   * Returns the get pressure kpa value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public double getPressureKpa() {
     return pressureKpa;
   }
 
+  /**
+   * Returns the get flow rate value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public double getFlowRate() {
     return flowRate;
   }
 
+  /**
+   * Updates reset state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   */
   @Override
   public void reset() {
     effort = 0.0;

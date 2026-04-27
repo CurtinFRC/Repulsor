@@ -25,9 +25,23 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal.HeadingPick;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateOps;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.SpatialDyn;
 
+/**
+ * Provides predictive collect footprint runtime functionality for the Repulsor runtime helper layer
+ * shared by behaviours and planners. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class PredictiveCollectFootprintRuntime {
   private PredictiveCollectFootprintRuntime() {}
 
+  /**
+   * Returns the face value maintained by this Repulsor component.
+   *
+   * @param from value used by this operation.
+   * @param to value used by this operation.
+   * @param fallback value used by this operation.
+   * @return value produced by this operation.
+   */
   public static Rotation2d face(Translation2d from, Translation2d to, Rotation2d fallback) {
     Translation2d d = to.minus(from);
     if (d.getNorm() < 1e-9
@@ -37,6 +51,18 @@ public final class PredictiveCollectFootprintRuntime {
     return d.getAngle();
   }
 
+  /**
+   * Returns the resolve collect touch value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param dyn value used by this operation.
+   * @param center value used by this operation.
+   * @param heading value used by this operation.
+   * @param rCore value used by this operation.
+   * @param rSnap value used by this operation.
+   * @param rCentroid value used by this operation.
+   * @return value produced by this operation.
+   */
   public static Translation2d resolveCollectTouch(
       PredictiveFieldStateOps ops,
       SpatialDyn dyn,
@@ -55,6 +81,16 @@ public final class PredictiveCollectFootprintRuntime {
     return ops.enforceHardStopOnFuel(dyn, front, rCore, rSnap, rCentroid, 0.10);
   }
 
+  /**
+   * Returns the eval footprint value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param dyn value used by this operation.
+   * @param center value used by this operation.
+   * @param heading value used by this operation.
+   * @param rCore value used by this operation.
+   * @return footprint eval result for eval footprint.
+   */
   public static FootprintEval evalFootprint(
       PredictiveFieldStateOps ops,
       SpatialDyn dyn,
@@ -73,6 +109,15 @@ public final class PredictiveCollectFootprintRuntime {
     return e;
   }
 
+  /**
+   * Runs fill footprint evidence in the Repulsor runtime.
+   *
+   * @param ops value used by this operation.
+   * @param dyn value used by this operation.
+   * @param center value used by this operation.
+   * @param heading value used by this operation.
+   * @param e value used by this operation.
+   */
   public static void fillFootprintEvidence(
       PredictiveFieldStateOps ops,
       SpatialDyn dyn,
@@ -92,6 +137,17 @@ public final class PredictiveCollectFootprintRuntime {
     e.hasEvidence = true;
   }
 
+  /**
+   * Returns the footprint ok value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param dyn value used by this operation.
+   * @param center value used by this operation.
+   * @param heading value used by this operation.
+   * @param rCore value used by this operation.
+   * @param minUnits value used by this operation.
+   * @return value produced by this operation.
+   */
   public static boolean footprintOk(
       PredictiveFieldStateOps ops,
       SpatialDyn dyn,
@@ -105,6 +161,18 @@ public final class PredictiveCollectFootprintRuntime {
     return fp.avgEvidence >= minUnits * 0.85;
   }
 
+  /**
+   * Returns the best heading for footprint value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param dyn value used by this operation.
+   * @param desiredCenter value used by this operation.
+   * @param fuelTouch value used by this operation.
+   * @param baseHeading value used by this operation.
+   * @param rCore value used by this operation.
+   * @param minUnits value used by this operation.
+   * @return heading pick result for best heading for footprint.
+   */
   public static HeadingPick bestHeadingForFootprint(
       PredictiveFieldStateOps ops,
       SpatialDyn dyn,
@@ -139,6 +207,17 @@ public final class PredictiveCollectFootprintRuntime {
     return best;
   }
 
+  /**
+   * Returns the compare footprint evidence value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param dyn value used by this operation.
+   * @param p value used by this operation.
+   * @param h value used by this operation.
+   * @param fp value used by this operation.
+   * @param best value used by this operation.
+   * @return value produced by this operation.
+   */
   public static boolean compareFootprintEvidence(
       PredictiveFieldStateOps ops,
       SpatialDyn dyn,
@@ -152,6 +231,13 @@ public final class PredictiveCollectFootprintRuntime {
     return fp.avgEvidence > best.eval.avgEvidence;
   }
 
+  /**
+   * Returns the footprint key value maintained by this Repulsor component.
+   *
+   * @param center value used by this operation.
+   * @param cellM value used by this operation.
+   * @return value produced by this operation.
+   */
   public static long footprintKey(Translation2d center, double cellM) {
     long kx = Math.round(center.getX() * 1000.0);
     long ky = Math.round(center.getY() * 1000.0);

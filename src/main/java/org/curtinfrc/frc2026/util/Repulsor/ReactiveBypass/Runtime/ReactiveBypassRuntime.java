@@ -27,43 +27,98 @@ import java.util.Optional;
 import java.util.function.Function;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 
+/**
+ * Provides reactive bypass runtime functionality for the Repulsor runtime helper layer shared by
+ * behaviours and planners. Use this type from robot code, field profiles, or tests when integrating
+ * the corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public class ReactiveBypassRuntime {
   private final ReactiveBypassConfig cfg;
   private final ReactiveBypassState state = new ReactiveBypassState();
   private final ReactiveBypassVibrationTracker vibration = new ReactiveBypassVibrationTracker();
   private final ReactiveBypassTelemetry telemetry = new ReactiveBypassTelemetry();
 
+  /**
+   * Returns the reactive bypass runtime value maintained by this Repulsor component.
+   *
+   * @param cfg value used by this operation.
+   */
   public ReactiveBypassRuntime(ReactiveBypassConfig cfg) {
     this.cfg = cfg;
     ReactiveBypassConfigLoader.loadConfigFromYaml(this.cfg, ReactiveBypassConfig.class);
   }
 
+  /**
+   * Updates set config state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param c value used by this operation.
+   */
   public void setConfig(java.util.function.Consumer<ReactiveBypassConfig> c) {
     c.accept(cfg);
   }
 
+  /**
+   * Runs enable logging in the Repulsor runtime.
+   *
+   * @param filePath value used by this operation.
+   */
   public void enableLogging(String filePath) {
     telemetry.enableLogging(filePath);
   }
 
+  /** Runs disable logging in the Repulsor runtime. */
   public void disableLogging() {
     telemetry.disableLogging();
   }
 
+  /**
+   * Runs finalize episode in the Repulsor runtime.
+   *
+   * @param success value used by this operation.
+   */
   public void finalizeEpisode(boolean success) {
     telemetry.finalizeEpisode(success);
   }
 
+  /**
+   * Updates reset episode metrics state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   */
   public void resetEpisodeMetrics() {
     telemetry.resetEpisodeMetrics();
   }
 
+  /**
+   * Updates reset state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   */
   public void reset() {
     state.reset();
     vibration.reset();
     telemetry.resetEpisodeMetrics();
   }
 
+  /**
+   * Updates update state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   *
+   * @param pose WPILib Pose2d in field-relative coordinates.
+   * @param goal value used by this operation.
+   * @param headingTowardGoal value used by this operation.
+   * @param dtSeconds time value in seconds.
+   * @param robotX distance or field-coordinate value in meters.
+   * @param robotY distance or field-coordinate value in meters.
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   * @param intersectsDynamicOnly distance or field-coordinate value in meters.
+   * @param canRejoinOriginal value used by this operation.
+   * @return value produced by this operation.
+   */
   public Optional<Pose2d> update(
       Pose2d pose,
       Pose2d goal,
@@ -344,6 +399,11 @@ public class ReactiveBypassRuntime {
         ReactiveBypassWaypointPlanner.alignedPose(state.latchedSubgoal, headingTowardGoal));
   }
 
+  /**
+   * Returns the is pinned mode value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public boolean isPinnedMode() {
     return state.pinnedMode;
   }

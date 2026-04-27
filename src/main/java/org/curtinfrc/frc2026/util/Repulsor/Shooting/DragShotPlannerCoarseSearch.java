@@ -24,9 +24,35 @@ import java.util.List;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Profiler.Profiler;
 
+/**
+ * Provides drag shot planner coarse search functionality for the Repulsor projectile and
+ * shot-planning layer. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 final class DragShotPlannerCoarseSearch {
   private DragShotPlannerCoarseSearch() {}
 
+  /**
+   * Returns the coarse search value maintained by this Repulsor component.
+   *
+   * @param gamePiece value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param targetHeightMeters distance or field-coordinate value in meters.
+   * @param robotCurrentPosition value used by this operation.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @param robotHalfLengthMeters distance or field-coordinate value in meters.
+   * @param robotHalfWidthMeters distance or field-coordinate value in meters.
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   * @param minSpeed value used by this operation.
+   * @param maxSpeed value used by this operation.
+   * @param minAngleDeg value used by this operation.
+   * @param maxAngleDeg value used by this operation.
+   * @param fixedAngle value used by this operation.
+   * @param shotStyle value used by this operation.
+   * @param fastMode value used by this operation.
+   * @return drag shot planner candidate result for coarse search.
+   */
   static DragShotPlannerCandidate coarseSearch(
       GamePiecePhysics gamePiece,
       Translation2d targetFieldPosition,

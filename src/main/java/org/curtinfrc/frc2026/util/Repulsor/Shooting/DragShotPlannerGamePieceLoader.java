@@ -31,12 +31,24 @@ import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
+/**
+ * Provides drag shot planner game piece loader functionality for the Repulsor projectile and
+ * shot-planning layer. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 final class DragShotPlannerGamePieceLoader {
   private static final ConcurrentHashMap<String, GamePiecePhysics> GAME_PIECE_CACHE =
       new ConcurrentHashMap<>();
 
   private DragShotPlannerGamePieceLoader() {}
 
+  /**
+   * Returns the load game piece from deploy yaml value maintained by this Repulsor component.
+   *
+   * @param id value used by this operation.
+   * @return game piece physics result for load game piece from deploy yaml.
+   */
   static GamePiecePhysics loadGamePieceFromDeployYaml(String id) {
     AutoCloseable _p = Profiler.section("DragShotPlanner.loadGamePieceFromDeployYaml");
     try {
@@ -120,25 +132,50 @@ final class DragShotPlannerGamePieceLoader {
     }
 
     @SuppressWarnings("unused")
+    /**
+     * Returns the name value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     public String name() {
       return name;
     }
 
+    /**
+     * Returns the mass kg value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     @Override
     public double massKg() {
       return massKg;
     }
 
+    /**
+     * Returns the cross section area m2 value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     @Override
     public double crossSectionAreaM2() {
       return crossSectionAreaM2;
     }
 
+    /**
+     * Returns the drag coefficient value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     @Override
     public double dragCoefficient() {
       return dragCoefficient;
     }
 
+    /**
+     * Returns the air density kg per m3 value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     @Override
     public double airDensityKgPerM3() {
       return airDensityKgPerM3;

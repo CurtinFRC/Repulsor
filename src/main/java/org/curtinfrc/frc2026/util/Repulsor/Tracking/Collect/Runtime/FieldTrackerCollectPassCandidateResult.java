@@ -24,6 +24,21 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PointCandidate;
 
+/**
+ * Immutable data record for field tracker collect pass candidate result values passed through the
+ * Repulsor runtime helper layer shared by behaviours and planners. Use this type from robot code,
+ * field profiles, or tests when integrating the corresponding Repulsor subsystem. Coordinates are
+ * field-relative unless a method documents robot-relative motion.
+ *
+ * @param best component of the field tracker collect pass candidate result model
+ * @param bestCandidate record component for the field tracker collect pass candidate result model
+ * @param collectValid record component for the field tracker collect pass candidate result model
+ * @param footprintHasFuel record component for the field tracker collect pass candidate result
+ *     model
+ * @param scoreResource record component for the field tracker collect pass candidate result model
+ * @param immediatePose record component for the field tracker collect pass candidate result
+ *     snapshot
+ */
 public record FieldTrackerCollectPassCandidateResult(
     PointCandidate best,
     Translation2d bestCandidate,

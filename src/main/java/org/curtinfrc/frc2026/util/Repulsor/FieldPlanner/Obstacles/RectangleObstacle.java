@@ -26,13 +26,49 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Force;
 
+/**
+ * Provides rectangle obstacle functionality for the Repulsor field-obstacle model used by the
+ * repulsor planner. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public class RectangleObstacle extends Obstacle {
+  /**
+   * Configuration value for center. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final Translation2d center;
+
+  /**
+   * Configuration value for half x. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final double halfX;
+
+  /**
+   * Configuration value for half y. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final double halfY;
+
+  /**
+   * Configuration value for rot. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final Rotation2d rot;
+
+  /**
+   * Configuration value for max range x. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   public final double maxRangeX;
+
+  /**
+   * Configuration value for max range y. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   public final double maxRangeY;
+
   private final boolean flowAssist;
 
   private static final double X_AXIS_ANGLE_BIAS_RAD = Math.toRadians(18.0);
@@ -145,12 +181,46 @@ public class RectangleObstacle extends Obstacle {
   private final int shortSignB;
 
   private final class FlowTeardrop {
+    /**
+     * Configuration value for loc. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     final Translation2d loc;
+
+    /**
+     * Configuration value for primary strength. The valid range and tuning source are defined by
+     * the owning subsystem or field profile.
+     */
     final double primaryStrength;
+
+    /**
+     * Configuration value for primary max range. The valid range and tuning source are defined by
+     * the owning subsystem or field profile.
+     */
     final double primaryMaxRange;
+
+    /**
+     * Configuration value for primary radius. Distances use meters in WPILib field coordinates and
+     * should be treated as tunable when sourced from profiles.
+     */
     final double primaryRadius;
+
+    /**
+     * Configuration value for tail strength. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     final double tailStrength;
+
+    /**
+     * Configuration value for tail length. Distances use meters in WPILib field coordinates and
+     * should be treated as tunable when sourced from profiles.
+     */
     final double tailLength;
+
+    /**
+     * Configuration value for tail dir world. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     final Rotation2d tailDirWorld;
 
     FlowTeardrop(
@@ -178,6 +248,13 @@ public class RectangleObstacle extends Obstacle {
       return a + (b - a) * t;
     }
 
+    /**
+     * Returns the force vec value maintained by this Repulsor component.
+     *
+     * @param position value used by this operation.
+     * @param tailDirOverride value used by this operation.
+     * @return value produced by this operation.
+     */
     Translation2d forceVec(Translation2d position, Rotation2d tailDirOverride) {
       final double tiny = EPS;
 
@@ -949,6 +1026,18 @@ public class RectangleObstacle extends Obstacle {
     return wD * wEnd * cornerBlend;
   }
 
+  /**
+   * Returns the rectangle obstacle value maintained by this Repulsor component.
+   *
+   * @param center value used by this operation.
+   * @param widthMeters distance or field-coordinate value in meters.
+   * @param heightMeters distance or field-coordinate value in meters.
+   * @param rot value used by this operation.
+   * @param strength value used by this operation.
+   * @param maxRangeX distance or field-coordinate value in meters.
+   * @param maxRangeY distance or field-coordinate value in meters.
+   * @param flowAssist value used by this operation.
+   */
   public RectangleObstacle(
       Translation2d center,
       double widthMeters,
@@ -1059,6 +1148,17 @@ public class RectangleObstacle extends Obstacle {
     this.shortSignB = (bShort >= 0.0) ? 1 : -1;
   }
 
+  /**
+   * Returns the rectangle obstacle value maintained by this Repulsor component.
+   *
+   * @param center value used by this operation.
+   * @param widthMeters distance or field-coordinate value in meters.
+   * @param heightMeters distance or field-coordinate value in meters.
+   * @param rot value used by this operation.
+   * @param strength value used by this operation.
+   * @param maxRangeX distance or field-coordinate value in meters.
+   * @param maxRangeY distance or field-coordinate value in meters.
+   */
   public RectangleObstacle(
       Translation2d center,
       double widthMeters,
@@ -1070,6 +1170,16 @@ public class RectangleObstacle extends Obstacle {
     this(center, widthMeters, heightMeters, rot, strength, maxRangeX, maxRangeY, true);
   }
 
+  /**
+   * Returns the rectangle obstacle value maintained by this Repulsor component.
+   *
+   * @param center value used by this operation.
+   * @param widthMeters distance or field-coordinate value in meters.
+   * @param heightMeters distance or field-coordinate value in meters.
+   * @param strength value used by this operation.
+   * @param maxRangeX distance or field-coordinate value in meters.
+   * @param maxRangeY distance or field-coordinate value in meters.
+   */
   public RectangleObstacle(
       Translation2d center,
       double widthMeters,
@@ -1080,6 +1190,17 @@ public class RectangleObstacle extends Obstacle {
     this(center, widthMeters, heightMeters, Rotation2d.kZero, strength, maxRangeX, maxRangeY, true);
   }
 
+  /**
+   * Returns the simple value maintained by this Repulsor component.
+   *
+   * @param center value used by this operation.
+   * @param widthMeters distance or field-coordinate value in meters.
+   * @param heightMeters distance or field-coordinate value in meters.
+   * @param strength value used by this operation.
+   * @param maxRangeX distance or field-coordinate value in meters.
+   * @param maxRangeY distance or field-coordinate value in meters.
+   * @return rectangle obstacle result for simple.
+   */
   public static RectangleObstacle simple(
       Translation2d center,
       double widthMeters,
@@ -1091,6 +1212,13 @@ public class RectangleObstacle extends Obstacle {
         center, widthMeters, heightMeters, Rotation2d.kZero, strength, maxRangeX, maxRangeY, false);
   }
 
+  /**
+   * Returns the get force at position value maintained by this Repulsor component.
+   *
+   * @param position value used by this operation.
+   * @param target value used by this operation.
+   * @return value produced by this operation.
+   */
   @Override
   public Force getForceAtPosition(Translation2d position, Translation2d target) {
     clearCommitIfNeeded(position, target);
@@ -1711,6 +1839,12 @@ public class RectangleObstacle extends Obstacle {
     return System.nanoTime() * 1.0e-9;
   }
 
+  /**
+   * Returns the intersects rectangle value maintained by this Repulsor component.
+   *
+   * @param rectCorners value used by this operation.
+   * @return value produced by this operation.
+   */
   @Override
   public boolean intersectsRectangle(Translation2d[] rectCorners) {
     Translation2d[] me = corners();

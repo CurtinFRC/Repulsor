@@ -24,6 +24,18 @@ import java.util.List;
 import java.util.Optional;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 
+/**
+ * Immutable data record for setpoint context values passed through the Repulsor game setpoint
+ * abstraction layer for field-relative goals and mechanisms. Use this type from robot code, field
+ * profiles, or tests when integrating the corresponding Repulsor subsystem. Coordinates are
+ * field-relative unless a method documents robot-relative motion.
+ *
+ * @param robotPose component of the setpoint context model
+ * @param robotLengthMeters record component for the setpoint context model
+ * @param robotWidthMeters record component for the setpoint context model
+ * @param shooterReleaseHeightMeters record component for the setpoint context model
+ * @param dynamicObstacles record component for the setpoint context snapshot
+ */
 public record SetpointContext(
     Optional<Pose2d> robotPose,
     double robotLengthMeters,
@@ -31,6 +43,10 @@ public record SetpointContext(
     double shooterReleaseHeightMeters,
     List<? extends Obstacle> dynamicObstacles) {
 
+  /**
+   * Configuration value for empty. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public static final SetpointContext EMPTY =
       new SetpointContext(Optional.empty(), 0.0, 0.0, 0.0, List.of());
 

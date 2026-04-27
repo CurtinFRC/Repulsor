@@ -18,9 +18,34 @@
  */
 package org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal;
 
+/**
+ * Provides footprint eval functionality for the Repulsor package-internal data structures used by
+ * the surrounding Repulsor subsystem. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class FootprintEval {
+  /**
+   * Configuration value for max count. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public int maxCount;
+
+  /**
+   * Configuration value for sum units. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public double sumUnits;
+
+  /**
+   * Configuration value for avg evidence. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   public double avgEvidence;
+
+  /**
+   * Configuration value for has evidence. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   public boolean hasEvidence;
 }

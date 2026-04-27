@@ -23,9 +23,28 @@ import edu.wpi.first.math.geometry.Translation2d;
 import java.util.Optional;
 import org.curtinfrc.frc2026.util.Repulsor.Profiler.Profiler;
 
+/**
+ * Provides drag shot planner static position search functionality for the Repulsor projectile and
+ * shot-planning layer. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 final class DragShotPlannerStaticPositionSearch {
   private DragShotPlannerStaticPositionSearch() {}
 
+  /**
+   * Computes the calculate shot angle and speed from static position value for the current Repulsor
+   * planning state. Call this from periodic planning or tests when a fresh decision is required;
+   * inputs should already be expressed in the coordinate frame expected by the parameter names.
+   *
+   * @param gamePiece value used by this operation.
+   * @param shooterFieldPosition value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param targetHeightMeters distance or field-coordinate value in meters.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @param constraints value used by this operation.
+   * @return optional shot solution produced by this operation.
+   */
   static Optional<ShotSolution> calculateShotAngleAndSpeedFromStaticPosition(
       GamePiecePhysics gamePiece,
       Translation2d shooterFieldPosition,

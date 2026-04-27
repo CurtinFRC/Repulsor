@@ -21,11 +21,38 @@ package org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 
+/**
+ * Provides heading pick functionality for the Repulsor package-internal data structures used by the
+ * surrounding Repulsor subsystem. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class HeadingPick {
+  /**
+   * Configuration value for center. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final Translation2d center;
+
+  /**
+   * Configuration value for heading. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final Rotation2d heading;
+
+  /**
+   * Configuration value for eval. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final FootprintEval eval;
 
+  /**
+   * Returns the heading pick value maintained by this Repulsor component.
+   *
+   * @param center value used by this operation.
+   * @param heading value used by this operation.
+   * @param eval value used by this operation.
+   */
   public HeadingPick(Translation2d center, Rotation2d heading, FootprintEval eval) {
     this.center = center;
     this.heading = heading;

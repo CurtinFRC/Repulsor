@@ -20,16 +20,66 @@ package org.curtinfrc.frc2026.util.Repulsor.Tracking.Internal;
 
 import edu.wpi.first.math.geometry.Pose3d;
 
+/**
+ * Provides tracked obj functionality for the Repulsor package-internal data structures used by the
+ * surrounding Repulsor subsystem. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class TrackedObj {
+  /**
+   * Configuration value for id. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final String id;
+
+  /**
+   * Configuration value for type. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public volatile String type;
+
+  /**
+   * Configuration value for pos. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public volatile Pose3d pos;
+
+  /**
+   * Configuration value for prev. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public volatile Pose3d prev;
+
+  /**
+   * Configuration value for t ns. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public volatile long tNs;
+
+  /**
+   * Configuration value for vx. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public volatile double vx;
+
+  /**
+   * Configuration value for vy. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public volatile double vy;
+
+  /**
+   * Configuration value for vz. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public volatile double vz;
 
+  /**
+   * Returns the tracked obj value maintained by this Repulsor component.
+   *
+   * @param id value used by this operation.
+   */
   public TrackedObj(String id) {
     this.id = id;
     this.type = "unknown";

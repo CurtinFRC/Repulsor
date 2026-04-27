@@ -24,16 +24,72 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Force;
 
+/**
+ * Provides gated attractor obstacle functionality for the Repulsor field-obstacle model used by the
+ * repulsor planner. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public class GatedAttractorObstacle extends Obstacle {
+  /**
+   * Configuration value for center. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final Translation2d center;
+
+  /**
+   * Configuration value for max range. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final double maxRange;
+
+  /**
+   * Configuration value for soften. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final double soften;
+
+  /**
+   * Configuration value for gate poly. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final Translation2d[] gatePoly;
+
+  /**
+   * Configuration value for bypass point. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   public final Translation2d bypassPoint;
+
+  /**
+   * Configuration value for bypass strength scale. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   public final double bypassStrengthScale;
+
+  /**
+   * Configuration value for bypass range. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   public final double bypassRange;
+
+  /**
+   * Configuration value for waypoint. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final boolean waypoint;
 
+  /**
+   * Returns the gated attractor obstacle value maintained by this Repulsor component.
+   *
+   * @param center value used by this operation.
+   * @param strength value used by this operation.
+   * @param maxRange value used by this operation.
+   * @param gatePoly distance or field-coordinate value in meters.
+   * @param bypassPoint value used by this operation.
+   * @param bypassStrengthScale value used by this operation.
+   * @param bypassRange value used by this operation.
+   */
   public GatedAttractorObstacle(
       Translation2d center,
       double strength,
@@ -54,6 +110,18 @@ public class GatedAttractorObstacle extends Obstacle {
         false);
   }
 
+  /**
+   * Returns the gated attractor obstacle value maintained by this Repulsor component.
+   *
+   * @param center value used by this operation.
+   * @param strength value used by this operation.
+   * @param maxRange value used by this operation.
+   * @param gatePoly distance or field-coordinate value in meters.
+   * @param bypassPoint value used by this operation.
+   * @param bypassStrengthScale value used by this operation.
+   * @param bypassRange value used by this operation.
+   * @param waypoint value used by this operation.
+   */
   public GatedAttractorObstacle(
       Translation2d center,
       double strength,
@@ -75,6 +143,19 @@ public class GatedAttractorObstacle extends Obstacle {
         waypoint);
   }
 
+  /**
+   * Returns the gated attractor obstacle value maintained by this Repulsor component.
+   *
+   * @param center value used by this operation.
+   * @param strength value used by this operation.
+   * @param maxRange value used by this operation.
+   * @param gatePoly distance or field-coordinate value in meters.
+   * @param bypassPoint value used by this operation.
+   * @param bypassStrengthScale value used by this operation.
+   * @param bypassRange value used by this operation.
+   * @param soften value used by this operation.
+   * @param waypoint value used by this operation.
+   */
   public GatedAttractorObstacle(
       Translation2d center,
       double strength,
@@ -96,6 +177,13 @@ public class GatedAttractorObstacle extends Obstacle {
     this.waypoint = waypoint;
   }
 
+  /**
+   * Returns the get force at position value maintained by this Repulsor component.
+   *
+   * @param position value used by this operation.
+   * @param target value used by this operation.
+   * @return value produced by this operation.
+   */
   @Override
   public Force getForceAtPosition(Translation2d position, Translation2d target) {
     Translation2d pullTo = center;
@@ -124,6 +212,12 @@ public class GatedAttractorObstacle extends Obstacle {
     return new Force(mag, toward.getAngle());
   }
 
+  /**
+   * Returns the intersects rectangle value maintained by this Repulsor component.
+   *
+   * @param rectCorners value used by this operation.
+   * @return value produced by this operation.
+   */
   @Override
   public boolean intersectsRectangle(Translation2d[] rectCorners) {
     return false;

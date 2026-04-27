@@ -20,10 +20,31 @@ package org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal;
 
 import edu.wpi.first.math.geometry.Translation2d;
 
+/**
+ * Provides resource regions functionality for the Repulsor package-internal data structures used by
+ * the surrounding Repulsor subsystem. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class ResourceRegions {
+  /**
+   * Configuration value for centers. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final Translation2d[] centers;
+
+  /**
+   * Configuration value for mass. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final double[] mass;
 
+  /**
+   * Returns the resource regions value maintained by this Repulsor component.
+   *
+   * @param centers value used by this operation.
+   * @param mass value used by this operation.
+   */
   public ResourceRegions(Translation2d[] centers, double[] mass) {
     this.centers = centers != null ? centers : new Translation2d[0];
     this.mass = mass != null ? mass : new double[this.centers.length];

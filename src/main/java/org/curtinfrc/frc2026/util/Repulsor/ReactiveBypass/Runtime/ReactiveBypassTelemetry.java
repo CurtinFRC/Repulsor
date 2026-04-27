@@ -29,6 +29,12 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Locale;
 
+/**
+ * Provides reactive bypass telemetry functionality for the Repulsor runtime helper layer shared by
+ * behaviours and planners. Use this type from robot code, field profiles, or tests when integrating
+ * the corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 final class ReactiveBypassTelemetry {
   private boolean loggingEnabled = false;
   private String logFilePath = "ReactiveBypassLog.csv";
@@ -43,15 +49,26 @@ final class ReactiveBypassTelemetry {
   private boolean logHasStart = false;
   private boolean lastTouchDynamic = false;
 
+  /**
+   * Runs enable logging in the Repulsor runtime.
+   *
+   * @param filePath value used by this operation.
+   */
   void enableLogging(String filePath) {
     this.logFilePath = filePath;
     this.loggingEnabled = true;
   }
 
+  /** Runs disable logging in the Repulsor runtime. */
   void disableLogging() {
     this.loggingEnabled = false;
   }
 
+  /**
+   * Runs finalize episode in the Repulsor runtime.
+   *
+   * @param success value used by this operation.
+   */
   void finalizeEpisode(boolean success) {
     if (!loggingEnabled || !logHasStart) return;
     double startToGoalMeters = logStartPos.getDistance(logGoalPos);
@@ -70,6 +87,11 @@ final class ReactiveBypassTelemetry {
     resetEpisodeMetrics();
   }
 
+  /**
+   * Updates reset episode metrics state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   */
   void resetEpisodeMetrics() {
     logTimeS = 0.0;
     logForwardProgressM = 0.0;
@@ -82,6 +104,16 @@ final class ReactiveBypassTelemetry {
     lastTouchDynamic = false;
   }
 
+  /**
+   * Runs log step in the Repulsor runtime.
+   *
+   * @param pose WPILib Pose2d in field-relative coordinates.
+   * @param goal value used by this operation.
+   * @param dtSeconds time value in seconds.
+   * @param blockedNow value used by this operation.
+   * @param touchDynamic value used by this operation.
+   * @param pinnedMode value used by this operation.
+   */
   void logStep(
       Pose2d pose,
       Pose2d goal,

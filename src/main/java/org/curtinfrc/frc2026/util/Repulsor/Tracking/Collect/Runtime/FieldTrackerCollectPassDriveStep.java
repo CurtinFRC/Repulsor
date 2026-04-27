@@ -25,20 +25,73 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.CollectProbe;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerCollectObjectiveLoop;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerCollectObjectiveMath;
 
+/**
+ * Provides field tracker collect pass drive step functionality for the Repulsor runtime helper
+ * layer shared by behaviours and planners. Use this type from robot code, field profiles, or tests
+ * when integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+ * method documents robot-relative motion.
+ */
 public final class FieldTrackerCollectPassDriveStep {
   private FieldTrackerCollectPassDriveStep() {}
 
+  /**
+   * Configuration value for hub trap switch still sec. Time values use seconds and should be tuned
+   * against measured robot loop and mechanism latency.
+   */
   static final double HUB_TRAP_SWITCH_STILL_SEC = 0.35;
+
+  /**
+   * Configuration value for hub trap switch stuck sec. Time values use seconds and should be tuned
+   * against measured robot loop and mechanism latency.
+   */
   static final double HUB_TRAP_SWITCH_STUCK_SEC = 0.20;
+
+  /**
+   * Configuration value for hub trap switch no fuel sec. Time values use seconds and should be
+   * tuned against measured robot loop and mechanism latency.
+   */
   static final double HUB_TRAP_SWITCH_NO_FUEL_SEC = 0.12;
+
+  /**
+   * Configuration value for hub trap switch max hold sec. Time values use seconds and should be
+   * tuned against measured robot loop and mechanism latency.
+   */
   static final double HUB_TRAP_SWITCH_MAX_HOLD_SEC = 0.95;
+
+  /**
+   * Configuration value for hub trap switch live near r m. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   static final double HUB_TRAP_SWITCH_LIVE_NEAR_R_M = 0.85;
+
+  /**
+   * Configuration value for hub trap switch max live count. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   static final int HUB_TRAP_SWITCH_MAX_LIVE_COUNT = 2;
 
+  /**
+   * Returns the should auto switch from still value maintained by this Repulsor component.
+   *
+   * @param stillSec time value in seconds.
+   * @return value produced by this operation.
+   */
   static boolean shouldAutoSwitchFromStill(double stillSec) {
     return stillSec >= FieldTrackerCollectObjectiveLoop.COLLECT_AUTO_SWITCH_STILL_SEC;
   }
 
+  /**
+   * Returns the should force switch from hub front trap value maintained by this Repulsor
+   * component.
+   *
+   * @param trapTarget value used by this operation.
+   * @param stillSec time value in seconds.
+   * @param stuckSec time value in seconds.
+   * @param noFuelSec time value in seconds.
+   * @param liveFuelNear value used by this operation.
+   * @param stickyAgeSec time value in seconds.
+   * @return value produced by this operation.
+   */
   static boolean shouldForceSwitchFromHubFrontTrap(
       boolean trapTarget,
       double stillSec,
@@ -55,6 +108,16 @@ public final class FieldTrackerCollectPassDriveStep {
         || noFuelSec >= HUB_TRAP_SWITCH_NO_FUEL_SEC;
   }
 
+  /**
+   * Returns the drive and finish value maintained by this Repulsor component.
+   *
+   * @param loop value used by this operation.
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   * @param cand value used by this operation.
+   * @param sticky distance or field-coordinate value in meters.
+   * @param pass value used by this operation.
+   * @return value produced by this operation.
+   */
   public static Pose2d driveAndFinish(
       FieldTrackerCollectObjectiveLoop loop,
       FieldTrackerCollectPassContext ctx,

@@ -21,7 +21,18 @@ package org.curtinfrc.frc2026.util.Repulsor.Metrics;
 
 import org.curtinfrc.frc2026.util.Repulsor.Metrics.MetricCodecs.DoubleCodec;
 
+/**
+ * Provides double mean ntrecorder functionality for the Repulsor metric aggregation and
+ * NetworkTables recording layer. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public class DoubleMeanNTRecorder extends NetworkTablesMetricRecorder<Double> {
+  /**
+   * Returns the double mean ntrecorder value maintained by this Repulsor component.
+   *
+   * @param name value used by this operation.
+   */
   public DoubleMeanNTRecorder(String name) {
     super(name, new DoubleMeanAggregator(), new DoubleCodec());
   }

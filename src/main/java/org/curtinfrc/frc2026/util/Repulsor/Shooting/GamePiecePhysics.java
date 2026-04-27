@@ -19,13 +19,39 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Shooting;
 
+/**
+ * Provides game piece physics functionality for the Repulsor projectile and shot-planning layer.
+ * Use this type from robot code, field profiles, or tests when integrating the corresponding
+ * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+ * motion.
+ */
 public abstract class GamePiecePhysics {
+  /**
+   * Returns the mass kg value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public abstract double massKg();
 
+  /**
+   * Returns the cross section area m2 value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public abstract double crossSectionAreaM2();
 
+  /**
+   * Returns the drag coefficient value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public abstract double dragCoefficient();
 
+  /**
+   * Returns the air density kg per m3 value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public double airDensityKgPerM3() {
     return 1.225;
   }

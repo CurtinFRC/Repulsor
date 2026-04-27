@@ -40,12 +40,46 @@ import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.Runtime.FieldTracker
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.Runtime.FieldTrackerCollectPassStickyResult;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.Runtime.FieldTrackerCollectPassStickyStep;
 
+/**
+ * Provides field tracker collect objective loop functionality for the Repulsor collection objective
+ * runtime for tracked field resources. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class FieldTrackerCollectObjectiveLoop {
+  /**
+   * Configuration value for predictor. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final PredictiveFieldStateRuntime predictor;
+
+  /**
+   * Configuration value for collect objective points. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   public final Supplier<Translation2d[]> collectObjectivePoints;
+
+  /**
+   * Configuration value for dynamics supplier. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   final Supplier<List<DynamicObject>> dynamicsSupplier;
+
+  /**
+   * Configuration value for collect type predicate. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   final Predicate<String> collectTypePredicate;
 
+  /**
+   * Creates a field tracker collect objective loop instance with the dependencies and tuning values
+   * used by this Repulsor component.
+   *
+   * @param predictor value used by this operation.
+   * @param collectObjectivePoints value used by this operation.
+   * @param dynamicsSupplier value used by this operation.
+   * @param collectTypePredicate value used by this operation.
+   */
   FieldTrackerCollectObjectiveLoop(
       PredictiveFieldStateRuntime predictor,
       Supplier<Translation2d[]> collectObjectivePoints,
@@ -57,145 +91,592 @@ public final class FieldTrackerCollectObjectiveLoop {
     this.collectTypePredicate = collectTypePredicate;
   }
 
+  /**
+   * Returns the snapshot dynamic objects value maintained by this Repulsor component.
+   *
+   * @return list of dynamic object values produced by this operation.
+   */
   public List<DynamicObject> snapshotDynamicObjects() {
     List<DynamicObject> dyn = dynamicsSupplier.get();
     return dyn != null ? dyn : List.of();
   }
 
+  /**
+   * Returns the is collect type value maintained by this Repulsor component.
+   *
+   * @param type value used by this operation.
+   * @return value produced by this operation.
+   */
   public boolean isCollectType(String type) {
     return collectTypePredicate.test(type);
   }
 
   public StickyTarget<Translation2d> collectStickySelector = new StickyTarget<>(0.22, 1.25, 1.80);
 
+  /**
+   * Updates reset all state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   */
   void resetAll() {
     collectStickySelector = new StickyTarget<>(0.22, 1.25, 1.80);
     clearCollectSticky();
   }
 
+  /**
+   * Configuration value for collect sticky reached ts ns. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public volatile long collectStickyReachedTsNs = 0L;
 
+  /**
+   * Configuration value for collect sticky approach hat. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public volatile Translation2d collectStickyApproachHat = null;
+
+  /**
+   * Configuration value for collect sticky push m. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   public volatile double collectStickyPushM = 0.0;
+
+  /**
+   * Configuration value for collect sticky no progress since ns. The valid range and tuning source
+   * are defined by the owning subsystem or field profile.
+   */
   public volatile long collectStickyNoProgressSinceNs = 0L;
+
+  /**
+   * Configuration value for collect sticky last dist m. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public volatile double collectStickyLastDistM = Double.POSITIVE_INFINITY;
 
+  /**
+   * Configuration value for collect sticky drive target. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public volatile Translation2d collectStickyDriveTarget = null;
+
+  /**
+   * Configuration value for collect sticky side. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   public volatile int collectStickySide = 0;
+
+  /**
+   * Configuration value for collect sticky last switch ns. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public volatile long collectStickyLastSwitchNs = 0L;
+
+  /**
+   * Configuration value for collect drive last target. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public volatile Translation2d collectDriveLastTarget = null;
+
+  /**
+   * Configuration value for collect drive last target ns. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public volatile long collectDriveLastTargetNs = 0L;
+
+  /**
+   * Configuration value for collect group cell m. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   static final double COLLECT_GROUP_CELL_M = 0.40;
+
+  /**
+   * Configuration value for collect group r1 m. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   static final double COLLECT_GROUP_R1_M = 0.95;
+
+  /**
+   * Configuration value for collect group r2 m. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   static final double COLLECT_GROUP_R2_M = 1.70;
+
+  /**
+   * Configuration value for collect group min count. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   static final double COLLECT_GROUP_MIN_COUNT = 2.0;
+
+  /**
+   * Configuration value for collect relock enable dist m. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   static final double COLLECT_RELOCK_ENABLE_DIST_M = 1.6;
+
+  /**
+   * Configuration value for collect half keep mid band m. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_HALF_KEEP_MID_BAND_M = 1.2;
+
+  /**
+   * Configuration value for collect sticky invalid sec. Time values use seconds and should be tuned
+   * against measured robot loop and mechanism latency.
+   */
   public volatile double collectStickyInvalidSec = 0.0;
 
+  /**
+   * Configuration value for collect forced drive cand. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public volatile Translation2d collectForcedDriveCand = null;
+
+  /**
+   * Configuration value for collect forced drive since ns. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public volatile long collectForcedDriveSinceNs = 0L;
 
+  /**
+   * Configuration value for collect stuck radius m. Distances use meters in WPILib field
+   * coordinates and should be treated as tunable when sourced from profiles.
+   */
   public static final double COLLECT_STUCK_RADIUS_M = 0.10;
+
+  /**
+   * Configuration value for collect stuck reset move m. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_STUCK_RESET_MOVE_M = 0.22;
 
   public Translation2d collectStuckAnchorPos = new Translation2d();
+
+  /**
+   * Configuration value for collect stuck anchor ns. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   public volatile long collectStuckAnchorNs = 0L;
 
+  /**
+   * Configuration value for collect sticky half lock. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   public volatile int collectStickyHalfLock = 0;
 
+  /**
+   * Configuration value for last best. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public PointCandidate lastBest;
 
+  /**
+   * Configuration value for collect group w c1. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   static final double COLLECT_GROUP_W_C1 = 1.00;
+
+  /**
+   * Configuration value for collect group w c2. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   static final double COLLECT_GROUP_W_C2 = 0.35;
+
+  /**
+   * Configuration value for collect group w eta. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   static final double COLLECT_GROUP_W_ETA = 1.25;
+
+  /**
+   * Configuration value for collect group w spread. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   static final double COLLECT_GROUP_W_SPREAD = 0.60;
+
+  /**
+   * Configuration value for collect group w center. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   static final double COLLECT_GROUP_W_CENTER = 0.18;
+
+  /**
+   * Configuration value for collect nearby radius m. Distances use meters in WPILib field
+   * coordinates and should be treated as tunable when sourced from profiles.
+   */
   public static final double COLLECT_NEARBY_RADIUS_M = 2.2;
+
+  /**
+   * Configuration value for collect nearby min count. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   public static final int COLLECT_NEARBY_MIN_COUNT = 1;
 
+  /**
+   * Configuration value for collect live fuel near target r m. The valid range and tuning source
+   * are defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_LIVE_FUEL_NEAR_TARGET_R_M = 0.65;
+
+  /**
+   * Configuration value for collect live obs max age s. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_LIVE_OBS_MAX_AGE_S = 0.30;
+
+  /**
+   * Configuration value for collect predictor obs max age s. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_PREDICTOR_OBS_MAX_AGE_S = 0.25;
+
+  /**
+   * Configuration value for collect sticky invalid drop sec. Time values use seconds and should be
+   * tuned against measured robot loop and mechanism latency.
+   */
   public static final double COLLECT_STICKY_INVALID_DROP_SEC = 0.10;
+
+  /**
+   * Configuration value for collect reached empty force drop sec. Time values use seconds and
+   * should be tuned against measured robot loop and mechanism latency.
+   */
   public static final double COLLECT_REACHED_EMPTY_FORCE_DROP_SEC = 0.18;
+
+  /**
+   * Configuration value for collect reached empty near target m. The valid range and tuning source
+   * are defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_REACHED_EMPTY_NEAR_TARGET_M = 0.95;
+
+  /**
+   * Configuration value for collect reached empty sec. Time values use seconds and should be tuned
+   * against measured robot loop and mechanism latency.
+   */
   public double collectReachedEmptySec = 0.0;
 
+  /**
+   * Configuration value for collect done no fuel sec. Time values use seconds and should be tuned
+   * against measured robot loop and mechanism latency.
+   */
   public static final double COLLECT_DONE_NO_FUEL_SEC = 0.35;
+
+  /**
+   * Configuration value for collect done stuck sec. Time values use seconds and should be tuned
+   * against measured robot loop and mechanism latency.
+   */
   public static final double COLLECT_DONE_STUCK_SEC = 0.35;
+
+  /**
+   * Configuration value for collect stuck speed mps. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   public static final double COLLECT_STUCK_SPEED_MPS = 0.15;
+
+  /**
+   * Configuration value for collect auto switch still sec. Time values use seconds and should be
+   * tuned against measured robot loop and mechanism latency.
+   */
   public static final double COLLECT_AUTO_SWITCH_STILL_SEC = 1.0;
 
+  /**
+   * Configuration value for collect empty drive done sec. Time values use seconds and should be
+   * tuned against measured robot loop and mechanism latency.
+   */
   public static final double COLLECT_EMPTY_DRIVE_DONE_SEC = 0.35;
+
+  /**
+   * Configuration value for collect empty drive near robot m. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_EMPTY_DRIVE_NEAR_ROBOT_M = 1.05;
+
+  /**
+   * Configuration value for collect empty drive probe r m. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_EMPTY_DRIVE_PROBE_R_M = 0.55;
+
+  /**
+   * Configuration value for collect empty drive min units. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_EMPTY_DRIVE_MIN_UNITS = 0.06;
 
+  /**
+   * Configuration value for collect empty drive sec. Time values use seconds and should be tuned
+   * against measured robot loop and mechanism latency.
+   */
   public double collectEmptyDriveSec = 0.0;
 
+  /**
+   * Configuration value for collect cell m. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   public static final double COLLECT_CELL_M = 0.14;
+
+  /**
+   * Configuration value for collect coarse topk. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   public static final int COLLECT_COARSE_TOPK = 4;
+
+  /**
+   * Configuration value for collect refine grid. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   public static final int COLLECT_REFINE_GRID = 3;
 
+  /**
+   * Configuration value for collect drive probe r m. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   public static final double COLLECT_DRIVE_PROBE_R_M = 0.55;
+
+  /**
+   * Configuration value for collect drive min units. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   public static final double COLLECT_DRIVE_MIN_UNITS = 0.045;
+
+  /**
+   * Configuration value for collect drive search step m. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_DRIVE_SEARCH_STEP_M = 0.14;
+
+  /**
+   * Configuration value for collect drive search grid. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public static final int COLLECT_DRIVE_SEARCH_GRID = 3;
 
   public Translation2d collectStickyStillFiltPos = new Translation2d();
   public Translation2d collectStickyStillFiltLastPos = new Translation2d();
+
+  /**
+   * Configuration value for collect sticky robot half last. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public int collectStickyRobotHalfLast = 0;
+
+  /**
+   * Configuration value for collect sticky robot flicker sec. Time values use seconds and should be
+   * tuned against measured robot loop and mechanism latency.
+   */
   public double collectStickyRobotFlickerSec = 0.0;
 
+  /**
+   * Configuration value for collect sticky same m. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   public static final double COLLECT_STICKY_SAME_M = 0.45;
+
+  /**
+   * Configuration value for collect switch close m. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   public static final double COLLECT_SWITCH_CLOSE_M = 0.85;
 
+  /**
+   * Configuration value for collect sticky reached m. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   public static final double COLLECT_STICKY_REACHED_M = 0.22;
+
+  /**
+   * Configuration value for collect sticky target recalc eps m. The valid range and tuning source
+   * are defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_STICKY_TARGET_RECALC_EPS_M = 0.14;
 
+  /**
+   * Configuration value for collect sticky no progress s. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_STICKY_NO_PROGRESS_S = 0.40;
+
+  /**
+   * Configuration value for collect sticky no progress drop m. The valid range and tuning source
+   * are defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_STICKY_NO_PROGRESS_DROP_M = 0.06;
+
+  /**
+   * Configuration value for collect sticky no progress min dist m. The valid range and tuning
+   * source are defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_STICKY_NO_PROGRESS_MIN_DIST_M = 0.50;
 
+  /**
+   * Configuration value for collect sticky flap cooldown s. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_STICKY_FLAP_COOLDOWN_S = 0.95;
+
+  /**
+   * Configuration value for collect switch min move m. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_SWITCH_MIN_MOVE_M = 0.18;
+
+  /**
+   * Configuration value for collect switch cooldown s. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_SWITCH_COOLDOWN_S = 0.70;
 
+  /**
+   * Configuration value for collect no fuel sec. Time values use seconds and should be tuned
+   * against measured robot loop and mechanism latency.
+   */
   public double collectNoFuelSec = 0.0;
+
+  /**
+   * Configuration value for collect stuck sec. Time values use seconds and should be tuned against
+   * measured robot loop and mechanism latency.
+   */
   public double collectStuckSec = 0.0;
+
+  /**
+   * Configuration value for collect auto switch still sec. Time values use seconds and should be
+   * tuned against measured robot loop and mechanism latency.
+   */
   public double collectAutoSwitchStillSec = 0.0;
 
   public Translation2d lastRobotPosForStuck = new Translation2d();
 
+  /**
+   * Configuration value for collect sticky eta s. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   volatile double collectStickyEtaS = 0.0;
+
+  /**
+   * Configuration value for last objective tick ns. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   public volatile long lastObjectiveTickNs = 0L;
 
+  /**
+   * Configuration value for collect resource snap max dist m. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   static final double COLLECT_RESOURCE_SNAP_MAX_DIST_M = 0.55;
+
+  /**
+   * Configuration value for collect resource snap tiny m. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   static final double COLLECT_RESOURCE_SNAP_TINY_M = 0.14;
+
+  /**
+   * Configuration value for collect valid near fuel m. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_VALID_NEAR_FUEL_M = 0.25;
+
+  /**
+   * Configuration value for collect resource snap min units. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_RESOURCE_SNAP_MIN_UNITS = 0.07;
 
+  /**
+   * Configuration value for collect snap to point m. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   public static final double COLLECT_SNAP_TO_POINT_M = 0.22;
+
+  /**
+   * Configuration value for collect snap hyst m. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   public static final double COLLECT_SNAP_HYST_M = 0.10;
+
+  /**
+   * Configuration value for collect snap active. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   public boolean collectSnapActive = false;
+
   public Translation2d collectStickyStillLastPos = new Translation2d();
+
+  /**
+   * Configuration value for collect sticky still sec. Time values use seconds and should be tuned
+   * against measured robot loop and mechanism latency.
+   */
   public double collectStickyStillSec = 0.0;
 
+  /**
+   * Configuration value for collect sticky last switch robot pos. The valid range and tuning source
+   * are defined by the owning subsystem or field profile.
+   */
   public Translation2d collectStickyLastSwitchRobotPos = null;
 
+  /**
+   * Configuration value for collect sticky point. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   public volatile Translation2d collectStickyPoint = null;
+
+  /**
+   * Configuration value for collect sticky score. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   public volatile double collectStickyScore = -1e18;
+
+  /**
+   * Configuration value for collect sticky ts ns. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   public volatile long collectStickyTsNs = 0L;
 
+  /**
+   * Configuration value for collect empty space max dist to fuel m. The valid range and tuning
+   * source are defined by the owning subsystem or field profile.
+   */
   static final double COLLECT_EMPTY_SPACE_MAX_DIST_TO_FUEL_M = 0.18;
+
+  /**
+   * Configuration value for collect hotspot snap radius m. Distances use meters in WPILib field
+   * coordinates and should be treated as tunable when sourced from profiles.
+   */
   public static final double COLLECT_HOTSPOT_SNAP_RADIUS_M = 0.85;
+
+  /**
+   * Configuration value for collect max drive offset from fuel m. The valid range and tuning source
+   * are defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_MAX_DRIVE_OFFSET_FROM_FUEL_M = 0.12;
+
+  /**
+   * Configuration value for collect snap to nearest fuel m. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_SNAP_TO_NEAREST_FUEL_M = 0.22;
+
+  /**
+   * Configuration value for collect force on fuel search m. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_FORCE_ON_FUEL_SEARCH_M = 0.40;
+
+  /**
+   * Configuration value for collect force on fuel probe r m. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_FORCE_ON_FUEL_PROBE_R_M = 0.45;
+
+  /**
+   * Configuration value for collect force on fuel min units. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   public static final double COLLECT_FORCE_ON_FUEL_MIN_UNITS = 0.055;
 
+  /**
+   * Updates clear collect sticky state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   */
   public void clearCollectSticky() {
     collectStickyPoint = null;
     collectStickyScore = -1e18;
@@ -232,6 +713,14 @@ public final class FieldTrackerCollectObjectiveLoop {
     collectDriveLastTargetNs = 0L;
   }
 
+  /**
+   * Returns the count live collect resources within value maintained by this Repulsor component.
+   *
+   * @param dyn value used by this operation.
+   * @param center value used by this operation.
+   * @param r value used by this operation.
+   * @return value produced by this operation.
+   */
   public int countLiveCollectResourcesWithin(
       List<DynamicObject> dyn, Translation2d center, double r) {
     if (dyn == null || dyn.isEmpty() || center == null) return 0;
@@ -247,12 +736,24 @@ public final class FieldTrackerCollectObjectiveLoop {
     return n;
   }
 
+  /**
+   * Returns the is fresh collect observation value maintained by this Repulsor component.
+   *
+   * @param o value used by this operation.
+   * @return value produced by this operation.
+   */
   public boolean isFreshCollectObservation(DynamicObject o) {
     if (o == null || o.pos == null || o.type == null) return false;
     if (!isCollectType(o.type)) return false;
     return o.ageS <= COLLECT_LIVE_OBS_MAX_AGE_S;
   }
 
+  /**
+   * Returns the filter dynamics for collect predictor value maintained by this Repulsor component.
+   *
+   * @param dyn value used by this operation.
+   * @return list of dynamic object values produced by this operation.
+   */
   public List<DynamicObject> filterDynamicsForCollectPredictor(List<DynamicObject> dyn) {
     if (dyn == null || dyn.isEmpty()) return List.of();
     ArrayList<DynamicObject> out = new ArrayList<>(dyn.size());
@@ -265,6 +766,16 @@ public final class FieldTrackerCollectObjectiveLoop {
     return out;
   }
 
+  /**
+   * Returns the relock collect point to live fuel value maintained by this Repulsor component.
+   *
+   * @param desiredCollectPoint value used by this operation.
+   * @param clampToFieldRobotSafe value used by this operation.
+   * @param inForbidden value used by this operation.
+   * @param violatesWall value used by this operation.
+   * @param nudgeOutOfForbidden value used by this operation.
+   * @return value produced by this operation.
+   */
   public Translation2d relockCollectPointToLiveFuel(
       Translation2d desiredCollectPoint,
       java.util.function.Function<Translation2d, Translation2d> clampToFieldRobotSafe,
@@ -294,6 +805,20 @@ public final class FieldTrackerCollectObjectiveLoop {
     return p;
   }
 
+  /**
+   * Computes the compute frozen drive target value for the current Repulsor planning state. Call
+   * this from periodic planning or tests when a fresh decision is required; inputs should already
+   * be expressed in the coordinate frame expected by the parameter names.
+   *
+   * @param resource value used by this operation.
+   * @param approachHat value used by this operation.
+   * @param pushM value used by this operation.
+   * @param clampToFieldRobotSafe value used by this operation.
+   * @param inForbidden value used by this operation.
+   * @param violatesWall value used by this operation.
+   * @param nudgeOutOfForbidden value used by this operation.
+   * @return value produced by this operation.
+   */
   public Translation2d computeFrozenDriveTarget(
       Translation2d resource,
       Translation2d approachHat,
@@ -316,6 +841,12 @@ public final class FieldTrackerCollectObjectiveLoop {
     return t;
   }
 
+  /**
+   * Returns the fallback collect pose value maintained by this Repulsor component.
+   *
+   * @param robotPoseBlue value used by this operation.
+   * @return value produced by this operation.
+   */
   public Pose2d fallbackCollectPose(Pose2d robotPoseBlue) {
     // return new Pose2d(Constants.FIELD_LENGTH / 2, Constants.FIELD_WIDTH / 2, new Rotation2d());
     Translation2d p =
@@ -327,6 +858,15 @@ public final class FieldTrackerCollectObjectiveLoop {
     return new Pose2d(p, rot);
   }
 
+  /**
+   * Returns the next objective goal blue value maintained by this Repulsor component.
+   *
+   * @param robotPoseBlue value used by this operation.
+   * @param ourSpeedCap value used by this operation.
+   * @param goalUnits value used by this operation.
+   * @param cat value used by this operation.
+   * @return value produced by this operation.
+   */
   public Pose2d nextObjectiveGoalBlue(
       Pose2d robotPoseBlue, double ourSpeedCap, int goalUnits, CategorySpec cat) {
     if (robotPoseBlue == null) return Pose2d.kZero;
@@ -353,6 +893,19 @@ public final class FieldTrackerCollectObjectiveLoop {
     return fallbackCollectPose(robotPoseBlue);
   }
 
+  /**
+   * Returns the force drive target onto fuel value maintained by this Repulsor component.
+   *
+   * @param robotPos value used by this operation.
+   * @param cap value used by this operation.
+   * @param collectPoint value used by this operation.
+   * @param driveSeed value used by this operation.
+   * @param clampToFieldRobotSafe value used by this operation.
+   * @param inForbidden value used by this operation.
+   * @param violatesWall value used by this operation.
+   * @param nudgeOutOfForbidden value used by this operation.
+   * @return value produced by this operation.
+   */
   public Translation2d forceDriveTargetOntoFuel(
       Translation2d robotPos,
       double cap,
@@ -425,6 +978,11 @@ public final class FieldTrackerCollectObjectiveLoop {
     return drive;
   }
 
+  /**
+   * Updates clear state state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   */
   public void clearState() {
     clearCollectSticky();
   }

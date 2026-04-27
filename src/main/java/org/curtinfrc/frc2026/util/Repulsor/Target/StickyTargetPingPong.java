@@ -21,6 +21,12 @@ package org.curtinfrc.frc2026.util.Repulsor.Target;
 
 import java.util.function.ToDoubleBiFunction;
 
+/**
+ * Provides sticky target ping pong functionality for the Repulsor sticky-target filtering and
+ * target-selection layer. Use this type from robot code, field profiles, or tests when integrating
+ * the corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 final class StickyTargetPingPong<T> {
   private T pingA;
   private T pingB;
@@ -29,6 +35,11 @@ final class StickyTargetPingPong<T> {
 
   private double pingPeriodEmaSec = 0.0;
 
+  /**
+   * Updates clear state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   */
   void clear() {
     pingA = null;
     pingB = null;
@@ -37,6 +48,14 @@ final class StickyTargetPingPong<T> {
     pingPeriodEmaSec = 0.0;
   }
 
+  /**
+   * Returns the canonicalize ping value maintained by this Repulsor component.
+   *
+   * @param now value used by this operation.
+   * @param canon value used by this operation.
+   * @param distanceFn value used by this operation.
+   * @param eps value used by this operation.
+   */
   void canonicalizePing(
       double now, StickyTargetCanon<T> canon, ToDoubleBiFunction<T, T> distanceFn, double eps) {
     if (canon == null) return;
@@ -44,6 +63,15 @@ final class StickyTargetPingPong<T> {
     if (pingB != null) pingB = canon.canonicalize(now, pingB, distanceFn, eps);
   }
 
+  /**
+   * Returns the is blocked value maintained by this Repulsor component.
+   *
+   * @param now value used by this operation.
+   * @param next value used by this operation.
+   * @param distanceFn value used by this operation.
+   * @param eps value used by this operation.
+   * @return value produced by this operation.
+   */
   boolean isBlocked(double now, T next, ToDoubleBiFunction<T, T> distanceFn, double eps) {
     if (now >= pingBlockUntilSec) return false;
     if (next == null) return false;
@@ -52,6 +80,16 @@ final class StickyTargetPingPong<T> {
     return false;
   }
 
+  /**
+   * Runs note switch in the Repulsor runtime.
+   *
+   * @param now value used by this operation.
+   * @param from value used by this operation.
+   * @param to value used by this operation.
+   * @param distanceFn value used by this operation.
+   * @param eps value used by this operation.
+   * @param switchDistM value used by this operation.
+   */
   void noteSwitch(
       double now,
       T from,

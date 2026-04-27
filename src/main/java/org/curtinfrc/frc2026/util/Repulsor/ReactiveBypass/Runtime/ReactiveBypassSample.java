@@ -21,14 +21,60 @@ package org.curtinfrc.frc2026.util.Repulsor.ReactiveBypass.Runtime;
 
 import edu.wpi.first.math.geometry.Translation2d;
 
+/**
+ * Provides reactive bypass sample functionality for the Repulsor runtime helper layer shared by
+ * behaviours and planners. Use this type from robot code, field profiles, or tests when integrating
+ * the corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 final class ReactiveBypassSample {
+  /**
+   * Configuration value for pos. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   final Translation2d pos;
+
+  /**
+   * Configuration value for s para. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   final double sPara;
+
+  /**
+   * Configuration value for s perp. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   final double sPerp;
+
+  /**
+   * Configuration value for sign para. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   final int signPara;
+
+  /**
+   * Configuration value for sign perp. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   final int signPerp;
+
+  /**
+   * Configuration value for dt. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   final double dt;
 
+  /**
+   * Creates a reactive bypass sample instance with the dependencies and tuning values used by this
+   * Repulsor component.
+   *
+   * @param pos value used by this operation.
+   * @param sPara value used by this operation.
+   * @param sPerp value used by this operation.
+   * @param signPara value used by this operation.
+   * @param signPerp value used by this operation.
+   * @param dt value used by this operation.
+   */
   ReactiveBypassSample(
       Translation2d pos, double sPara, double sPerp, int signPara, int signPerp, double dt) {
     this.pos = pos;

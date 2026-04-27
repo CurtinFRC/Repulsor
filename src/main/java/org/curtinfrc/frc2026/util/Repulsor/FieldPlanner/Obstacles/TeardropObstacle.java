@@ -26,14 +26,59 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Force;
 
+/**
+ * Provides teardrop obstacle functionality for the Repulsor field-obstacle model used by the
+ * repulsor planner. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public class TeardropObstacle extends Obstacle {
+  /**
+   * Configuration value for loc. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final Translation2d loc;
+
+  /**
+   * Configuration value for primary max range. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   public final double primaryMaxRange;
+
+  /**
+   * Configuration value for primary radius. Distances use meters in WPILib field coordinates and
+   * should be treated as tunable when sourced from profiles.
+   */
   public final double primaryRadius;
+
+  /**
+   * Configuration value for tail strength. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   public final double tailStrength;
+
+  /**
+   * Configuration value for tail length. Distances use meters in WPILib field coordinates and
+   * should be treated as tunable when sourced from profiles.
+   */
   public final double tailLength;
+
+  /**
+   * Configuration value for tiny. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   final double tiny = EPS;
 
+  /**
+   * Returns the teardrop obstacle value maintained by this Repulsor component.
+   *
+   * @param loc value used by this operation.
+   * @param primaryStrength value used by this operation.
+   * @param primaryMaxRange value used by this operation.
+   * @param primaryRadius value used by this operation.
+   * @param tailStrength value used by this operation.
+   * @param tailLength value used by this operation.
+   */
   public TeardropObstacle(
       Translation2d loc,
       double primaryStrength,
@@ -49,18 +94,40 @@ public class TeardropObstacle extends Obstacle {
     this.tailLength = tailLength + primaryMaxRange;
   }
 
+  /**
+   * Returns the angle from vec value maintained by this Repulsor component.
+   *
+   * @param v value used by this operation.
+   * @param fallback value used by this operation.
+   * @return value produced by this operation.
+   */
   Rotation2d angleFromVec(Translation2d v, Rotation2d fallback) {
     double x = v.getX(), y = v.getY();
     double n = Math.hypot(x, y);
     return (n > tiny) ? Rotation2d.fromRadians(Math.atan2(y, x)) : fallback;
   }
 
+  /**
+   * Returns the angle between value maintained by this Repulsor component.
+   *
+   * @param from value used by this operation.
+   * @param to value used by this operation.
+   * @param fallback value used by this operation.
+   * @return value produced by this operation.
+   */
   Rotation2d angleBetween(Translation2d from, Translation2d to, Rotation2d fallback) {
     double dx = to.getX() - from.getX(), dy = to.getY() - from.getY();
     double n = Math.hypot(dx, dy);
     return (n > tiny) ? Rotation2d.fromRadians(Math.atan2(dy, dx)) : fallback;
   }
 
+  /**
+   * Returns the get force at position value maintained by this Repulsor component.
+   *
+   * @param position value used by this operation.
+   * @param target value used by this operation.
+   * @return value produced by this operation.
+   */
   public Force getForceAtPosition(Translation2d position, Translation2d target) {
     var targetToLoc = new Translation2d(loc.getX() - target.getX(), loc.getY() - target.getY());
     var targetToLocAngle = angleFromVec(targetToLoc, Rotation2d.kZero);
@@ -130,6 +197,12 @@ public class TeardropObstacle extends Obstacle {
     return new Force(sum.getNorm(), angleFromVec(sum, Rotation2d.kZero));
   }
 
+  /**
+   * Returns the intersects rectangle value maintained by this Repulsor component.
+   *
+   * @param rectCorners value used by this operation.
+   * @return value produced by this operation.
+   */
   @Override
   public boolean intersectsRectangle(Translation2d[] rectCorners) {
     if (FieldPlanner.isPointInPolygon(loc, rectCorners)) return true;

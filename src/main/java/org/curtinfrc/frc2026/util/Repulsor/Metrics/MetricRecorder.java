@@ -24,6 +24,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * Provides metric recorder functionality for the Repulsor metric aggregation and NetworkTables
+ * recording layer. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public abstract class MetricRecorder<T> {
   private final String name;
   private final MetricAggregator<T> aggregator;
@@ -36,6 +42,13 @@ public abstract class MetricRecorder<T> {
     this.aggregator = Objects.requireNonNull(aggregator);
   }
 
+  /**
+   * Updates record state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   *
+   * @param data value used by this operation.
+   */
   public final void record(T data) {
     if (!enabled.get()) return;
     last.set(data);
@@ -46,33 +59,71 @@ public abstract class MetricRecorder<T> {
 
   protected abstract void emit(T latest, T overall, long count, boolean enabled);
 
+  /** Runs close in the Repulsor runtime. */
   public void close() {}
 
+  /**
+   * Returns the get name value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public String getName() {
     return name;
   }
 
+  /**
+   * Updates set enabled state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param on value used by this operation.
+   */
   public void setEnabled(boolean on) {
     enabled.set(on);
     emit(last.get(), aggregator.getOverall(), count.get(), enabled.get());
   }
 
+  /**
+   * Returns the is enabled value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public boolean isEnabled() {
     return enabled.get();
   }
 
+  /**
+   * Returns the get last record value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public T getLastRecord() {
     return last.get();
   }
 
+  /**
+   * Returns the get overall value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public T getOverall() {
     return aggregator.getOverall();
   }
 
+  /**
+   * Returns the get count value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public long getCount() {
     return count.get();
   }
 
+  /**
+   * Updates reset state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   */
   public void reset() {
     last.set(null);
     aggregator.reset();

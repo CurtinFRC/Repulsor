@@ -20,12 +20,41 @@ package org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal;
 
 import edu.wpi.first.math.geometry.Translation2d;
 
+/**
+ * Provides intent agg cont functionality for the Repulsor package-internal data structures used by
+ * the surrounding Repulsor subsystem. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class IntentAggCont {
+  /**
+   * Configuration value for regions. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final Translation2d[] regions;
+
+  /**
+   * Configuration value for intent mass. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   public final double[] intentMass;
+
+  /**
+   * Configuration value for count. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final int count;
+
   private final double sigma;
 
+  /**
+   * Returns the intent agg cont value maintained by this Repulsor component.
+   *
+   * @param regions value used by this operation.
+   * @param intentMass value used by this operation.
+   * @param count value used by this operation.
+   * @param sigma value used by this operation.
+   */
   public IntentAggCont(Translation2d[] regions, double[] intentMass, int count, double sigma) {
     this.regions = regions != null ? regions : new Translation2d[0];
     this.intentMass = intentMass != null ? intentMass : new double[this.regions.length];
@@ -33,6 +62,12 @@ public final class IntentAggCont {
     this.sigma = Math.max(1e-6, sigma);
   }
 
+  /**
+   * Returns the intent at value maintained by this Repulsor component.
+   *
+   * @param p value used by this operation.
+   * @return value produced by this operation.
+   */
   public double intentAt(Translation2d p) {
     if (p == null || regions.length == 0) return 0.0;
     double sum = 0.0;

@@ -29,23 +29,94 @@ import java.util.function.Predicate;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
 
+/**
+ * Provides spatial dyn functionality for the Repulsor predictive field-state and
+ * collection-planning layer. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class SpatialDyn {
+  /**
+   * Returns the key value maintained by this Repulsor component.
+   *
+   * @param cx distance or field-coordinate value in meters.
+   * @param cy distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   static long key(int cx, int cy) {
     return (((long) cx) << 32) ^ (cy & 0xffffffffL);
   }
 
+  /**
+   * Configuration value for all. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   final List<DynamicObject> all;
+
+  /**
+   * Configuration value for resources. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final List<DynamicObject> resources;
+
+  /**
+   * Configuration value for others. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   final List<DynamicObject> others;
+
+  /**
+   * Configuration value for specs. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   final HashMap<String, ResourceSpec> specs;
+
+  /**
+   * Configuration value for other weights. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   final HashMap<String, Double> otherWeights;
+
+  /**
+   * Configuration value for collect types. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   final HashSet<String> collectTypes;
+
+  /**
+   * Configuration value for collect filter. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   final Predicate<Translation2d> collectFilter;
 
+  /**
+   * Configuration value for cell m. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   final double cellM;
+
+  /**
+   * Configuration value for res cells. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   final HashMap<Long, ArrayList<DynamicObject>> resCells;
+
+  /**
+   * Configuration value for oth cells. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   final HashMap<Long, ArrayList<DynamicObject>> othCells;
 
+  /**
+   * Creates a spatial dyn instance with the dependencies and tuning values used by this Repulsor
+   * component.
+   *
+   * @param dyn value used by this operation.
+   * @param specsIn value used by this operation.
+   * @param otherWeightsIn value used by this operation.
+   * @param collectTypesIn value used by this operation.
+   * @param collectFilterIn value used by this operation.
+   */
   SpatialDyn(
       List<DynamicObject> dyn,
       HashMap<String, ResourceSpec> specsIn,
@@ -131,6 +202,13 @@ public final class SpatialDyn {
     return out;
   }
 
+  /**
+   * Returns the count resources within value maintained by this Repulsor component.
+   *
+   * @param p value used by this operation.
+   * @param r value used by this operation.
+   * @return value produced by this operation.
+   */
   public int countResourcesWithin(Translation2d p, double r) {
     if (p == null) return 0;
     double rr2 = r * r;
@@ -147,6 +225,11 @@ public final class SpatialDyn {
     return c;
   }
 
+  /**
+   * Returns the total evidence value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public double totalEvidence() {
     if (resources.isEmpty() || specs.isEmpty()) return 0.0;
     double sum = 0.0;
@@ -163,6 +246,13 @@ public final class SpatialDyn {
     return Math.max(0.0, sum);
   }
 
+  /**
+   * Returns the evidence mass within value maintained by this Repulsor component.
+   *
+   * @param p value used by this operation.
+   * @param r value used by this operation.
+   * @return value produced by this operation.
+   */
   public double evidenceMassWithin(Translation2d p, double r) {
     if (p == null || resources.isEmpty() || specs.isEmpty()) return 0.0;
     double rr2 = r * r;
@@ -189,6 +279,12 @@ public final class SpatialDyn {
     return Math.max(0.0, sum);
   }
 
+  /**
+   * Returns the value at value maintained by this Repulsor component.
+   *
+   * @param p value used by this operation.
+   * @return value produced by this operation.
+   */
   public double valueAt(Translation2d p) {
     if (p == null || resources.isEmpty() || specs.isEmpty()) return 0.0;
 
@@ -238,6 +334,13 @@ public final class SpatialDyn {
     return Math.max(0.0, sum);
   }
 
+  /**
+   * Returns the value in square value maintained by this Repulsor component.
+   *
+   * @param center value used by this operation.
+   * @param half value used by this operation.
+   * @return value produced by this operation.
+   */
   public double valueInSquare(Translation2d center, double half) {
     if (center == null || resources.isEmpty() || specs.isEmpty()) return 0.0;
     double x0 = center.getX() - half;
@@ -270,6 +373,14 @@ public final class SpatialDyn {
     return Math.max(0.0, sum);
   }
 
+  /**
+   * Returns the centroid resources within value maintained by this Repulsor component.
+   *
+   * @param seed value used by this operation.
+   * @param r value used by this operation.
+   * @param minMass value used by this operation.
+   * @return value produced by this operation.
+   */
   public Translation2d centroidResourcesWithin(Translation2d seed, double r, double minMass) {
     if (seed == null || resources.isEmpty() || specs.isEmpty()) return null;
 
@@ -321,6 +432,13 @@ public final class SpatialDyn {
     return new Translation2d(sx / sw, sy / sw);
   }
 
+  /**
+   * Computes the nearest resource to value for the current Repulsor planning state.
+   *
+   * @param p value used by this operation.
+   * @param maxDist value used by this operation.
+   * @return value produced by this operation.
+   */
   public Translation2d nearestResourceTo(Translation2d p, double maxDist) {
     if (p == null || resources.isEmpty()) return null;
     double bestD2 = maxDist * maxDist;
@@ -343,6 +461,13 @@ public final class SpatialDyn {
     return best;
   }
 
+  /**
+   * Returns the other density value maintained by this Repulsor component.
+   *
+   * @param p value used by this operation.
+   * @param sigma value used by this operation.
+   * @return value produced by this operation.
+   */
   public double otherDensity(Translation2d p, double sigma) {
     if (p == null || others.isEmpty()) return 0.0;
     double s = Math.max(0.05, sigma);
@@ -371,6 +496,13 @@ public final class SpatialDyn {
     return Math.max(0.0, agg / wSum);
   }
 
+  /**
+   * Returns the local avoid penalty value maintained by this Repulsor component.
+   *
+   * @param p value used by this operation.
+   * @param r value used by this operation.
+   * @return value produced by this operation.
+   */
   public double localAvoidPenalty(Translation2d p, double r) {
     if (p == null || others.isEmpty()) return 0.0;
     double rr = Math.max(0.05, r);

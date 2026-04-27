@@ -22,11 +22,22 @@ package org.curtinfrc.frc2026.util.Repulsor;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldLayoutProvider;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
 
+/**
+ * Provides field tracker functionality for the Repulsor core Repulsor coordination layer. Use this
+ * type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+ * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public class FieldTracker extends FieldTrackerCore {
+  /** Returns the field tracker value maintained by this Repulsor component. */
   public FieldTracker() {
     super();
   }
 
+  /**
+   * Returns the field tracker value maintained by this Repulsor component.
+   *
+   * @param provider value used by this operation.
+   */
   public FieldTracker(FieldLayoutProvider provider) {
     super(provider);
   }

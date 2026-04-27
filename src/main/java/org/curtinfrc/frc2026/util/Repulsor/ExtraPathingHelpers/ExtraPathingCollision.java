@@ -23,9 +23,23 @@ import edu.wpi.first.math.geometry.Translation2d;
 import java.util.List;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 
+/**
+ * Provides extra pathing collision functionality for the Repulsor extra pathing geometry and
+ * collision helper layer. Use this type from robot code, field profiles, or tests when integrating
+ * the corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public final class ExtraPathingCollision {
   private ExtraPathingCollision() {}
 
+  /**
+   * Returns the rect corners value maintained by this Repulsor component.
+   *
+   * @param center value used by this operation.
+   * @param length value used by this operation.
+   * @param width value used by this operation.
+   * @return value produced by this operation.
+   */
   public static Translation2d[] rectCorners(Translation2d center, double length, double width) {
     double hx = length * 0.5, hy = width * 0.5;
     return new Translation2d[] {
@@ -36,6 +50,15 @@ public final class ExtraPathingCollision {
     };
   }
 
+  /**
+   * Returns the robot intersects value maintained by this Repulsor component.
+   *
+   * @param center value used by this operation.
+   * @param robotLengthMeters distance or field-coordinate value in meters.
+   * @param robotWidthMeters distance or field-coordinate value in meters.
+   * @param obstacles obstacle set used for safety checks, costs, or replanning.
+   * @return value produced by this operation.
+   */
   public static boolean robotIntersects(
       Translation2d center,
       double robotLengthMeters,
@@ -48,6 +71,16 @@ public final class ExtraPathingCollision {
     return false;
   }
 
+  /**
+   * Returns the segment completely blocked value maintained by this Repulsor component.
+   *
+   * @param start value used by this operation.
+   * @param goal value used by this operation.
+   * @param robotLengthMeters distance or field-coordinate value in meters.
+   * @param robotWidthMeters distance or field-coordinate value in meters.
+   * @param obstacles obstacle set used for safety checks, costs, or replanning.
+   * @return value produced by this operation.
+   */
   static boolean segmentCompletelyBlocked(
       Translation2d start,
       Translation2d goal,

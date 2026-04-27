@@ -19,9 +19,21 @@ import org.curtinfrc.frc2026.util.Repulsor.Shooting.GamePiecePhysics;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.ShotSolution;
 import org.curtinfrc.frc2026.util.Repulsor.VisionPlanner;
 
+/**
+ * Provides drag shot offload mapper functionality for the Repulsor offload serialization and
+ * native/JNI entrypoint boundary. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class DragShotOffloadMapper {
   private DragShotOffloadMapper() {}
 
+  /**
+   * Returns the to translation dto value maintained by this Repulsor component.
+   *
+   * @param translation value used by this operation.
+   * @return translation2d dto result for to translation dto.
+   */
   public static Translation2dDTO toTranslationDto(Translation2d translation) {
     if (translation == null) {
       return new Translation2dDTO();
@@ -29,6 +41,12 @@ public final class DragShotOffloadMapper {
     return new Translation2dDTO(translation.getX(), translation.getY());
   }
 
+  /**
+   * Returns the from translation dto value maintained by this Repulsor component.
+   *
+   * @param dto value used by this operation.
+   * @return value produced by this operation.
+   */
   public static Translation2d fromTranslationDto(Translation2dDTO dto) {
     if (dto == null) {
       return new Translation2d();
@@ -36,6 +54,12 @@ public final class DragShotOffloadMapper {
     return new Translation2d(dto.getX(), dto.getY());
   }
 
+  /**
+   * Returns the to pose dto value maintained by this Repulsor component.
+   *
+   * @param pose WPILib Pose2d in field-relative coordinates.
+   * @return pose2d dto result for to pose dto.
+   */
   public static Pose2dDTO toPoseDto(Pose2d pose) {
     if (pose == null) {
       return new Pose2dDTO();
@@ -46,6 +70,12 @@ public final class DragShotOffloadMapper {
         pose.getRotation().getRadians());
   }
 
+  /**
+   * Returns the from pose dto value maintained by this Repulsor component.
+   *
+   * @param dto value used by this operation.
+   * @return value produced by this operation.
+   */
   public static Pose2d fromPoseDto(Pose2dDTO dto) {
     if (dto == null) {
       return new Pose2d();
@@ -53,6 +83,12 @@ public final class DragShotOffloadMapper {
     return new Pose2d(dto.getX(), dto.getY(), Rotation2d.fromRadians(dto.getThetaRadians()));
   }
 
+  /**
+   * Returns the to game piece dto value maintained by this Repulsor component.
+   *
+   * @param gamePiece value used by this operation.
+   * @return game piece physics dto result for to game piece dto.
+   */
   public static GamePiecePhysicsDTO toGamePieceDto(GamePiecePhysics gamePiece) {
     if (gamePiece == null) {
       return new GamePiecePhysicsDTO();
@@ -64,6 +100,12 @@ public final class DragShotOffloadMapper {
         gamePiece.airDensityKgPerM3());
   }
 
+  /**
+   * Returns the from game piece dto value maintained by this Repulsor component.
+   *
+   * @param dto value used by this operation.
+   * @return game piece physics result for from game piece dto.
+   */
   public static GamePiecePhysics fromGamePieceDto(GamePiecePhysicsDTO dto) {
     if (dto == null) {
       return new SnapshotGamePiecePhysics(0, 0, 0, 1.225);
@@ -75,6 +117,12 @@ public final class DragShotOffloadMapper {
         dto.getAirDensityKgPerM3());
   }
 
+  /**
+   * Returns the to constraints dto value maintained by this Repulsor component.
+   *
+   * @param constraints value used by this operation.
+   * @return constraints dto result for to constraints dto.
+   */
   public static ConstraintsDTO toConstraintsDto(Constraints constraints) {
     if (constraints == null) {
       return new ConstraintsDTO();
@@ -87,6 +135,12 @@ public final class DragShotOffloadMapper {
         constraints.shotStyle().name());
   }
 
+  /**
+   * Returns the from constraints dto value maintained by this Repulsor component.
+   *
+   * @param dto value used by this operation.
+   * @return value produced by this operation.
+   */
   public static Constraints fromConstraintsDto(ConstraintsDTO dto) {
     if (dto == null) {
       return new Constraints(0, 0, 0, 0);
@@ -107,6 +161,12 @@ public final class DragShotOffloadMapper {
         style);
   }
 
+  /**
+   * Returns the to shot solution dto value maintained by this Repulsor component.
+   *
+   * @param solution value used by this operation.
+   * @return shot solution dto result for to shot solution dto.
+   */
   public static ShotSolutionDTO toShotSolutionDto(ShotSolution solution) {
     if (solution == null) {
       return null;
@@ -123,6 +183,12 @@ public final class DragShotOffloadMapper {
     return dto;
   }
 
+  /**
+   * Returns the from shot solution dto value maintained by this Repulsor component.
+   *
+   * @param dto value used by this operation.
+   * @return shot solution result for from shot solution dto.
+   */
   public static ShotSolution fromShotSolutionDto(ShotSolutionDTO dto) {
     if (dto == null) {
       return null;
@@ -138,6 +204,12 @@ public final class DragShotOffloadMapper {
         dto.getVerticalErrorMeters());
   }
 
+  /**
+   * Returns the to optional shot solution dto value maintained by this Repulsor component.
+   *
+   * @param solutionOptional value used by this operation.
+   * @return drag shot auto response dto result for to optional shot solution dto.
+   */
   public static DragShotAutoResponseDTO toOptionalShotSolutionDto(
       Optional<ShotSolution> solutionOptional) {
     if (solutionOptional == null || solutionOptional.isEmpty()) {
@@ -150,6 +222,12 @@ public final class DragShotOffloadMapper {
     return response;
   }
 
+  /**
+   * Returns the from optional shot solution dto value maintained by this Repulsor component.
+   *
+   * @param response value used by this operation.
+   * @return optional shot solution produced by this operation.
+   */
   public static Optional<ShotSolution> fromOptionalShotSolutionDto(
       DragShotAutoResponseDTO response) {
     if (response == null || !response.isPresent() || response.getSolution() == null) {
@@ -160,6 +238,12 @@ public final class DragShotOffloadMapper {
     return solution == null ? Optional.empty() : Optional.of(solution);
   }
 
+  /**
+   * Returns the to obstacle dtos value maintained by this Repulsor component.
+   *
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   * @return list of obstacle dto values produced by this operation.
+   */
   public static List<ObstacleDTO> toObstacleDtos(List<? extends Obstacle> dynamicObstacles) {
     List<ObstacleDTO> output = new ArrayList<>();
     if (dynamicObstacles == null) {
@@ -175,6 +259,12 @@ public final class DragShotOffloadMapper {
     return output;
   }
 
+  /**
+   * Returns the from obstacle dtos value maintained by this Repulsor component.
+   *
+   * @param obstacleDtos obstacle set used for safety checks, costs, or replanning.
+   * @return value produced by this operation.
+   */
   public static List<Obstacle> fromObstacleDtos(List<ObstacleDTO> obstacleDtos) {
     List<Obstacle> output = new ArrayList<>();
     if (obstacleDtos == null) {
@@ -262,21 +352,41 @@ public final class DragShotOffloadMapper {
       this.airDensityKgPerM3 = airDensityKgPerM3;
     }
 
+    /**
+     * Returns the mass kg value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     @Override
     public double massKg() {
       return massKg;
     }
 
+    /**
+     * Returns the cross section area m2 value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     @Override
     public double crossSectionAreaM2() {
       return crossSectionAreaM2;
     }
 
+    /**
+     * Returns the drag coefficient value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     @Override
     public double dragCoefficient() {
       return dragCoefficient;
     }
 
+    /**
+     * Returns the air density kg per m3 value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     @Override
     public double airDensityKgPerM3() {
       return airDensityKgPerM3;
@@ -301,11 +411,24 @@ public final class DragShotOffloadMapper {
       radius = dto == null ? 0.0 : dto.getRadius();
     }
 
+    /**
+     * Returns the get force at position value maintained by this Repulsor component.
+     *
+     * @param position value used by this operation.
+     * @param target value used by this operation.
+     * @return value produced by this operation.
+     */
     @Override
     public Force getForceAtPosition(Translation2d position, Translation2d target) {
       return new Force();
     }
 
+    /**
+     * Returns the intersects rectangle value maintained by this Repulsor component.
+     *
+     * @param rectCorners value used by this operation.
+     * @return value produced by this operation.
+     */
     @Override
     public boolean intersectsRectangle(Translation2d[] rectCorners) {
       if ("LINE_H".equals(kind)) {

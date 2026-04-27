@@ -21,4 +21,10 @@ package org.curtinfrc.frc2026.util.Repulsor;
 
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateRuntime;
 
+/**
+ * Provides predictive field state functionality for the Repulsor core Repulsor coordination layer.
+ * Use this type from robot code, field profiles, or tests when integrating the corresponding
+ * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+ * motion.
+ */
 public class PredictiveFieldState extends PredictiveFieldStateRuntime {}

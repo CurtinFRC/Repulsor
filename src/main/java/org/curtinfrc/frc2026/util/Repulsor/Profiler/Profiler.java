@@ -30,6 +30,12 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * Provides profiler functionality for the Repulsor low-overhead profiling and event recording
+ * layer. Use this type from robot code, field profiles, or tests when integrating the corresponding
+ * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+ * motion.
+ */
 public final class Profiler {
   private static final class Scope implements AutoCloseable {
     private final Profiler p;
@@ -42,6 +48,7 @@ public final class Profiler {
       this.startNs = startNs;
     }
 
+    /** Runs close in the Repulsor runtime. */
     @Override
     public void close() {
       long end = System.nanoTime();
@@ -106,11 +113,17 @@ public final class Profiler {
                 "RepulsorProfilerShutdown"));
   }
 
+  /**
+   * Returns the enabled value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public static boolean enabled() {
     Profiler p = INSTANCE;
     return p != null && p.cfg.enabled;
   }
 
+  /** Runs ensure init in the Repulsor runtime. */
   public static void ensureInit() {
     if (!profilerExplicitlyEnabled()) return;
     if (!isSimulationRuntime()) return;
@@ -127,6 +140,12 @@ public final class Profiler {
     }
   }
 
+  /**
+   * Returns the section value maintained by this Repulsor component.
+   *
+   * @param name value used by this operation.
+   * @return auto closeable result for section.
+   */
   public static AutoCloseable section(String name) {
     if (!profilerExplicitlyEnabled()) return NOOP;
     if (!isSimulationRuntime()) return NOOP;
@@ -136,6 +155,12 @@ public final class Profiler {
     return new Scope(p, name, System.nanoTime());
   }
 
+  /**
+   * Runs counter add in the Repulsor runtime.
+   *
+   * @param name value used by this operation.
+   * @param delta value used by this operation.
+   */
   public static void counterAdd(String name, long delta) {
     if (!profilerExplicitlyEnabled()) return;
     if (!isSimulationRuntime()) return;
@@ -145,6 +170,12 @@ public final class Profiler {
     p.counters.computeIfAbsent(name, k -> new AtomicLong(0L)).addAndGet(delta);
   }
 
+  /**
+   * Runs gauge set in the Repulsor runtime.
+   *
+   * @param name value used by this operation.
+   * @param value value used by this operation.
+   */
   public static void gaugeSet(String name, long value) {
     if (!profilerExplicitlyEnabled()) return;
     if (!isSimulationRuntime()) return;
@@ -154,12 +185,22 @@ public final class Profiler {
     p.gauges.computeIfAbsent(name, k -> new AtomicLong(0L)).set(value);
   }
 
+  /**
+   * Returns the output path or empty value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public static String outputPathOrEmpty() {
     Profiler p = INSTANCE;
     if (p == null || p.writer == null) return "";
     return p.writer.path().toString();
   }
 
+  /**
+   * Runs dump now in the Repulsor runtime.
+   *
+   * @param reason value used by this operation.
+   */
   public static void dumpNow(String reason) {
     if (!profilerExplicitlyEnabled()) return;
     if (!isSimulationRuntime()) return;
@@ -169,6 +210,11 @@ public final class Profiler {
     p.dumpSummary(reason == null ? "manual" : reason);
   }
 
+  /**
+   * Runs flush now in the Repulsor runtime.
+   *
+   * @param reason value used by this operation.
+   */
   public static void flushNow(String reason) {
     dumpNow(reason == null ? "flush" : reason);
   }
@@ -283,6 +329,7 @@ public final class Profiler {
         || normalized.equals("on");
   }
 
+  /** Runs shutdown in the Repulsor runtime. */
   public static void shutdown() {
     Profiler p = INSTANCE;
     if (p == null) return;

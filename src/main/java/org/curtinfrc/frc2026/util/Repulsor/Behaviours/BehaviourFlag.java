@@ -19,6 +19,12 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Behaviours;
 
+/**
+ * Defines the behaviour flag values used by the Repulsor command-behaviour layer that converts
+ * strategy and state into WPILib commands. Use this type from robot code, field profiles, or tests
+ * when integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+ * method documents robot-relative motion.
+ */
 public enum BehaviourFlag {
   DEFENCE_MODE,
   AUTOPATH_MODE,

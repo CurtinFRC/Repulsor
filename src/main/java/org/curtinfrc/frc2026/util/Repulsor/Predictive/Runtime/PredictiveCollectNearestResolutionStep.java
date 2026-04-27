@@ -31,16 +31,58 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateOps;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.SpatialDyn;
 import org.littletonrobotics.junction.Logger;
 
+/**
+ * Provides predictive collect nearest resolution step functionality for the Repulsor runtime helper
+ * layer shared by behaviours and planners. Use this type from robot code, field profiles, or tests
+ * when integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+ * method documents robot-relative motion.
+ */
 public final class PredictiveCollectNearestResolutionStep {
   private PredictiveCollectNearestResolutionStep() {}
 
+  /**
+   * Configuration value for early switch richer units abs. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   static final double EARLY_SWITCH_RICHER_UNITS_ABS = 0.08;
+
+  /**
+   * Configuration value for early switch richer units rel. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   static final double EARLY_SWITCH_RICHER_UNITS_REL = 1.55;
+
+  /**
+   * Configuration value for early switch eta delta max s. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   static final double EARLY_SWITCH_ETA_DELTA_MAX_S = 0.85;
+
+  /**
+   * Configuration value for early switch score floor delta. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   static final double EARLY_SWITCH_SCORE_FLOOR_DELTA = 0.45;
+
+  /**
+   * Configuration value for escape same target eps m. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   static final double ESCAPE_SAME_TARGET_EPS_M = 0.05;
+
+  /**
+   * Configuration value for return fresh max age s. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   static final double RETURN_FRESH_MAX_AGE_S = 0.30;
 
+  /**
+   * Returns the allow commit window richer switch value maintained by this Repulsor component.
+   *
+   * @param current value used by this operation.
+   * @param candidate value used by this operation.
+   * @return value produced by this operation.
+   */
   static boolean allowCommitWindowRicherSwitch(CollectEval current, CollectEval candidate) {
     if (current == null || candidate == null) return false;
     if (!Double.isFinite(current.units) || !Double.isFinite(candidate.units)) return false;
@@ -55,12 +97,29 @@ public final class PredictiveCollectNearestResolutionStep {
     return significantlyRicher && etaAcceptable && scoreAcceptable;
   }
 
+  /**
+   * Returns the should drop escaped current target value maintained by this Repulsor component.
+   *
+   * @param escape value used by this operation.
+   * @param currentTarget value used by this operation.
+   * @param chosenPoint value used by this operation.
+   * @return value produced by this operation.
+   */
   static boolean shouldDropEscapedCurrentTarget(
       boolean escape, Translation2d currentTarget, Translation2d chosenPoint) {
     if (!escape || currentTarget == null || chosenPoint == null) return false;
     return currentTarget.getDistance(chosenPoint) <= ESCAPE_SAME_TARGET_EPS_M;
   }
 
+  /**
+   * Returns the count fresh resources within value maintained by this Repulsor component.
+   *
+   * @param dyn value used by this operation.
+   * @param center value used by this operation.
+   * @param r value used by this operation.
+   * @param maxAgeS value used by this operation.
+   * @return value produced by this operation.
+   */
   static int countFreshResourcesWithin(
       SpatialDyn dyn, Translation2d center, double r, double maxAgeS) {
     if (dyn == null || center == null || dyn.resources == null || dyn.resources.isEmpty()) return 0;
@@ -77,6 +136,15 @@ public final class PredictiveCollectNearestResolutionStep {
     return n;
   }
 
+  /**
+   * Computes the nearest fresh resource to value for the current Repulsor planning state.
+   *
+   * @param dyn value used by this operation.
+   * @param center value used by this operation.
+   * @param maxDist value used by this operation.
+   * @param maxAgeS value used by this operation.
+   * @return value produced by this operation.
+   */
   static Translation2d nearestFreshResourceTo(
       SpatialDyn dyn, Translation2d center, double maxDist, double maxAgeS) {
     if (dyn == null || center == null || dyn.resources == null || dyn.resources.isEmpty())
@@ -98,6 +166,35 @@ public final class PredictiveCollectNearestResolutionStep {
     return best;
   }
 
+  /**
+   * Returns the resolve value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param ourPos value used by this operation.
+   * @param cap value used by this operation.
+   * @param goal value used by this operation.
+   * @param cellM value used by this operation.
+   * @param dyn value used by this operation.
+   * @param enemyIntent value used by this operation.
+   * @param allyIntent value used by this operation.
+   * @param inShootBand value used by this operation.
+   * @param bestP value used by this operation.
+   * @param bestTouch value used by this operation.
+   * @param bestHeading value used by this operation.
+   * @param bestE value used by this operation.
+   * @param totalEv value used by this operation.
+   * @param minUnits value used by this operation.
+   * @param minCount value used by this operation.
+   * @param minEv value used by this operation.
+   * @param onHalf value used by this operation.
+   * @param onR value used by this operation.
+   * @param minHardUnits value used by this operation.
+   * @param footprintMinUnits value used by this operation.
+   * @param rCore value used by this operation.
+   * @param rSnap value used by this operation.
+   * @param rCentroid value used by this operation.
+   * @return point candidate result for resolve.
+   */
   public static PointCandidate resolve(
       PredictiveFieldStateOps ops,
       Translation2d ourPos,

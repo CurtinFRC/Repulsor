@@ -22,12 +22,41 @@ package org.curtinfrc.frc2026.util.Repulsor.Behaviours;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.EnumSet;
 
+/**
+ * Provides behaviour functionality for the Repulsor command-behaviour layer that converts strategy
+ * and state into WPILib commands. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public abstract class Behaviour {
+  /**
+   * Returns the name value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public abstract String name();
 
+  /**
+   * Returns the priority value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public abstract int priority();
 
+  /**
+   * Returns the should run value maintained by this Repulsor component.
+   *
+   * @param flags value used by this operation.
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   * @return value produced by this operation.
+   */
   public abstract boolean shouldRun(EnumSet<BehaviourFlag> flags, BehaviourContext ctx);
 
+  /**
+   * Builds the WPILib command sequence for the current behaviour context.
+   *
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   * @return value produced by this operation.
+   */
   public abstract Command build(BehaviourContext ctx);
 }

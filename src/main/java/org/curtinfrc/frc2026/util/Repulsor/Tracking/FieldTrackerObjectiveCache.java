@@ -26,9 +26,23 @@ import org.curtinfrc.frc2026.util.Repulsor.Tracking.Internal.ObjectiveCache;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElementModel;
 
+/**
+ * Provides field tracker objective cache functionality for the Repulsor field-object tracking and
+ * collection objective layer. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 final class FieldTrackerObjectiveCache {
   private FieldTrackerObjectiveCache() {}
 
+  /**
+   * Returns the mix hash value maintained by this Repulsor component.
+   *
+   * @param h value used by this operation.
+   * @param x distance or field-coordinate value in meters.
+   * @param y distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   static int mixHash(int h, double x, double y) {
     long a = Double.doubleToLongBits(x);
     long b = Double.doubleToLongBits(y);
@@ -37,6 +51,13 @@ final class FieldTrackerObjectiveCache {
     return h;
   }
 
+  /**
+   * Runs rebuild objective cache for category in the Repulsor runtime.
+   *
+   * @param cache value used by this operation.
+   * @param cat value used by this operation.
+   * @param fieldMap value used by this operation.
+   */
   static void rebuildObjectiveCacheForCategory(
       ObjectiveCache cache, CategorySpec cat, GameElement[] fieldMap) {
     GameElement[] fm = fieldMap;

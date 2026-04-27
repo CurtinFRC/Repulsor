@@ -30,9 +30,24 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateOps;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
 
+/**
+ * Provides predictive collect config runtime functionality for the Repulsor runtime helper layer
+ * shared by behaviours and planners. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class PredictiveCollectConfigRuntime {
   private PredictiveCollectConfigRuntime() {}
 
+  /**
+   * Updates register resource spec state or telemetry as part of the Repulsor runtime loop. This
+   * may mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param ops value used by this operation.
+   * @param type value used by this operation.
+   * @param spec value used by this operation.
+   */
   public static void registerResourceSpec(
       PredictiveFieldStateOps ops, String type, ResourceSpec spec) {
     if (type == null || type.isEmpty() || spec == null) return;
@@ -41,6 +56,15 @@ public final class PredictiveCollectConfigRuntime {
     ops.invalidateDynCache();
   }
 
+  /**
+   * Updates register other type weight state or telemetry as part of the Repulsor runtime loop.
+   * This may mutate local state, NetworkTables output, planner caches, or command-side runtime
+   * state depending on the owning type.
+   *
+   * @param ops value used by this operation.
+   * @param type value used by this operation.
+   * @param weight value used by this operation.
+   */
   public static void registerOtherTypeWeight(
       PredictiveFieldStateOps ops, String type, double weight) {
     if (type == null || type.isEmpty()) return;
@@ -49,6 +73,14 @@ public final class PredictiveCollectConfigRuntime {
     ops.invalidateDynCache();
   }
 
+  /**
+   * Updates set collect resource types state or telemetry as part of the Repulsor runtime loop.
+   * This may mutate local state, NetworkTables output, planner caches, or command-side runtime
+   * state depending on the owning type.
+   *
+   * @param ops value used by this operation.
+   * @param types value used by this operation.
+   */
   public static void setCollectResourceTypes(PredictiveFieldStateOps ops, Set<String> types) {
     ops.collectResourceTypes.clear();
     if (types != null) {
@@ -64,10 +96,22 @@ public final class PredictiveCollectConfigRuntime {
     ops.invalidateDynCache();
   }
 
+  /**
+   * Returns the get collect resource types value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @return value produced by this operation.
+   */
   public static Set<String> getCollectResourceTypes(PredictiveFieldStateOps ops) {
     return Collections.unmodifiableSet(new HashSet<>(ops.collectResourceTypes));
   }
 
+  /**
+   * Runs add collect resource type in the Repulsor runtime.
+   *
+   * @param ops value used by this operation.
+   * @param type value used by this operation.
+   */
   public static void addCollectResourceType(PredictiveFieldStateOps ops, String type) {
     if (type == null || type.isEmpty()) return;
     if (ops.collectResourceTypes.add(type.toLowerCase())) {
@@ -76,6 +120,12 @@ public final class PredictiveCollectConfigRuntime {
     }
   }
 
+  /**
+   * Runs remove collect resource type in the Repulsor runtime.
+   *
+   * @param ops value used by this operation.
+   * @param type value used by this operation.
+   */
   public static void removeCollectResourceType(PredictiveFieldStateOps ops, String type) {
     if (type == null || type.isEmpty()) return;
     if (ops.collectResourceTypes.remove(type.toLowerCase())) {
@@ -87,11 +137,26 @@ public final class PredictiveCollectConfigRuntime {
     }
   }
 
+  /**
+   * Returns the is collect resource type value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param type value used by this operation.
+   * @return value produced by this operation.
+   */
   public static boolean isCollectResourceType(PredictiveFieldStateOps ops, String type) {
     if (type == null || type.isEmpty()) return false;
     return ops.collectResourceTypes.contains(type.toLowerCase());
   }
 
+  /**
+   * Updates set collect resource position filter state or telemetry as part of the Repulsor runtime
+   * loop. This may mutate local state, NetworkTables output, planner caches, or command-side
+   * runtime state depending on the owning type.
+   *
+   * @param ops value used by this operation.
+   * @param filter value used by this operation.
+   */
   public static void setCollectResourcePositionFilter(
       PredictiveFieldStateOps ops, Predicate<Translation2d> filter) {
     ops.collectResourcePositionFilter =
@@ -100,11 +165,28 @@ public final class PredictiveCollectConfigRuntime {
     ops.invalidateDynCache();
   }
 
+  /**
+   * Updates set dynamic objects state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param ops value used by this operation.
+   * @param objs value used by this operation.
+   */
   public static void setDynamicObjects(PredictiveFieldStateOps ops, List<DynamicObject> objs) {
     ops.dynamicObjects = (objs != null) ? List.copyOf(objs) : List.of();
     ops.invalidateDynCache();
   }
 
+  /**
+   * Updates set world state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param ops value used by this operation.
+   * @param elements value used by this operation.
+   * @param ours value used by this operation.
+   */
   public static void setWorld(
       PredictiveFieldStateOps ops, List<GameElement> elements, Alliance ours) {
     ops.worldElements = elements != null ? elements : List.of();

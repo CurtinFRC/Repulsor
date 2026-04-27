@@ -26,18 +26,39 @@ import java.util.Objects;
 import java.util.Optional;
 import org.curtinfrc.frc2026.util.Repulsor.Simulation.NetworkTablesValue;
 
+/**
+ * Provides network tables signals functionality for the Repulsor rule-based strategy and signal
+ * reasoning layer. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public final class NetworkTablesSignals implements Signals, AutoCloseable {
   private final NetworkTableInstance inst;
   private final String basePath;
   private final Map<SignalKey<?>, NetworkTablesValue<?>> values = new HashMap<>();
   private final Map<SignalKey<?>, Object> initial = new HashMap<>();
 
+  /**
+   * Returns the network tables signals value maintained by this Repulsor component.
+   *
+   * @param inst value used by this operation.
+   * @param basePath value used by this operation.
+   */
   public NetworkTablesSignals(NetworkTableInstance inst, String basePath) {
     this.inst = Objects.requireNonNull(inst, "inst");
     if (basePath == null || basePath.isEmpty()) throw new IllegalArgumentException("basePath");
     this.basePath = normalizeBase(basePath);
   }
 
+  /**
+   * Updates register state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param initialValue value used by this operation.
+   * @return network tables signals result for register.
+   */
   public <T> NetworkTablesSignals register(SignalKey<T> key, T initialValue) {
     Objects.requireNonNull(key, "key");
     if (initialValue != null && !key.type().isInstance(initialValue)) {
@@ -53,23 +74,48 @@ public final class NetworkTablesSignals implements Signals, AutoCloseable {
     return this;
   }
 
+  /**
+   * Runs put in the Repulsor runtime.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param value value used by this operation.
+   */
   @Override
   public <T> void put(SignalKey<T> key, T value) {
     NetworkTablesValue<T> v = ensure(key);
     v.set(copyIfArray(value));
   }
 
+  /**
+   * Returns the latest value maintained by this Repulsor component.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   @Override
   public <T> Optional<T> get(SignalKey<T> key) {
     NetworkTablesValue<T> v = ensure(key);
     return Optional.ofNullable(v.get());
   }
 
+  /**
+   * Returns the get or value maintained by this Repulsor component.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param fallback value used by this operation.
+   * @return value produced by this operation.
+   */
   @Override
   public <T> T getOr(SignalKey<T> key, T fallback) {
     return get(key).orElse(fallback);
   }
 
+  /**
+   * Returns the has value maintained by this Repulsor component.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   @Override
   public boolean has(SignalKey<?> key) {
     Objects.requireNonNull(key, "key");
@@ -77,6 +123,11 @@ public final class NetworkTablesSignals implements Signals, AutoCloseable {
     return true;
   }
 
+  /**
+   * Updates clear state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   */
   @Override
   public void clear() {
     for (Map.Entry<SignalKey<?>, NetworkTablesValue<?>> e : values.entrySet()) {
@@ -88,11 +139,13 @@ public final class NetworkTablesSignals implements Signals, AutoCloseable {
     }
   }
 
+  /** Runs flush in the Repulsor runtime. */
   @Override
   public void flush() {
     for (NetworkTablesValue<?> v : values.values()) v.flush();
   }
 
+  /** Runs close in the Repulsor runtime. */
   @Override
   public void close() {
     for (NetworkTablesValue<?> v : values.values()) v.close();

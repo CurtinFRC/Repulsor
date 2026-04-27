@@ -19,6 +19,11 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Vision.Test;
 
+/**
+ * Defines the agent role values used by the Repulsor simulation test harness layer. Use this type
+ * from robot code, field profiles, or tests when integrating the corresponding Repulsor subsystem.
+ * Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public enum AgentRole {
   BLOCKER,
   SCORER,

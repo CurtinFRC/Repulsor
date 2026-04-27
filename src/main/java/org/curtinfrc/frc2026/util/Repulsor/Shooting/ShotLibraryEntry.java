@@ -21,6 +21,12 @@ package org.curtinfrc.frc2026.util.Repulsor.Shooting;
 
 import edu.wpi.first.math.geometry.Translation2d;
 
+/**
+ * Provides shot library entry functionality for the Repulsor projectile and shot-planning layer.
+ * Use this type from robot code, field profiles, or tests when integrating the corresponding
+ * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+ * motion.
+ */
 public final class ShotLibraryEntry {
   private final Translation2d shooterPosition;
   private final double shooterYawRad;
@@ -29,6 +35,16 @@ public final class ShotLibraryEntry {
   private final double timeToPlaneSeconds;
   private final double verticalErrorMeters;
 
+  /**
+   * Returns the shot library entry value maintained by this Repulsor component.
+   *
+   * @param shooterPosition value used by this operation.
+   * @param shooterYawRad value used by this operation.
+   * @param launchSpeedMetersPerSecond distance or field-coordinate value in meters.
+   * @param launchAngleRad value used by this operation.
+   * @param timeToPlaneSeconds time value in seconds.
+   * @param verticalErrorMeters distance or field-coordinate value in meters.
+   */
   public ShotLibraryEntry(
       Translation2d shooterPosition,
       double shooterYawRad,
@@ -44,26 +60,56 @@ public final class ShotLibraryEntry {
     this.verticalErrorMeters = verticalErrorMeters;
   }
 
+  /**
+   * Returns the shooter position value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Translation2d shooterPosition() {
     return shooterPosition;
   }
 
+  /**
+   * Returns the shooter yaw rad value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public double shooterYawRad() {
     return shooterYawRad;
   }
 
+  /**
+   * Returns the launch speed meters per second value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public double launchSpeedMetersPerSecond() {
     return launchSpeedMetersPerSecond;
   }
 
+  /**
+   * Returns the launch angle rad value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public double launchAngleRad() {
     return launchAngleRad;
   }
 
+  /**
+   * Returns the time to plane seconds value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public double timeToPlaneSeconds() {
     return timeToPlaneSeconds;
   }
 
+  /**
+   * Returns the vertical error meters value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public double verticalErrorMeters() {
     return verticalErrorMeters;
   }

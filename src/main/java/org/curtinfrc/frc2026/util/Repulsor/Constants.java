@@ -26,6 +26,11 @@ import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldModel;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.Rebuilt2026;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.Reefscape2025;
 
+/**
+ * Provides constants functionality for the Repulsor core Repulsor coordination layer. Use this type
+ * from robot code, field profiles, or tests when integrating the corresponding Repulsor subsystem.
+ * Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public final class Constants {
   public static final FieldDefinition FIELD = loadDefaultField();
   public static final FieldModel FIELD_MODEL = FIELD.fieldModel();

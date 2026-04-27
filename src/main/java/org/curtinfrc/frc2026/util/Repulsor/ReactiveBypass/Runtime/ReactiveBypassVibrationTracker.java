@@ -24,15 +24,34 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.ArrayDeque;
 
+/**
+ * Provides reactive bypass vibration tracker functionality for the Repulsor runtime helper layer
+ * shared by behaviours and planners. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 final class ReactiveBypassVibrationTracker {
   private final ArrayDeque<ReactiveBypassSample> vib = new ArrayDeque<>();
   private double vibAccumTime = 0.0;
 
+  /**
+   * Updates reset state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   */
   void reset() {
     vib.clear();
     vibAccumTime = 0.0;
   }
 
+  /**
+   * Runs feed window in the Repulsor runtime.
+   *
+   * @param pose WPILib Pose2d in field-relative coordinates.
+   * @param heading value used by this operation.
+   * @param dt value used by this operation.
+   * @param cfg value used by this operation.
+   */
   void feedWindow(Pose2d pose, Rotation2d heading, double dt, ReactiveBypassConfig cfg) {
     Translation2d p = pose.getTranslation();
     double cos = Math.cos(heading.getRadians());
@@ -55,6 +74,12 @@ final class ReactiveBypassVibrationTracker {
     }
   }
 
+  /**
+   * Returns the is vibrating value maintained by this Repulsor component.
+   *
+   * @param cfg value used by this operation.
+   * @return value produced by this operation.
+   */
   boolean isVibrating(ReactiveBypassConfig cfg) {
     if (vib.isEmpty()) return false;
     double pMin = vib.getFirst().sPara, pMax = pMin;
@@ -78,6 +103,13 @@ final class ReactiveBypassVibrationTracker {
     return disp < cfg.vibMinDisp && flips >= cfg.vibMaxDirFlips;
   }
 
+  /**
+   * Returns the is forward stuck value maintained by this Repulsor component.
+   *
+   * @param cfg value used by this operation.
+   * @param lastOcc value used by this operation.
+   * @return value produced by this operation.
+   */
   boolean isForwardStuck(ReactiveBypassConfig cfg, double lastOcc) {
     if (vib.isEmpty()) return false;
     double requiredWindow = cfg.vibWindowS * cfg.stuckLookbackFrac;
@@ -88,6 +120,13 @@ final class ReactiveBypassVibrationTracker {
     return forwardDisp < cfg.stuckMinForwardProgress && lastOcc >= cfg.stuckOccMin;
   }
 
+  /**
+   * Returns the is vibrating with occ boost value maintained by this Repulsor component.
+   *
+   * @param cfg value used by this operation.
+   * @param lastOcc value used by this operation.
+   * @return value produced by this operation.
+   */
   boolean isVibratingWithOccBoost(ReactiveBypassConfig cfg, double lastOcc) {
     if (!isVibrating(cfg)) return false;
     return lastOcc >= Math.max(0.0, cfg.occHigh - cfg.escapeOccBoost);

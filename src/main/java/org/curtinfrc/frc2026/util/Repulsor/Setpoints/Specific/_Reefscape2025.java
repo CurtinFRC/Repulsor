@@ -28,11 +28,22 @@ import org.curtinfrc.frc2026.util.Repulsor.Setpoints.GameSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointContext;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointType;
 
+/**
+ * Provides reefscape2025 functionality for the Repulsor field-specific setpoint catalog bridged
+ * through generic setpoint abstractions. Use this type from robot code, field profiles, or tests
+ * when integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+ * method documents robot-relative motion.
+ */
 public class _Reefscape2025 {
   protected _Reefscape2025() {}
 
+  /**
+   * Configuration value for a. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public static final GameSetpoint A =
       new ReefTagScoreSetpoint("A", 18, true, 0.0); // i dont remember the offsets, idrc anyways
+
   public static final GameSetpoint B = new ReefTagScoreSetpoint("B", 18, false, 0.0);
   public static final GameSetpoint C = new ReefTagScoreSetpoint("C", 17, true, 0.0);
   public static final GameSetpoint D = new ReefTagScoreSetpoint("D", 17, false, 0.0);
@@ -46,20 +57,39 @@ public class _Reefscape2025 {
   public static final GameSetpoint L = new ReefTagScoreSetpoint("L", 19, false, 0.0);
 
   public static final GameSetpoint CLOSE = new ReefTagScoreSetpoint("CLOSE", 18, true, 0.0);
+
+  /**
+   * Configuration value for close left. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public static final GameSetpoint CLOSE_LEFT =
       new ReefTagScoreSetpoint("CLOSE_LEFT", 19, true, 0.0);
+
+  /**
+   * Configuration value for close right. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   public static final GameSetpoint CLOSE_RIGHT =
       new ReefTagScoreSetpoint("CLOSE_RIGHT", 17, true, 0.0);
+
   public static final GameSetpoint FAR_RIGHT = new ReefTagScoreSetpoint("FAR_RIGHT", 22, true, 0.0);
   public static final GameSetpoint FAR_LEFT = new ReefTagScoreSetpoint("FAR_LEFT", 20, true, 0.0);
   public static final GameSetpoint FAR = new ReefTagScoreSetpoint("FAR", 21, true, 0.0);
 
+  /**
+   * Configuration value for left hp. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public static final GameSetpoint LEFT_HP =
       new StaticPoseSetpoint(
           "LEFT_HP",
           SetpointType.kHumanPlayer,
           new Pose2d(1.148711085319519, 7.199769020080566, Rotation2d.fromDegrees(125.989 + 180)));
 
+  /**
+   * Configuration value for right hp. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public static final GameSetpoint RIGHT_HP =
       new StaticPoseSetpoint(
           "RIGHT_HP",
@@ -77,6 +107,12 @@ public class _Reefscape2025 {
       this.bluePose = bluePose == null ? Pose2d.kZero : bluePose;
     }
 
+    /**
+     * Returns the blue pose value maintained by this Repulsor component.
+     *
+     * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+     * @return value produced by this operation.
+     */
     @Override
     public Pose2d bluePose(SetpointContext ctx) {
       return bluePose;
@@ -95,6 +131,12 @@ public class _Reefscape2025 {
       this.offset = offset;
     }
 
+    /**
+     * Returns the blue pose value maintained by this Repulsor component.
+     *
+     * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+     * @return value produced by this operation.
+     */
     @Override
     public Pose2d bluePose(SetpointContext ctx) {
       var tagPose3dOpt = aprilTagLayout.getTagPose(tagID);
@@ -121,6 +163,11 @@ public class _Reefscape2025 {
           mappedPose.getRotation().plus(Rotation2d.kPi));
     }
 
+    /**
+     * Returns the approximate blue pose value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     @Override
     public Pose2d approximateBluePose() {
       var tagPose3dOpt = aprilTagLayout.getTagPose(tagID);

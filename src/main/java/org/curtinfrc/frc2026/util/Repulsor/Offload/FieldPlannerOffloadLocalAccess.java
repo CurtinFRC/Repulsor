@@ -11,12 +11,35 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.RepulsorSample;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
 
+/**
+ * Provides field planner offload local access functionality for the Repulsor offload serialization
+ * and native/JNI entrypoint boundary. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class FieldPlannerOffloadLocalAccess {
   private static final Object LOCK = new Object();
   private static FieldPlanner planner;
 
   private FieldPlannerOffloadLocalAccess() {}
 
+  /**
+   * Computes the calculate local value for the current Repulsor planning state. Call this from
+   * periodic planning or tests when a fresh decision is required; inputs should already be
+   * expressed in the coordinate frame expected by the parameter names.
+   *
+   * @param pose WPILib Pose2d in field-relative coordinates.
+   * @param requestedGoalPose value used by this operation.
+   * @param activeGoalPose value used by this operation.
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   * @param robot_x distance or field-coordinate value in meters.
+   * @param robot_y distance or field-coordinate value in meters.
+   * @param categoryName value used by this operation.
+   * @param preferredAllianceName value used by this operation.
+   * @param suppressFallback value used by this operation.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @return field planner calculate result dto result for calculate local.
+   */
   public static FieldPlannerCalculateResultDTO calculateLocal(
       Pose2d pose,
       Pose2d requestedGoalPose,

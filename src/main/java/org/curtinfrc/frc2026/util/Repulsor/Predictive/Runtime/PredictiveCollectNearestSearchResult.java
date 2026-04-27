@@ -22,6 +22,28 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal.CollectEval;
 
+/**
+ * Immutable data record for predictive collect nearest search result values passed through the
+ * Repulsor runtime helper layer shared by behaviours and planners. Use this type from robot code,
+ * field profiles, or tests when integrating the corresponding Repulsor subsystem. Coordinates are
+ * field-relative unless a method documents robot-relative motion.
+ *
+ * @param bestPoint component of the predictive collect nearest search result model
+ * @param bestTouch record component for the predictive collect nearest search result model
+ * @param bestHeading record component for the predictive collect nearest search result model
+ * @param bestEval record component for the predictive collect nearest search result model
+ * @param topScore record component for the predictive collect nearest search result model
+ * @param topEta record component for the predictive collect nearest search result model
+ * @param topUnits record component for the predictive collect nearest search result model
+ * @param topRegion record component for the predictive collect nearest search result model
+ * @param topDep record component for the predictive collect nearest search result model
+ * @param topAvoid record component for the predictive collect nearest search result model
+ * @param topEnemyPressure record component for the predictive collect nearest search result model
+ * @param topAllyCongestion record component for the predictive collect nearest search result model
+ * @param topActivity record component for the predictive collect nearest search result model
+ * @param topEvidence record component for the predictive collect nearest search result model
+ * @param topCount record component for the predictive collect nearest search result snapshot
+ */
 public record PredictiveCollectNearestSearchResult(
     Translation2d bestPoint,
     Translation2d bestTouch,

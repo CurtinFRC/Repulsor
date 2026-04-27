@@ -26,9 +26,23 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Internal.TrackedObj;
 
+/**
+ * Provides field tracker dynamic tracker functionality for the Repulsor field-object tracking and
+ * collection objective layer. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 final class FieldTrackerDynamicTracker {
   private final ConcurrentHashMap<String, TrackedObj> tracked = new ConcurrentHashMap<>();
 
+  /**
+   * Runs ingest tracked in the Repulsor runtime.
+   *
+   * @param id value used by this operation.
+   * @param type value used by this operation.
+   * @param p value used by this operation.
+   * @param nowNs value used by this operation.
+   */
   void ingestTracked(String id, String type, Pose3d p, long nowNs) {
     if (id == null || id.isEmpty() || p == null) return;
     TrackedObj st = tracked.computeIfAbsent(id, TrackedObj::new);
@@ -49,6 +63,11 @@ final class FieldTrackerDynamicTracker {
     }
   }
 
+  /**
+   * Returns the snapshot dynamics value maintained by this Repulsor component.
+   *
+   * @return list of dynamic object values produced by this operation.
+   */
   List<DynamicObject> snapshotDynamics() {
     long nowNs = System.nanoTime();
 

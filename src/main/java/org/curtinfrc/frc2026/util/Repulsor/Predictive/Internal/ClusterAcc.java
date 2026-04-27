@@ -18,9 +18,34 @@
  */
 package org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal;
 
+/**
+ * Provides cluster acc functionality for the Repulsor package-internal data structures used by the
+ * surrounding Repulsor subsystem. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class ClusterAcc {
+  /**
+   * Configuration value for sx. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public double sx;
+
+  /**
+   * Configuration value for sy. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public double sy;
+
+  /**
+   * Configuration value for sw. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public double sw;
+
+  /**
+   * Configuration value for n. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public int n;
 }

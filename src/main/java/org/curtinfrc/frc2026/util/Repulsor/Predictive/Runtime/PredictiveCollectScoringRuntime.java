@@ -30,9 +30,29 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveClock;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateOps;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.SpatialDyn;
 
+/**
+ * Provides predictive collect scoring runtime functionality for the Repulsor runtime helper layer
+ * shared by behaviours and planners. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class PredictiveCollectScoringRuntime {
   private PredictiveCollectScoringRuntime() {}
 
+  /**
+   * Returns the eval collect point value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param ourPos value used by this operation.
+   * @param cap value used by this operation.
+   * @param p value used by this operation.
+   * @param goal value used by this operation.
+   * @param cellM value used by this operation.
+   * @param dyn value used by this operation.
+   * @param enemyIntent value used by this operation.
+   * @param allyIntent value used by this operation.
+   * @return collect eval result for eval collect point.
+   */
   public static CollectEval evalCollectPoint(
       PredictiveFieldStateOps ops,
       Translation2d ourPos,
@@ -116,12 +136,29 @@ public final class PredictiveCollectScoringRuntime {
     return e;
   }
 
+  /**
+   * Returns the normalize value value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param dyn value used by this operation.
+   * @param value value used by this operation.
+   * @return value produced by this operation.
+   */
   public static double normalizeValue(PredictiveFieldStateOps ops, SpatialDyn dyn, double value) {
     double tot = dyn != null ? dyn.totalEvidence() : 0.0;
     double denom = 0.65 + 0.35 * Math.log(1.0 + Math.max(0.0, tot)) + 0.20 * Math.max(0.0, tot);
     return value / Math.max(0.65, denom);
   }
 
+  /**
+   * Returns the reservation overlap penalty value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param allies value used by this operation.
+   * @param p value used by this operation.
+   * @param ourEtaS value used by this operation.
+   * @return value produced by this operation.
+   */
   public static double reservationOverlapPenalty(
       PredictiveFieldStateOps ops,
       HashMap<Integer, Track> allies,
@@ -142,6 +179,18 @@ public final class PredictiveCollectScoringRuntime {
     return PredictiveFieldStateOps.RES_OVERLAP_GAIN * (0.35 + 0.95 * x * x);
   }
 
+  /**
+   * Returns the should escape current collect value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param ourPos value used by this operation.
+   * @param dyn value used by this operation.
+   * @param totalEv value used by this operation.
+   * @param minUnits value used by this operation.
+   * @param minCount value used by this operation.
+   * @param cellM value used by this operation.
+   * @return value produced by this operation.
+   */
   public static boolean shouldEscapeCurrentCollect(
       PredictiveFieldStateOps ops,
       Translation2d ourPos,
@@ -224,6 +273,13 @@ public final class PredictiveCollectScoringRuntime {
     return false;
   }
 
+  /**
+   * Returns the collect commit window value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param etaCurrent value used by this operation.
+   * @return value produced by this operation.
+   */
   public static double collectCommitWindow(PredictiveFieldStateOps ops, double etaCurrent) {
     double x = clamp01(ops, (etaCurrent - 0.20) / 1.25);
     return lerp(
@@ -233,6 +289,13 @@ public final class PredictiveCollectScoringRuntime {
         x);
   }
 
+  /**
+   * Returns the min evidence value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param totalEvidence value used by this operation.
+   * @return value produced by this operation.
+   */
   public static double minEvidence(PredictiveFieldStateOps ops, double totalEvidence) {
     double x = clamp01(ops, totalEvidence / 6.0);
     return lerp(
@@ -242,37 +305,94 @@ public final class PredictiveCollectScoringRuntime {
         x);
   }
 
+  /**
+   * Returns the dynamic min units value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param totalEvidence value used by this operation.
+   * @return value produced by this operation.
+   */
   public static double dynamicMinUnits(PredictiveFieldStateOps ops, double totalEvidence) {
     double x = clamp01(ops, totalEvidence / 7.5);
     return lerp(ops, 0.05, 0.15, x);
   }
 
+  /**
+   * Returns the dynamic min count value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param totalEvidence value used by this operation.
+   * @return value produced by this operation.
+   */
   public static int dynamicMinCount(PredictiveFieldStateOps ops, double totalEvidence) {
     double x = clamp01(ops, totalEvidence / 7.5);
     return (int) Math.round(lerp(ops, 1.0, 3.0, x));
   }
 
+  /**
+   * Updates record region attempt state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param ops value used by this operation.
+   * @param dyn value used by this operation.
+   * @param p value used by this operation.
+   * @param now value used by this operation.
+   * @param success value used by this operation.
+   */
   public static void recordRegionAttempt(
       PredictiveFieldStateOps ops, SpatialDyn dyn, Translation2d p, double now, boolean success) {
     if (dyn == null || p == null) return;
     ops.penaltyTracker.recordRegionAttempt(p, now, success);
   }
 
+  /**
+   * Returns the region bandit bonus value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param dyn value used by this operation.
+   * @param p value used by this operation.
+   * @param now value used by this operation.
+   * @return value produced by this operation.
+   */
   public static double regionBanditBonus(
       PredictiveFieldStateOps ops, SpatialDyn dyn, Translation2d p, double now) {
     if (dyn == null || p == null) return 0.0;
     return ops.penaltyTracker.regionBanditBonus(p, now);
   }
 
+  /**
+   * Returns the lerp value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @param t value used by this operation.
+   * @return value produced by this operation.
+   */
   public static double lerp(PredictiveFieldStateOps ops, double a, double b, double t) {
     double x = Math.max(0.0, Math.min(1.0, t));
     return a + (b - a) * x;
   }
 
+  /**
+   * Returns the clamp01 value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param x distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   public static double clamp01(PredictiveFieldStateOps ops, double x) {
     return Math.max(0.0, Math.min(1.0, x));
   }
 
+  /**
+   * Returns the wall distance value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param p value used by this operation.
+   * @return value produced by this operation.
+   */
   public static double wallDistance(PredictiveFieldStateOps ops, Translation2d p) {
     if (p == null) return 0.0;
     double dx = Math.min(p.getX(), Constants.FIELD_LENGTH - p.getX());
@@ -280,6 +400,13 @@ public final class PredictiveCollectScoringRuntime {
     return Math.min(dx, dy);
   }
 
+  /**
+   * Returns the is invalid fuel band value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param p value used by this operation.
+   * @return value produced by this operation.
+   */
   public static boolean isInvalidFuelBand(PredictiveFieldStateOps ops, Translation2d p) {
     if (p == null) return false;
     double x = p.getX();
@@ -287,6 +414,14 @@ public final class PredictiveCollectScoringRuntime {
         || PredictiveFieldStateOps.X_RIGHT_BAND.within(x);
   }
 
+  /**
+   * Returns the default collect resource position filter value maintained by this Repulsor
+   * component.
+   *
+   * @param ops value used by this operation.
+   * @param p value used by this operation.
+   * @return value produced by this operation.
+   */
   public static boolean defaultCollectResourcePositionFilter(
       PredictiveFieldStateOps ops, Translation2d p) {
     if (p == null) return false;

@@ -29,6 +29,12 @@ import java.util.Objects;
 import java.util.Optional;
 import org.curtinfrc.frc2026.util.Repulsor.Simulation.NetworkTablesValue;
 
+/**
+ * Provides nt repulsor driver station functionality for the Repulsor driver-station and
+ * NetworkTables control surface. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public abstract class NtRepulsorDriverStation extends RepulsorDriverStation {
   protected final NetworkTableInstance inst;
   protected final String root;
@@ -64,90 +70,205 @@ public abstract class NtRepulsorDriverStation extends RepulsorDriverStation {
     return root + "/commands/" + normalizeKey(key);
   }
 
+  /**
+   * Returns the get config bool value maintained by this Repulsor component.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   public final boolean getConfigBool(String key) {
     NetworkTablesValue<Boolean> v = require(configBools, key);
     return Boolean.TRUE.equals(v.get());
   }
 
+  /**
+   * Updates set config bool state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param value value used by this operation.
+   */
   public final void setConfigBool(String key, boolean value) {
     require(configBools, key).set(value);
   }
 
+  /**
+   * Returns the get config double value maintained by this Repulsor component.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   public final double getConfigDouble(String key) {
     NetworkTablesValue<Double> v = require(configDoubles, key);
     Double d = v.get();
     return d != null ? d : 0.0;
   }
 
+  /**
+   * Updates set config double state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param value value used by this operation.
+   */
   public final void setConfigDouble(String key, double value) {
     require(configDoubles, key).set(value);
   }
 
+  /**
+   * Returns the get config int value maintained by this Repulsor component.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   public final long getConfigInt(String key) {
     NetworkTablesValue<Long> v = require(configInts, key);
     Long d = v.get();
     return d != null ? d : 0L;
   }
 
+  /**
+   * Updates set config int state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param value value used by this operation.
+   */
   public final void setConfigInt(String key, long value) {
     require(configInts, key).set(value);
   }
 
+  /**
+   * Returns the get config string value maintained by this Repulsor component.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   public final String getConfigString(String key) {
     NetworkTablesValue<String> v = require(configStrings, key);
     String s = v.get();
     return s != null ? s : "";
   }
 
+  /**
+   * Updates set config string state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param value value used by this operation.
+   */
   public final void setConfigString(String key, String value) {
     require(configStrings, key).set(value != null ? value : "");
   }
 
+  /**
+   * Returns the get config double array value maintained by this Repulsor component.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   public final double[] getConfigDoubleArray(String key) {
     NetworkTablesValue<double[]> v = require(configDoubleArrays, key);
     double[] a = v.get();
     return a != null ? a : new double[0];
   }
 
+  /**
+   * Updates set config double array state or telemetry as part of the Repulsor runtime loop. This
+   * may mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param value value used by this operation.
+   */
   public final void setConfigDoubleArray(String key, double[] value) {
     require(configDoubleArrays, key).set(value != null ? value : new double[0]);
   }
 
+  /**
+   * Returns the consume pose override value maintained by this Repulsor component.
+   *
+   * @param name value used by this operation.
+   * @return value produced by this operation.
+   */
   public final Optional<Pose2d> consumePoseOverride(String name) {
     PoseOverrideCommand cmd = require(poseOverrideCommands, name);
     return cmd.consume();
   }
 
+  /**
+   * Runs request pose override in the Repulsor runtime.
+   *
+   * @param name value used by this operation.
+   * @param pose WPILib Pose2d in field-relative coordinates.
+   * @param enabled value used by this operation.
+   */
   public final void requestPoseOverride(String name, Pose2d pose, boolean enabled) {
     PoseOverrideCommand cmd = require(poseOverrideCommands, name);
     cmd.request(pose, enabled);
   }
 
+  /**
+   * Returns the consume pose reset value maintained by this Repulsor component.
+   *
+   * @param name value used by this operation.
+   * @return value produced by this operation.
+   */
   public final Optional<Pose2d> consumePoseReset(String name) {
     PoseResetCommand cmd = require(poseResetCommands, name);
     return cmd.consume();
   }
 
+  /**
+   * Runs request pose reset in the Repulsor runtime.
+   *
+   * @param name value used by this operation.
+   * @param pose WPILib Pose2d in field-relative coordinates.
+   */
   public final void requestPoseReset(String name, Pose2d pose) {
     PoseResetCommand cmd = require(poseResetCommands, name);
     cmd.request(pose);
   }
 
+  /**
+   * Returns the forced goal pose value maintained by this Repulsor component.
+   *
+   * @param name value used by this operation.
+   * @return value produced by this operation.
+   */
   public final Optional<Pose2d> forcedGoalPose(String name) {
     GoalSetpointCommand cmd = require(goalSetpointCommands, name);
     return cmd.forcedPose();
   }
 
+  /**
+   * Returns the consume goal setpoint applied value maintained by this Repulsor component.
+   *
+   * @param name value used by this operation.
+   * @return optional goal setpoint produced by this operation.
+   */
   public final Optional<GoalSetpoint> consumeGoalSetpointApplied(String name) {
     GoalSetpointCommand cmd = require(goalSetpointCommands, name);
     return cmd.consumeApplied();
   }
 
+  /**
+   * Runs request goal setpoint in the Repulsor runtime.
+   *
+   * @param name value used by this operation.
+   * @param goalPose value used by this operation.
+   * @param enabled value used by this operation.
+   */
   public final void requestGoalSetpoint(String name, Pose2d goalPose, boolean enabled) {
     GoalSetpointCommand cmd = require(goalSetpointCommands, name);
     cmd.request(goalPose, enabled);
   }
 
+  /** Runs tick in the Repulsor runtime. */
   @Override
   public final void tick() {
     for (PoseOverrideCommand c : poseOverrideCommands.values()) c.tick();
@@ -158,10 +279,12 @@ public abstract class NtRepulsorDriverStation extends RepulsorDriverStation {
 
   protected void onTick() {}
 
+  /** Runs flush all in the Repulsor runtime. */
   public final void flushAll() {
     for (NetworkTablesValue<?> v : owned) v.flush();
   }
 
+  /** Runs close in the Repulsor runtime. */
   @Override
   public void close() {
     for (NetworkTablesValue<?> v : owned) v.close();
@@ -176,10 +299,31 @@ public abstract class NtRepulsorDriverStation extends RepulsorDriverStation {
     goalSetpointCommands.clear();
   }
 
+  /**
+   * Provides goal setpoint functionality for the Repulsor driver-station and NetworkTables control
+   * surface. Use this type from robot code, field profiles, or tests when integrating the
+   * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+   * robot-relative motion.
+   */
   public static final class GoalSetpoint {
+    /**
+     * Configuration value for pose. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     public final Pose2d pose;
+
+    /**
+     * Configuration value for enabled. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     public final boolean enabled;
 
+    /**
+     * Returns the goal setpoint value maintained by this Repulsor component.
+     *
+     * @param pose WPILib Pose2d in field-relative coordinates.
+     * @param enabled value used by this operation.
+     */
     public GoalSetpoint(Pose2d pose, boolean enabled) {
       this.pose = pose != null ? pose : new Pose2d();
       this.enabled = enabled;
@@ -193,30 +337,60 @@ public abstract class NtRepulsorDriverStation extends RepulsorDriverStation {
       this.ds = ds;
     }
 
+    /**
+     * Runs config bool in the Repulsor runtime.
+     *
+     * @param key distance or field-coordinate value in meters.
+     * @param initialValue value used by this operation.
+     */
     public void configBool(String key, boolean initialValue) {
       String k = normalizeKey(key);
       putUnique(
           configBools, k, own(NetworkTablesValue.ofBoolean(inst, configPath(k), initialValue)));
     }
 
+    /**
+     * Runs config double in the Repulsor runtime.
+     *
+     * @param key distance or field-coordinate value in meters.
+     * @param initialValue value used by this operation.
+     */
     public void configDouble(String key, double initialValue) {
       String k = normalizeKey(key);
       putUnique(
           configDoubles, k, own(NetworkTablesValue.ofDouble(inst, configPath(k), initialValue)));
     }
 
+    /**
+     * Runs config int in the Repulsor runtime.
+     *
+     * @param key distance or field-coordinate value in meters.
+     * @param initialValue value used by this operation.
+     */
     public void configInt(String key, long initialValue) {
       String k = normalizeKey(key);
       putUnique(
           configInts, k, own(NetworkTablesValue.ofInteger(inst, configPath(k), initialValue)));
     }
 
+    /**
+     * Runs config string in the Repulsor runtime.
+     *
+     * @param key distance or field-coordinate value in meters.
+     * @param initialValue value used by this operation.
+     */
     public void configString(String key, String initialValue) {
       String k = normalizeKey(key);
       putUnique(
           configStrings, k, own(NetworkTablesValue.ofString(inst, configPath(k), initialValue)));
     }
 
+    /**
+     * Runs config double array in the Repulsor runtime.
+     *
+     * @param key distance or field-coordinate value in meters.
+     * @param initialValue value used by this operation.
+     */
     public void configDoubleArray(String key, double[] initialValue) {
       String k = normalizeKey(key);
       putUnique(
@@ -225,17 +399,37 @@ public abstract class NtRepulsorDriverStation extends RepulsorDriverStation {
           own(NetworkTablesValue.ofDoubleArray(inst, configPath(k), initialValue)));
     }
 
+    /**
+     * Runs pose override command in the Repulsor runtime.
+     *
+     * @param name value used by this operation.
+     * @param initialPose value used by this operation.
+     * @param initialEnabled value used by this operation.
+     */
     public void poseOverrideCommand(String name, Pose2d initialPose, boolean initialEnabled) {
       String k = normalizeKey(name);
       putUnique(
           poseOverrideCommands, k, new PoseOverrideCommand(ds, k, initialPose, initialEnabled));
     }
 
+    /**
+     * Runs pose reset command in the Repulsor runtime.
+     *
+     * @param name value used by this operation.
+     * @param initialPose value used by this operation.
+     */
     public void poseResetCommand(String name, Pose2d initialPose) {
       String k = normalizeKey(name);
       putUnique(poseResetCommands, k, new PoseResetCommand(ds, k, initialPose));
     }
 
+    /**
+     * Runs goal setpoint command in the Repulsor runtime.
+     *
+     * @param name value used by this operation.
+     * @param initialPose value used by this operation.
+     * @param initialEnabled value used by this operation.
+     */
     public void goalSetpointCommand(String name, Pose2d initialPose, boolean initialEnabled) {
       String k = normalizeKey(name);
       putUnique(

@@ -19,10 +19,31 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Predictive.Model;
 
+/**
+ * Provides collect probe functionality for the Repulsor typed model layer for field objects and
+ * prediction inputs. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public class CollectProbe {
+  /**
+   * Configuration value for count. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final int count;
+
+  /**
+   * Configuration value for units. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final double units;
 
+  /**
+   * Returns the collect probe value maintained by this Repulsor component.
+   *
+   * @param count value used by this operation.
+   * @param units value used by this operation.
+   */
   public CollectProbe(int count, double units) {
     this.count = Math.max(0, count);
     this.units = Math.max(0.0, units);

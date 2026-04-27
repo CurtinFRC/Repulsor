@@ -22,25 +22,51 @@ package org.curtinfrc.frc2026.util.Repulsor.Metrics;
 import java.util.Objects;
 import java.util.function.BinaryOperator;
 
+/**
+ * Provides reducer aggregator functionality for the Repulsor metric aggregation and NetworkTables
+ * recording layer. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public class ReducerAggregator<T> implements MetricAggregator<T> {
   private final BinaryOperator<T> reducer;
   private T overall;
 
+  /**
+   * Returns the reducer aggregator value maintained by this Repulsor component.
+   *
+   * @param reducer value used by this operation.
+   */
   public ReducerAggregator(BinaryOperator<T> reducer) {
     this.reducer = Objects.requireNonNull(reducer);
   }
 
+  /**
+   * Runs add sample in the Repulsor runtime.
+   *
+   * @param value value used by this operation.
+   */
   @Override
   public void addSample(T value) {
     if (value == null) return;
     overall = (overall == null) ? value : reducer.apply(overall, value);
   }
 
+  /**
+   * Returns the get overall value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public T getOverall() {
     return overall;
   }
 
+  /**
+   * Updates reset state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   */
   @Override
   public void reset() {
     overall = null;

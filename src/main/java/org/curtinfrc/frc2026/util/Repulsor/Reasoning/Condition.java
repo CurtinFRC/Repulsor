@@ -20,6 +20,19 @@
 package org.curtinfrc.frc2026.util.Repulsor.Reasoning;
 
 @FunctionalInterface
+/**
+ * Contract for condition implementations used by the Repulsor rule-based strategy and signal
+ * reasoning layer. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public interface Condition<C> {
+  /**
+   * Returns the test value maintained by this Repulsor component.
+   *
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   * @param signals value used by this operation.
+   * @return value produced by this operation.
+   */
   boolean test(C ctx, Signals signals);
 }

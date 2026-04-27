@@ -22,9 +22,23 @@ package org.curtinfrc.frc2026.util.Repulsor.Metrics;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Provides hpstation metrics functionality for the Repulsor metric aggregation and NetworkTables
+ * recording layer. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public final class HPStationMetrics {
   private static final Map<String, MetricRecorder<Double>> byKey = new ConcurrentHashMap<>();
 
+  /**
+   * Updates recorder state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   *
+   * @param stationKey distance or field-coordinate value in meters.
+   * @return metric recorder of double result for recorder.
+   */
   public static MetricRecorder<Double> recorder(String stationKey) {
     return byKey.computeIfAbsent(
         stationKey, k -> new DoubleMeanNTRecorder("hp/" + k + "/pickupTimeSeconds"));

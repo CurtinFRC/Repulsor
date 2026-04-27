@@ -32,13 +32,49 @@ import org.curtinfrc.frc2026.util.Repulsor.Vision.RepulsorVision;
 import org.curtinfrc.frc2026.util.Repulsor.Vision.RepulsorVision.Kind;
 import org.curtinfrc.frc2026.util.Repulsor.Vision.RepulsorVision.ObstacleType;
 
+/**
+ * Provides vision planner functionality for the Repulsor core Repulsor coordination layer. Use this
+ * type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+ * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public class VisionPlanner {
+  /**
+   * Provides vision obstacle functionality for the Repulsor core Repulsor coordination layer. Use
+   * this type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+   * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+   */
   public static class VisionObstacle extends Obstacle {
+    /**
+     * Configuration value for loc. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     public Translation2d loc;
+
+    /**
+     * Configuration value for size x. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     public double sizeX;
+
+    /**
+     * Configuration value for size y. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     public double sizeY;
+
+    /**
+     * Configuration value for kind. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     public Kind kind;
 
+    /**
+     * Returns the vision obstacle value maintained by this Repulsor component.
+     *
+     * @param loc value used by this operation.
+     * @param strength value used by this operation.
+     * @param type value used by this operation.
+     */
     public VisionObstacle(Translation2d loc, double strength, ObstacleType type) {
       super(strength, true);
       this.loc = loc;
@@ -47,6 +83,13 @@ public class VisionPlanner {
       this.kind = type.getKind();
     }
 
+    /**
+     * Returns the get force at position value maintained by this Repulsor component.
+     *
+     * @param position value used by this operation.
+     * @param target value used by this operation.
+     * @return value produced by this operation.
+     */
     @Override
     public Force getForceAtPosition(Translation2d position, Translation2d target) {
       double distance = loc.getDistance(position);
@@ -72,6 +115,12 @@ public class VisionPlanner {
       return new Force(mag, new edu.wpi.first.math.geometry.Rotation2d(angleRad));
     }
 
+    /**
+     * Returns the intersects rectangle value maintained by this Repulsor component.
+     *
+     * @param rectCorners value used by this operation.
+     * @return value produced by this operation.
+     */
     public boolean intersectsRectangle(Translation2d[] rectCorners) {
       if (FieldPlanner.isPointInPolygon(loc, rectCorners)) return true;
 
@@ -98,17 +147,34 @@ public class VisionPlanner {
 
   private List<RepulsorVision> m_vision = new ArrayList<RepulsorVision>();
 
+  /** Returns the vision planner value maintained by this Repulsor component. */
   public VisionPlanner() {}
 
+  /**
+   * Returns the with vision value maintained by this Repulsor component.
+   *
+   * @param vision value used by this operation.
+   * @return vision planner result for with vision.
+   */
   public VisionPlanner withVision(RepulsorVision vision) {
     m_vision.add(vision);
     return this;
   }
 
+  /**
+   * Runs add vision in the Repulsor runtime.
+   *
+   * @param vision value used by this operation.
+   */
   public void addVision(RepulsorVision vision) {
     m_vision.add(vision);
   }
 
+  /**
+   * Returns the get obstacles value maintained by this Repulsor component.
+   *
+   * @return list of vision obstacle values produced by this operation.
+   */
   public List<VisionObstacle> getObstacles() {
     return m_vision.stream()
         .flatMap(v -> Arrays.stream(v.getObstacles()))
@@ -116,6 +182,7 @@ public class VisionPlanner {
         .collect(Collectors.toList());
   }
 
+  /** Runs tick in the Repulsor runtime. */
   public void tick() {
     for (RepulsorVision vision : m_vision) {
       vision.tick();

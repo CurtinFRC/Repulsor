@@ -19,8 +19,18 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Shooting;
 
+/**
+ * Provides constraints functionality for the Repulsor projectile and shot-planning layer. Use this
+ * type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+ * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public final class Constraints {
 
+  /**
+   * Defines the shot style values used by the Repulsor projectile and shot-planning layer. Use this
+   * type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+   * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+   */
   public enum ShotStyle {
     ANY,
     DIRECT,
@@ -33,6 +43,14 @@ public final class Constraints {
   private final double maxLaunchAngleDeg;
   private final ShotStyle shotStyle;
 
+  /**
+   * Returns the constraints value maintained by this Repulsor component.
+   *
+   * @param minLaunchSpeedMetersPerSecond distance or field-coordinate value in meters.
+   * @param maxLaunchSpeedMetersPerSecond distance or field-coordinate value in meters.
+   * @param minLaunchAngleDeg value used by this operation.
+   * @param maxLaunchAngleDeg value used by this operation.
+   */
   public Constraints(
       double minLaunchSpeedMetersPerSecond,
       double maxLaunchSpeedMetersPerSecond,
@@ -46,6 +64,15 @@ public final class Constraints {
         ShotStyle.ANY);
   }
 
+  /**
+   * Returns the constraints value maintained by this Repulsor component.
+   *
+   * @param minLaunchSpeedMetersPerSecond distance or field-coordinate value in meters.
+   * @param maxLaunchSpeedMetersPerSecond distance or field-coordinate value in meters.
+   * @param minLaunchAngleDeg value used by this operation.
+   * @param maxLaunchAngleDeg value used by this operation.
+   * @param shotStyle value used by this operation.
+   */
   public Constraints(
       double minLaunchSpeedMetersPerSecond,
       double maxLaunchSpeedMetersPerSecond,
@@ -59,22 +86,47 @@ public final class Constraints {
     this.shotStyle = shotStyle == null ? ShotStyle.ANY : shotStyle;
   }
 
+  /**
+   * Returns the min launch speed meters per second value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public double minLaunchSpeedMetersPerSecond() {
     return minLaunchSpeedMetersPerSecond;
   }
 
+  /**
+   * Returns the max launch speed meters per second value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public double maxLaunchSpeedMetersPerSecond() {
     return maxLaunchSpeedMetersPerSecond;
   }
 
+  /**
+   * Returns the min launch angle deg value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public double minLaunchAngleDeg() {
     return minLaunchAngleDeg;
   }
 
+  /**
+   * Returns the max launch angle deg value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public double maxLaunchAngleDeg() {
     return maxLaunchAngleDeg;
   }
 
+  /**
+   * Returns the shot style value maintained by this Repulsor component.
+   *
+   * @return shot style result for shot style.
+   */
   public ShotStyle shotStyle() {
     return shotStyle;
   }

@@ -52,10 +52,26 @@ import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
 
+/**
+ * Provides rebuilt2026 functionality for the Repulsor field/profile definition layer used to tune
+ * Repulsor for a specific game. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class Rebuilt2026 implements FieldDefinition {
+  /**
+   * Configuration value for april tag layout. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   public static final AprilTagFieldLayout APRIL_TAG_LAYOUT =
       AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
+
+  /**
+   * Configuration value for field length m. Distances use meters in WPILib field coordinates and
+   * should be treated as tunable when sourced from profiles.
+   */
   public static final double FIELD_LENGTH_M = 16.540988;
+
   public static final double FIELD_WIDTH_M = APRIL_TAG_LAYOUT.getFieldWidth();
   private final FieldProfileConfig profile;
   private final FieldGeometry geometry;
@@ -71,10 +87,17 @@ public final class Rebuilt2026 implements FieldDefinition {
   private static final Constraints DEFAULT_HUB_SHOT_CONSTRAINTS =
       new Constraints(0, 30, 60, 90.0, Constraints.ShotStyle.ARC);
 
+  /** Returns the rebuilt2026 value maintained by this Repulsor component. */
   public Rebuilt2026() {
     this(FieldProfileYamlLoader.loadOrDefault("rebuilt2026", defaultProfileConfig()));
   }
 
+  /**
+   * Creates a rebuilt2026 instance with the dependencies and tuning values used by this Repulsor
+   * component.
+   *
+   * @param profile value used by this operation.
+   */
   Rebuilt2026(FieldProfileConfig profile) {
     this.profile = profile;
     this.geometry = profile.fieldGeometry(FIELD_LENGTH_M, FIELD_WIDTH_M);
@@ -173,6 +196,12 @@ public final class Rebuilt2026 implements FieldDefinition {
     return value != null && Double.isFinite(value) && value > 0.0 ? value : fallback;
   }
 
+  /**
+   * Builds the WPILib command sequence for the current behaviour context.
+   *
+   * @param ft value used by this operation.
+   * @return game element[] result for build.
+   */
   @Override
   public GameElement[] build(FieldTrackerCore ft) {
     var b = new FieldMapBuilder(ft);
@@ -254,36 +283,71 @@ public final class Rebuilt2026 implements FieldDefinition {
     return b.build();
   }
 
+  /**
+   * Returns the game name value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public String gameName() {
     return profile.gameName;
   }
 
+  /**
+   * Returns the game year value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public int gameYear() {
     return profile.gameYear;
   }
 
+  /**
+   * Returns the april tag layout value maintained by this Repulsor component.
+   *
+   * @return april tag field layout result for april tag layout.
+   */
   @Override
   public AprilTagFieldLayout aprilTagLayout() {
     return APRIL_TAG_LAYOUT;
   }
 
+  /**
+   * Returns the field length meters value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public double fieldLengthMeters() {
     return geometry.lengthMeters();
   }
 
+  /**
+   * Returns the field width meters value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public double fieldWidthMeters() {
     return geometry.widthMeters();
   }
 
+  /**
+   * Returns the geometry value maintained by this Repulsor component.
+   *
+   * @return field geometry result for geometry.
+   */
   @Override
   public FieldGeometry geometry() {
     return geometry;
   }
 
+  /**
+   * Returns the default collect setpoint value maintained by this Repulsor component.
+   *
+   * @return optional repulsor setpoint produced by this operation.
+   */
   @Override
   public Optional<RepulsorSetpoint> defaultCollectSetpoint() {
     return Optional.of(
@@ -291,12 +355,24 @@ public final class Rebuilt2026 implements FieldDefinition {
             Setpoints.Rebuilt2026.CENTER_COLLECT, "center.collect", HeightSetpoint.NONE));
   }
 
+  /**
+   * Returns the default score setpoint value maintained by this Repulsor component.
+   *
+   * @return optional repulsor setpoint produced by this operation.
+   */
   @Override
   public Optional<RepulsorSetpoint> defaultScoreSetpoint() {
     return Optional.of(
         new RepulsorSetpoint(Setpoints.Rebuilt2026.HUB_SHOOT, "hub", HeightSetpoint.NET));
   }
 
+  /**
+   * Updates configure tracker state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param ft value used by this operation.
+   */
   @Override
   public void configureTracker(FieldTrackerCore ft) {
     ft.setCollectResourceTypes(profile.resources.keySet());
@@ -308,6 +384,11 @@ public final class Rebuilt2026 implements FieldDefinition {
     }
   }
 
+  /**
+   * Returns the action profile value maintained by this Repulsor component.
+   *
+   * @return field action profile result for action profile.
+   */
   @Override
   public FieldActionProfile actionProfile() {
     var actions = new java.util.LinkedHashMap<String, ProjectileShotAction>();
@@ -445,6 +526,11 @@ public final class Rebuilt2026 implements FieldDefinition {
     }
   }
 
+  /**
+   * Returns the field obstacles value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public List<Obstacle> fieldObstacles() {
     // double maxRangeY = 1;
@@ -748,7 +834,11 @@ public final class Rebuilt2026 implements FieldDefinition {
   //           maxRangeX,
   //           maxRangeY));
   // }
-
+  /**
+   * Returns the walls value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public List<Obstacle> walls() {
     return List.of(
@@ -758,11 +848,28 @@ public final class Rebuilt2026 implements FieldDefinition {
         new VerticalObstacle(geometry.lengthMeters(), 3, false));
   }
 
+  /**
+   * Returns the get heatmap value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public Heatmap getHeatmap() {
+    /**
+     * Configuration value for slow heat. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     final double SLOW_HEAT = 0.6;
+    /**
+     * Configuration value for fast heat. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     final double FAST_HEAT = 1.0;
 
+    /**
+     * Configuration value for trans m. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     final double TRANS_M = 0.30;
 
     double cx = geometry.lengthMeters() * 0.5;

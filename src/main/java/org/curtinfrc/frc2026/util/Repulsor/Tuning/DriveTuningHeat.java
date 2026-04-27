@@ -27,6 +27,11 @@ import org.curtinfrc.frc2026.util.Repulsor.Constants;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldDefinition;
 import org.curtinfrc.frc2026.util.Repulsor.Heatmap;
 
+/**
+ * Provides drive tuning heat functionality for the Repulsor drive and turn tuning model layer. Use
+ * this type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+ * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public class DriveTuningHeat extends DriveTuning {
   private double baseMaxSpeed = 5.14;
   private double sqrtScale = 6.0;
@@ -38,49 +43,103 @@ public class DriveTuningHeat extends DriveTuning {
   private final Heatmap heatmap;
   private final Supplier<Pose2d> robotPoseSupplier;
 
+  /**
+   * Returns the drive tuning heat value maintained by this Repulsor component.
+   *
+   * @param robotPoseSupplier value used by this operation.
+   */
   public DriveTuningHeat(Supplier<Pose2d> robotPoseSupplier) {
     this(robotPoseSupplier, Constants.FIELD);
   }
 
+  /**
+   * Returns the drive tuning heat value maintained by this Repulsor component.
+   *
+   * @param robotPoseSupplier value used by this operation.
+   * @param field value used by this operation.
+   */
   public DriveTuningHeat(Supplier<Pose2d> robotPoseSupplier, FieldDefinition field) {
     this(robotPoseSupplier, field == null ? null : field.getHeatmap());
   }
 
+  /**
+   * Returns the drive tuning heat value maintained by this Repulsor component.
+   *
+   * @param robotPoseSupplier value used by this operation.
+   * @param heatmap value used by this operation.
+   */
   public DriveTuningHeat(Supplier<Pose2d> robotPoseSupplier, Heatmap heatmap) {
     super("Drive/Heat");
     this.heatmap = heatmap == null ? Heatmap.builder().build() : heatmap;
     this.robotPoseSupplier = robotPoseSupplier;
   }
 
+  /**
+   * Returns the with base max speed value maintained by this Repulsor component.
+   *
+   * @param mps value used by this operation.
+   * @return drive tuning heat result for with base max speed.
+   */
   public DriveTuningHeat withBaseMaxSpeed(double mps) {
     this.baseMaxSpeed = mps;
     return this;
   }
 
+  /**
+   * Returns the with sqrt scale value maintained by this Repulsor component.
+   *
+   * @param s value used by this operation.
+   * @return drive tuning heat result for with sqrt scale.
+   */
   public DriveTuningHeat withSqrtScale(double s) {
     this.sqrtScale = s;
     return this;
   }
 
+  /**
+   * Returns the with min step value maintained by this Repulsor component.
+   *
+   * @param m value used by this operation.
+   * @return drive tuning heat result for with min step.
+   */
   public DriveTuningHeat withMinStep(double m) {
     this.minStep = m;
     return this;
   }
 
+  /**
+   * Returns the with near window value maintained by this Repulsor component.
+   *
+   * @param startM value used by this operation.
+   * @param endM value used by this operation.
+   * @return drive tuning heat result for with near window.
+   */
   public DriveTuningHeat withNearWindow(double startM, double endM) {
     this.nearStart = startM;
     this.nearEnd = endM;
     return this;
   }
 
+  /** Runs apply defaults in the Repulsor runtime. */
   @Override
   public void applyDefaults() {
     setDtSeconds(0.02);
   }
 
+  /**
+   * Updates reset state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   */
   @Override
   public void reset() {}
 
+  /**
+   * Returns the max linear speed mps value maintained by this Repulsor component.
+   *
+   * @param robotPose WPILib Pose2d in field-relative coordinates.
+   * @return value produced by this operation.
+   */
   public double maxLinearSpeedMps(Pose2d robotPose) {
     if (robotPose == null) return baseMaxSpeed;
     double heat = heatmap.heatAt(robotPose.getTranslation());
@@ -88,16 +147,33 @@ public class DriveTuningHeat extends DriveTuning {
     return baseMaxSpeed * scale;
   }
 
+  /**
+   * Returns the max linear speed mps value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public double maxLinearSpeedMps() {
     return baseMaxSpeed;
   }
 
+  /**
+   * Returns the min step meters value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public double minStepMeters() {
     return minStep;
   }
 
+  /**
+   * Returns the base step meters value maintained by this Repulsor component.
+   *
+   * @param distanceMeters distance or field-coordinate value in meters.
+   * @param slowDown value used by this operation.
+   * @return value produced by this operation.
+   */
   @Override
   public double baseStepMeters(double distanceMeters, boolean slowDown) {
     double d = Math.max(0.0, distanceMeters);
@@ -166,11 +242,24 @@ public class DriveTuningHeat extends DriveTuning {
     return step;
   }
 
+  /**
+   * Returns the near goal scale value maintained by this Repulsor component.
+   *
+   * @param distanceMeters distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   @Override
   public double nearGoalScale(double distanceMeters) {
     return 1.0;
   }
 
+  /**
+   * Returns the scale for turning value maintained by this Repulsor component.
+   *
+   * @param yawDeltaRad value used by this operation.
+   * @param isScoring value used by this operation.
+   * @return value produced by this operation.
+   */
   @Override
   public double scaleForTurning(double yawDeltaRad, boolean isScoring) {
     return 1.0;

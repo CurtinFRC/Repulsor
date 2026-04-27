@@ -19,7 +19,20 @@
 
 package org.curtinfrc.frc2026.util.Repulsor;
 
+/**
+ * Provides repulsor util functionality for the Repulsor core Repulsor coordination layer. Use this
+ * type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+ * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public class RepulsorUtil {
+  /**
+   * Returns the clamp value maintained by this Repulsor component.
+   *
+   * @param value value used by this operation.
+   * @param min value used by this operation.
+   * @param max distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   public static double clamp(double value, double min, double max) {
     return Math.max(min, Math.min(max, value));
   }

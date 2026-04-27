@@ -23,6 +23,12 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 
+/**
+ * Provides default turn tuning functionality for the Repulsor drive and turn tuning model layer.
+ * Use this type from robot code, field profiles, or tests when integrating the corresponding
+ * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+ * motion.
+ */
 public class DefaultTurnTuning extends TurnTuning {
   private double maxOmega = 6.0;
   private double turnMargin = 0.12;
@@ -71,35 +77,74 @@ public class DefaultTurnTuning extends TurnTuning {
   private double ttcAggroBoost = 0.35;
   private double latchedSlowFloor = 0.72;
 
+  /** Returns the default turn tuning value maintained by this Repulsor component. */
   public DefaultTurnTuning() {
     super("Turn/Default");
   }
 
+  /**
+   * Returns the with max omega value maintained by this Repulsor component.
+   *
+   * @param radps value used by this operation.
+   * @return default turn tuning result for with max omega.
+   */
   public DefaultTurnTuning withMaxOmega(double radps) {
     this.maxOmega = radps;
     return this;
   }
 
+  /**
+   * Returns the with turn margin value maintained by this Repulsor component.
+   *
+   * @param m value used by this operation.
+   * @return default turn tuning result for with turn margin.
+   */
   public DefaultTurnTuning withTurnMargin(double m) {
     this.turnMargin = m;
     return this;
   }
 
+  /**
+   * Returns the with samples value maintained by this Repulsor component.
+   *
+   * @param n value used by this operation.
+   * @return default turn tuning result for with samples.
+   */
   public DefaultTurnTuning withSamples(int n) {
     this.samples = n;
     return this;
   }
 
+  /**
+   * Returns the with score margin mult value maintained by this Repulsor component.
+   *
+   * @param m value used by this operation.
+   * @return default turn tuning result for with score margin mult.
+   */
   public DefaultTurnTuning withScoreMarginMult(double m) {
     this.scoreMarginMult = m;
     return this;
   }
 
+  /**
+   * Returns the with score bubble value maintained by this Repulsor component.
+   *
+   * @param m value used by this operation.
+   * @return default turn tuning result for with score bubble.
+   */
   public DefaultTurnTuning withScoreBubble(double m) {
     this.scoreBubble = m;
     return this;
   }
 
+  /**
+   * Returns the with blend window value maintained by this Repulsor component.
+   *
+   * @param startM value used by this operation.
+   * @param endM value used by this operation.
+   * @param n value used by this operation.
+   * @return default turn tuning result for with blend window.
+   */
   public DefaultTurnTuning withBlendWindow(double startM, double endM, int n) {
     this.blendStart = startM;
     this.blendEnd = endM;
@@ -107,36 +152,80 @@ public class DefaultTurnTuning extends TurnTuning {
     return this;
   }
 
+  /**
+   * Returns the with score slowdown value maintained by this Repulsor component.
+   *
+   * @param s value used by this operation.
+   * @return default turn tuning result for with score slowdown.
+   */
   public DefaultTurnTuning withScoreSlowdown(double s) {
     this.scoreSlowdown = s;
     return this;
   }
 
+  /**
+   * Returns the with short hop meters value maintained by this Repulsor component.
+   *
+   * @param m value used by this operation.
+   * @return default turn tuning result for with short hop meters.
+   */
   public DefaultTurnTuning withShortHopMeters(double m) {
     this.shortHopMeters = m;
     return this;
   }
 
+  /**
+   * Returns the with min alpha at short value maintained by this Repulsor component.
+   *
+   * @param a value used by this operation.
+   * @return default turn tuning result for with min alpha at short.
+   */
   public DefaultTurnTuning withMinAlphaAtShort(double a) {
     this.minAlphaAtShort = a;
     return this;
   }
 
+  /**
+   * Returns the with arc lookahead time value maintained by this Repulsor component.
+   *
+   * @param t value used by this operation.
+   * @return default turn tuning result for with arc lookahead time.
+   */
   public DefaultTurnTuning withArcLookaheadTime(double t) {
     this.arcLookaheadTime = t;
     return this;
   }
 
+  /**
+   * Returns the with max alpha from angle deg value maintained by this Repulsor component.
+   *
+   * @param d value used by this operation.
+   * @return default turn tuning result for with max alpha from angle deg.
+   */
   public DefaultTurnTuning withMaxAlphaFromAngleDeg(double d) {
     this.maxAlphaFromAngleDeg = d;
     return this;
   }
 
+  /**
+   * Returns the with collision inflation value maintained by this Repulsor component.
+   *
+   * @param m value used by this operation.
+   * @return default turn tuning result for with collision inflation.
+   */
   public DefaultTurnTuning withCollisionInflation(double m) {
     this.collisionInflation = m;
     return this;
   }
 
+  /**
+   * Returns the with reserve coeffs value maintained by this Repulsor component.
+   *
+   * @param k0 value used by this operation.
+   * @param kAngle value used by this operation.
+   * @param kShort value used by this operation.
+   * @return default turn tuning result for with reserve coeffs.
+   */
   public DefaultTurnTuning withReserveCoeffs(double k0, double kAngle, double kShort) {
     this.reserveK0 = k0;
     this.reserveKAngle = kAngle;
@@ -144,64 +233,133 @@ public class DefaultTurnTuning extends TurnTuning {
     return this;
   }
 
+  /**
+   * Returns the with probe value maintained by this Repulsor component.
+   *
+   * @param angleDeg value used by this operation.
+   * @param timeS value used by this operation.
+   * @return default turn tuning result for with probe.
+   */
   public DefaultTurnTuning withProbe(double angleDeg, double timeS) {
     this.probeAngleDeg = angleDeg;
     this.probeTime = timeS;
     return this;
   }
 
+  /**
+   * Returns the with snap value maintained by this Repulsor component.
+   *
+   * @param distM value used by this operation.
+   * @param angleDeg value used by this operation.
+   * @return default turn tuning result for with snap.
+   */
   public DefaultTurnTuning withSnap(double distM, double angleDeg) {
     this.snapDist = distM;
     this.snapAngleDeg = angleDeg;
     return this;
   }
 
+  /**
+   * Returns the with ttc buffer value maintained by this Repulsor component.
+   *
+   * @param t value used by this operation.
+   * @return default turn tuning result for with ttc buffer.
+   */
   public DefaultTurnTuning withTtcBuffer(double t) {
     this.ttcBuffer = t;
     return this;
   }
 
+  /**
+   * Returns the with alpha ema value maintained by this Repulsor component.
+   *
+   * @param k value used by this operation.
+   * @return default turn tuning result for with alpha ema.
+   */
   public DefaultTurnTuning withAlphaEma(double k) {
     this.alphaEma = clamp01(k);
     return this;
   }
 
+  /**
+   * Returns the with trigger bias value maintained by this Repulsor component.
+   *
+   * @param onBias value used by this operation.
+   * @param offGap value used by this operation.
+   * @return default turn tuning result for with trigger bias.
+   */
   public DefaultTurnTuning withTriggerBias(double onBias, double offGap) {
     this.triggerOnBias = Math.max(0.5, onBias);
     this.triggerOffGap = Math.max(0.05, offGap);
     return this;
   }
 
+  /**
+   * Returns the with alpha rate limit value maintained by this Repulsor component.
+   *
+   * @param perSec time value in seconds.
+   * @return default turn tuning result for with alpha rate limit.
+   */
   public DefaultTurnTuning withAlphaRateLimit(double perSec) {
     this.alphaRateLimit = Math.max(0.1, perSec);
     return this;
   }
 
+  /**
+   * Returns the with latch cooldown value maintained by this Repulsor component.
+   *
+   * @param seconds time value in seconds.
+   * @return default turn tuning result for with latch cooldown.
+   */
   public DefaultTurnTuning withLatchCooldown(double seconds) {
     this.cooldownS = Math.max(0.0, seconds);
     return this;
   }
 
+  /**
+   * Returns the with dynamic snap k value maintained by this Repulsor component.
+   *
+   * @param k value used by this operation.
+   * @return default turn tuning result for with dynamic snap k.
+   */
   public DefaultTurnTuning withDynamicSnapK(double k) {
     this.dynamicSnapK = Math.max(0.0, k);
     return this;
   }
 
+  /**
+   * Returns the with speed margin k value maintained by this Repulsor component.
+   *
+   * @param k value used by this operation.
+   * @return default turn tuning result for with speed margin k.
+   */
   public DefaultTurnTuning withSpeedMarginK(double k) {
     this.speedMarginK = Math.max(0.0, k);
     return this;
   }
 
+  /**
+   * Returns the with yaw rate guard scale value maintained by this Repulsor component.
+   *
+   * @param s value used by this operation.
+   * @return default turn tuning result for with yaw rate guard scale.
+   */
   public DefaultTurnTuning withYawRateGuardScale(double s) {
     this.yawRateGuardScale = clamp01(s);
     return this;
   }
 
+  /** Runs apply defaults in the Repulsor runtime. */
   @Override
   public void applyDefaults() {
     setDtSeconds(0.02);
   }
 
+  /**
+   * Updates reset state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   */
   @Override
   public void reset() {
     lastAlpha = 0.0;
@@ -211,51 +369,109 @@ public class DefaultTurnTuning extends TurnTuning {
     timeSinceLatchChange = 1e9;
   }
 
+  /**
+   * Returns the max omega rad per sec value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public double maxOmegaRadPerSec() {
     return maxOmega;
   }
 
+  /**
+   * Returns the turn margin meters value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public double turnMarginMeters() {
     return turnMargin;
   }
 
+  /**
+   * Returns the turn samples value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public int turnSamples() {
     return samples;
   }
 
+  /**
+   * Computes the score turn margin mult value for the current Repulsor planning state.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public double scoreTurnMarginMult() {
     return scoreMarginMult;
   }
 
+  /**
+   * Computes the score safety bubble meters value for the current Repulsor planning state.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public double scoreSafetyBubbleMeters() {
     return scoreBubble;
   }
 
+  /**
+   * Returns the dock blend start meters value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public double dockBlendStartMeters() {
     return blendStart;
   }
 
+  /**
+   * Returns the dock blend end meters value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public double dockBlendEndMeters() {
     return blendEnd;
   }
 
+  /**
+   * Returns the dock blend samples value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public int dockBlendSamples() {
     return blendSamples;
   }
 
+  /**
+   * Computes the score turn slowdown factor value for the current Repulsor planning state.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public double scoreTurnSlowdownFactor() {
     return scoreSlowdown;
   }
 
+  /**
+   * Returns the plan value maintained by this Repulsor component.
+   *
+   * @param pose WPILib Pose2d in field-relative coordinates.
+   * @param goal value used by this operation.
+   * @param pathHeading value used by this operation.
+   * @param stepVec value used by this operation.
+   * @param isScoring value used by this operation.
+   * @param robotX distance or field-coordinate value in meters.
+   * @param robotY distance or field-coordinate value in meters.
+   * @param checker value used by this operation.
+   * @return turn result result for plan.
+   */
   @Override
   public TurnResult plan(
       Pose2d pose,

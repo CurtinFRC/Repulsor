@@ -23,6 +23,12 @@ import edu.wpi.first.math.geometry.Translation2d;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Force;
 
+/**
+ * Provides corridor centerline rail functionality for the Repulsor field-obstacle model used by the
+ * repulsor planner. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public class CorridorCenterlineRail extends Obstacle {
   private static final double CENTER_DEADBAND_FRAC = 0.15;
 
@@ -32,6 +38,16 @@ public class CorridorCenterlineRail extends Obstacle {
   private final double yHalfWidth;
   private final double maxForce;
 
+  /**
+   * Returns the corridor centerline rail value maintained by this Repulsor component.
+   *
+   * @param xCenter value used by this operation.
+   * @param xHalfWindow value used by this operation.
+   * @param yCenter value used by this operation.
+   * @param yHalfWidth value used by this operation.
+   * @param strength value used by this operation.
+   * @param maxForce value used by this operation.
+   */
   public CorridorCenterlineRail(
       double xCenter,
       double xHalfWindow,
@@ -56,6 +72,13 @@ public class CorridorCenterlineRail extends Obstacle {
     return x * x * (3.0 - 2.0 * x);
   }
 
+  /**
+   * Returns the get force at position value maintained by this Repulsor component.
+   *
+   * @param position value used by this operation.
+   * @param target value used by this operation.
+   * @return value produced by this operation.
+   */
   @Override
   public Force getForceAtPosition(Translation2d position, Translation2d target) {
     double dx = Math.abs(position.getX() - xCenter);

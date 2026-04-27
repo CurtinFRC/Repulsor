@@ -22,7 +22,20 @@ package org.curtinfrc.frc2026.util.Repulsor.DriverStation;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.networktables.NetworkTableInstance;
 
+/**
+ * Provides default nt repulsor driver station functionality for the Repulsor driver-station and
+ * NetworkTables control surface. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 final class DefaultNtRepulsorDriverStation extends NtRepulsorDriverStation {
+  /**
+   * Creates a default nt repulsor driver station instance with the dependencies and tuning values
+   * used by this Repulsor component.
+   *
+   * @param inst value used by this operation.
+   * @param root value used by this operation.
+   */
   DefaultNtRepulsorDriverStation(NetworkTableInstance inst, String root) {
     super(inst, root);
   }

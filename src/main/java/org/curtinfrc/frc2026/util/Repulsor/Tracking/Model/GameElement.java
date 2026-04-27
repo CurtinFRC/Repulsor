@@ -24,6 +24,12 @@ import java.util.function.Predicate;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 
+/**
+ * Provides game element functionality for the Repulsor typed model layer for field objects and
+ * prediction inputs. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public class GameElement {
   private final GameObject[] containedStorage;
   private int containedCount;
@@ -38,10 +44,25 @@ public class GameElement {
   private GameObject[] cachedExact;
   private boolean dirtyCache;
 
+  /**
+   * Returns the game element value maintained by this Repulsor component.
+   *
+   * @param model value used by this operation.
+   */
   public GameElement(GameElementModel model) {
     this(Alliance.kBlue, 10, model, g -> true, null, CategorySpec.kScore);
   }
 
+  /**
+   * Returns the game element value maintained by this Repulsor component.
+   *
+   * @param alliance value used by this operation.
+   * @param maxContained value used by this operation.
+   * @param model value used by this operation.
+   * @param filter value used by this operation.
+   * @param relatedPoint value used by this operation.
+   * @param category distance or field-coordinate value in meters.
+   */
   public GameElement(
       Alliance alliance,
       int maxContained,
@@ -63,28 +84,63 @@ public class GameElement {
     this.dirtyCache = true;
   }
 
+  /**
+   * Returns the filter value maintained by this Repulsor component.
+   *
+   * @param gameObject value used by this operation.
+   * @return value produced by this operation.
+   */
   public boolean filter(GameObject gameObject) {
     if (gameObject == null) throw new IllegalArgumentException("GameObject cannot be null");
     return filter.test(gameObject);
   }
 
+  /**
+   * Returns the get alliance value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Alliance getAlliance() {
     return alliance;
   }
 
+  /**
+   * Returns the get category value maintained by this Repulsor component.
+   *
+   * @return category spec result for get category.
+   */
   public CategorySpec getCategory() {
     return category;
   }
 
+  /**
+   * Updates set alliance state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param alliance value used by this operation.
+   */
   public void setAlliance(Alliance alliance) {
     if (alliance == null) throw new IllegalArgumentException("Alliance cannot be null");
     this.alliance = alliance;
   }
 
+  /**
+   * Returns the get max contained value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public int getMaxContained() {
     return maxContained;
   }
 
+  /**
+   * Updates set max contained state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param maxContained value used by this operation.
+   */
   public void setMaxContained(int maxContained) {
     if (maxContained < 0) throw new IllegalArgumentException("Max contained cannot be negative");
     this.maxContained = maxContained;
@@ -94,6 +150,11 @@ public class GameElement {
     }
   }
 
+  /**
+   * Returns the get contained value maintained by this Repulsor component.
+   *
+   * @return game object[] result for get contained.
+   */
   public GameObject[] getContained() {
     if (!dirtyCache && cachedExact.length == containedCount) {
       return cachedExact;
@@ -107,6 +168,13 @@ public class GameElement {
     return out;
   }
 
+  /**
+   * Updates set contained state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param contained value used by this operation.
+   */
   public void setContained(GameObject[] contained) {
     clearContained();
     if (contained == null || contained.length == 0) return;
@@ -118,6 +186,12 @@ public class GameElement {
     dirtyCache = true;
   }
 
+  /**
+   * Returns the get contained value maintained by this Repulsor component.
+   *
+   * @param index distance or field-coordinate value in meters.
+   * @return game object result for get contained.
+   */
   public GameObject getContained(int index) {
     if (index < 0 || index >= containedCount) {
       throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + containedCount);
@@ -125,38 +199,91 @@ public class GameElement {
     return containedStorage[index];
   }
 
+  /**
+   * Returns the get contained count value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public int getContainedCount() {
     return containedCount;
   }
 
+  /**
+   * Returns the is at capacity value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public boolean isAtCapacity() {
     return containedCount >= maxContained;
   }
 
+  /**
+   * Returns the get model value maintained by this Repulsor component.
+   *
+   * @return game element model result for get model.
+   */
   public GameElementModel getModel() {
     return model;
   }
 
+  /**
+   * Updates set model state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param model value used by this operation.
+   */
   public void setModel(GameElementModel model) {
     this.model = model;
   }
 
+  /**
+   * Returns the get related point value maintained by this Repulsor component.
+   *
+   * @return optional repulsor setpoint produced by this operation.
+   */
   public Optional<RepulsorSetpoint> getRelatedPoint() {
     return relatedPoint;
   }
 
+  /**
+   * Updates set related point state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param newPoint value used by this operation.
+   */
   public void setRelatedPoint(RepulsorSetpoint newPoint) {
     this.relatedPoint = Optional.ofNullable(newPoint);
   }
 
+  /**
+   * Updates set filter state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param filter value used by this operation.
+   */
   public void setFilter(Predicate<GameObject> filter) {
     this.filter = (filter != null) ? filter : (go -> true);
   }
 
+  /**
+   * Updates set category state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param category distance or field-coordinate value in meters.
+   */
   public void setCategory(CategorySpec category) {
     this.category = category;
   }
 
+  /**
+   * Updates clear contained state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   */
   public void clearContained() {
     if (containedCount != 0) {
       for (int i = 0; i < containedCount; i++) {
@@ -167,6 +294,12 @@ public class GameElement {
     }
   }
 
+  /**
+   * Returns the try add value maintained by this Repulsor component.
+   *
+   * @param obj value used by this operation.
+   * @return value produced by this operation.
+   */
   public boolean tryAdd(GameObject obj) {
     if (obj == null) return false;
     if (containedCount >= maxContained) return false;

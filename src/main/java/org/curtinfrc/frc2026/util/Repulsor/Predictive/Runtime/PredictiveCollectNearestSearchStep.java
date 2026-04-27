@@ -31,9 +31,45 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveClock;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateOps;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.SpatialDyn;
 
+/**
+ * Provides predictive collect nearest search step functionality for the Repulsor runtime helper
+ * layer shared by behaviours and planners. Use this type from robot code, field profiles, or tests
+ * when integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+ * method documents robot-relative motion.
+ */
 public final class PredictiveCollectNearestSearchStep {
   private PredictiveCollectNearestSearchStep() {}
 
+  /**
+   * Returns the search value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param seeds value used by this operation.
+   * @param shortlist value used by this operation.
+   * @param maxCheck value used by this operation.
+   * @param ourPos value used by this operation.
+   * @param cap value used by this operation.
+   * @param goal value used by this operation.
+   * @param cellM value used by this operation.
+   * @param dyn value used by this operation.
+   * @param enemyIntent value used by this operation.
+   * @param allyIntent value used by this operation.
+   * @param inShootBand value used by this operation.
+   * @param wallPenalty distance or field-coordinate value in meters.
+   * @param nearHalf value used by this operation.
+   * @param nearR value used by this operation.
+   * @param onHalf value used by this operation.
+   * @param onR value used by this operation.
+   * @param minHardUnits value used by this operation.
+   * @param minUnits value used by this operation.
+   * @param minCount value used by this operation.
+   * @param minEv value used by this operation.
+   * @param rCore value used by this operation.
+   * @param rSnap value used by this operation.
+   * @param rCentroid value used by this operation.
+   * @param footprintMinUnits value used by this operation.
+   * @return predictive collect nearest search result result for search.
+   */
   public static PredictiveCollectNearestSearchResult search(
       PredictiveFieldStateOps ops,
       Translation2d[] seeds,

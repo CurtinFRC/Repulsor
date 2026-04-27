@@ -19,16 +19,66 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Shooting;
 
+/**
+ * Provides drag shot planner constants functionality for the Repulsor projectile and shot-planning
+ * layer. Use this type from robot code, field profiles, or tests when integrating the corresponding
+ * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+ * motion.
+ */
 final class DragShotPlannerConstants {
+  /**
+   * Configuration value for eps. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   static final double EPS = 1e-6;
+
+  /**
+   * Configuration value for min range meters. Distances use meters in WPILib field coordinates and
+   * should be treated as tunable when sourced from profiles.
+   */
   static final double MIN_RANGE_METERS = 0.5;
+
+  /**
+   * Configuration value for max range meters. Distances use meters in WPILib field coordinates and
+   * should be treated as tunable when sourced from profiles.
+   */
   static final double MAX_RANGE_METERS = 7.0;
+
+  /**
+   * Configuration value for max robot travel meters. Distances use meters in WPILib field
+   * coordinates and should be treated as tunable when sourced from profiles.
+   */
   static final double MAX_ROBOT_TRAVEL_METERS = 7.0;
+
+  /**
+   * Configuration value for max robot travel meters sq. Distances use meters in WPILib field
+   * coordinates and should be treated as tunable when sourced from profiles.
+   */
   static final double MAX_ROBOT_TRAVEL_METERS_SQ =
       MAX_ROBOT_TRAVEL_METERS * MAX_ROBOT_TRAVEL_METERS;
+
+  /**
+   * Configuration value for acceptable vertical error meters. Distances use meters in WPILib field
+   * coordinates and should be treated as tunable when sourced from profiles.
+   */
   static final double ACCEPTABLE_VERTICAL_ERROR_METERS = 0.06;
+
+  /**
+   * Configuration value for fast acceptable vertical error meters. Distances use meters in WPILib
+   * field coordinates and should be treated as tunable when sourced from profiles.
+   */
   static final double FAST_ACCEPTABLE_VERTICAL_ERROR_METERS = 0.25;
+
+  /**
+   * Configuration value for deg to rad. Angles use WPILib rotation conventions; names ending in
+   * degrees are degrees, otherwise radians are assumed by the API.
+   */
   static final double DEG_TO_RAD = Math.PI / 180.0;
+
+  /**
+   * Configuration value for rad to deg. Angles use WPILib rotation conventions; names ending in
+   * degrees are degrees, otherwise radians are assumed by the API.
+   */
   static final double RAD_TO_DEG = 180.0 / Math.PI;
 
   private DragShotPlannerConstants() {}

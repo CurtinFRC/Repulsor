@@ -26,45 +26,106 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Distance;
 
+/**
+ * Provides pipe functionality for the Repulsor typed model layer for field objects and prediction
+ * inputs. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public class Pipe extends PrimitiveObject {
   private Pose3d position;
   private Distance radius;
   private Angle angle;
 
+  /**
+   * Returns the pipe value maintained by this Repulsor component.
+   *
+   * @param position value used by this operation.
+   * @param radius value used by this operation.
+   */
   public Pipe(Pose3d position, Distance radius) {
     this(position, radius, Radians.of(0));
   }
 
+  /**
+   * Returns the pipe value maintained by this Repulsor component.
+   *
+   * @param position value used by this operation.
+   * @param radius value used by this operation.
+   * @param angle value used by this operation.
+   */
   public Pipe(Pose3d position, Distance radius, Angle angle) {
     this.position = position;
     this.radius = radius;
     this.angle = angle;
   }
 
+  /**
+   * Returns the get position value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Pose3d getPosition() {
     return position;
   }
 
+  /**
+   * Updates set position state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param position value used by this operation.
+   */
   public void setPosition(Pose3d position) {
     this.position = position;
   }
 
+  /**
+   * Returns the get radius value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Distance getRadius() {
     return radius;
   }
 
+  /**
+   * Updates set radius state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param radius value used by this operation.
+   */
   public void setRadius(Distance radius) {
     this.radius = radius;
   }
 
+  /**
+   * Returns the get angle value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Angle getAngle() {
     return angle;
   }
 
+  /**
+   * Updates set angle state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param angle value used by this operation.
+   */
   public void setAngle(Angle angle) {
     this.angle = angle;
   }
 
+  /**
+   * Returns the intersects value maintained by this Repulsor component.
+   *
+   * @param pos value used by this operation.
+   * @return value produced by this operation.
+   */
   @Override
   public boolean intersects(Pose3d pos) {
     double dx = pos.getX() - position.getX();

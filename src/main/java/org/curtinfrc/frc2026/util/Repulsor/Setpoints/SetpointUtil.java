@@ -25,7 +25,18 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 
+/**
+ * Provides setpoint util functionality for the Repulsor game setpoint abstraction layer for
+ * field-relative goals and mechanisms. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class SetpointUtil {
+  /**
+   * Returns the current alliance or blue value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public static Alliance currentAllianceOrBlue() {
     // System.out.println("Current alliance: " + DriverStation.getAlliance());
     return DriverStation.getAlliance().orElse(Alliance.Blue);
@@ -48,22 +59,53 @@ public final class SetpointUtil {
     return ChoreoAllianceFlipUtil.flip(t);
   }
 
+  /**
+   * Returns the flip to red value maintained by this Repulsor component.
+   *
+   * @param bluePose value used by this operation.
+   * @return value produced by this operation.
+   */
   public static Pose2d flipToRed(Pose2d bluePose) {
     return flipAcrossField(bluePose);
   }
 
+  /**
+   * Returns the flip to red value maintained by this Repulsor component.
+   *
+   * @param blue value used by this operation.
+   * @return value produced by this operation.
+   */
   public static Translation2d flipToRed(Translation2d blue) {
     return flipAcrossField(blue);
   }
 
+  /**
+   * Returns the flip to blue value maintained by this Repulsor component.
+   *
+   * @param redPose value used by this operation.
+   * @return value produced by this operation.
+   */
   public static Pose2d flipToBlue(Pose2d redPose) {
     return flipAcrossField(redPose);
   }
 
+  /**
+   * Returns the flip to blue value maintained by this Repulsor component.
+   *
+   * @param red value used by this operation.
+   * @return value produced by this operation.
+   */
   public static Translation2d flipToBlue(Translation2d red) {
     return flipAcrossField(red);
   }
 
+  /**
+   * Returns the get set pose value maintained by this Repulsor component.
+   *
+   * @param sp value used by this operation.
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   * @return value produced by this operation.
+   */
   public static Pose2d getSetPose(RepulsorSetpoint sp, SetpointContext ctx) {
     if (sp == null) return Pose2d.kZero;
     return sp.get(ctx);

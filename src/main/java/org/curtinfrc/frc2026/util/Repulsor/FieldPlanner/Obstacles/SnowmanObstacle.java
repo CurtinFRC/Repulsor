@@ -25,16 +25,46 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Force;
 
+/**
+ * Provides snowman obstacle functionality for the Repulsor field-obstacle model used by the
+ * repulsor planner. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public class SnowmanObstacle extends Obstacle {
+  /**
+   * Configuration value for loc. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public Translation2d loc;
+
+  /**
+   * Configuration value for radius. Distances use meters in WPILib field coordinates and should be
+   * treated as tunable when sourced from profiles.
+   */
   public double radius = 0.5;
 
+  /**
+   * Returns the snowman obstacle value maintained by this Repulsor component.
+   *
+   * @param loc value used by this operation.
+   * @param strength value used by this operation.
+   * @param radius value used by this operation.
+   * @param positive value used by this operation.
+   */
   public SnowmanObstacle(Translation2d loc, double strength, double radius, boolean positive) {
     super(strength, positive);
     this.loc = loc;
     this.radius = radius;
   }
 
+  /**
+   * Returns the get force at position value maintained by this Repulsor component.
+   *
+   * @param position value used by this operation.
+   * @param target value used by this operation.
+   * @return value produced by this operation.
+   */
   public Force getForceAtPosition(Translation2d position, Translation2d target) {
     var targetToLoc = loc.minus(target);
     var targetToLocAngle = angleOr(targetToLoc, Rotation2d.kZero);
@@ -59,6 +89,12 @@ public class SnowmanObstacle extends Obstacle {
     return new Force(combined.getNorm(), combined.getAngle());
   }
 
+  /**
+   * Returns the intersects rectangle value maintained by this Repulsor component.
+   *
+   * @param rectCorners value used by this operation.
+   * @return value produced by this operation.
+   */
   @Override
   public boolean intersectsRectangle(Translation2d[] rectCorners) {
     if (FieldPlanner.isPointInPolygon(loc, rectCorners)) return true;

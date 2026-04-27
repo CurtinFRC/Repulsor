@@ -29,9 +29,23 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerCollectObjectiveLoop;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerCollectObjectiveMath;
 
+/**
+ * Provides field tracker collect pass setup functionality for the Repulsor runtime helper layer
+ * shared by behaviours and planners. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class FieldTrackerCollectPassSetup {
   private FieldTrackerCollectPassSetup() {}
 
+  /**
+   * Returns the prepare value maintained by this Repulsor component.
+   *
+   * @param loop value used by this operation.
+   * @param robotPoseBlue value used by this operation.
+   * @param cap value used by this operation.
+   * @return field tracker collect pass setup result result for prepare.
+   */
   public static FieldTrackerCollectPassSetupResult prepare(
       FieldTrackerCollectObjectiveLoop loop, Pose2d robotPoseBlue, double cap) {
     Translation2d[] pts = loop.collectObjectivePoints.get();
@@ -41,6 +55,10 @@ public final class FieldTrackerCollectPassSetup {
       return new FieldTrackerCollectPassSetupResult(null, loop.fallbackCollectPose(robotPoseBlue));
     }
 
+    /**
+     * Configuration value for forbid margin m. Distances use meters in WPILib field coordinates and
+     * should be treated as tunable when sourced from profiles.
+     */
     final double FORBID_MARGIN_M = 0.6;
 
     final double robotHalf =

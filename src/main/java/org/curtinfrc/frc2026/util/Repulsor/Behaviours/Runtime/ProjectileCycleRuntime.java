@@ -41,25 +41,61 @@ import org.curtinfrc.frc2026.util.Repulsor.Shooting.ShotSolution;
 import org.curtinfrc.frc2026.util.Repulsor.Simulation.NetworkTablesValue;
 import org.littletonrobotics.junction.Logger;
 
+/**
+ * Shared runtime utilities for behaviours that collect, transfer, or score projectile resources.
+ * The class centralizes field-relative aim computation, shot telemetry publication, release gates,
+ * and moving-shot compensation so individual behaviours only express their specific sequence.
+ */
 public final class ProjectileCycleRuntime {
+  /** Default measured command-to-release latency in seconds; tune per robot mechanism. */
   public static final double MOTION_COMP_LATENCY_SEC = 0.08;
+
+  /** Minimum moving-shot lead time in seconds used to prevent overreacting to noisy estimates. */
   public static final double MOTION_COMP_MIN_LEAD_SEC = 0.10;
+
+  /** Maximum moving-shot lead time in seconds used to bound prediction error. */
   public static final double MOTION_COMP_MAX_LEAD_SEC = 0.45;
+
+  /** Maximum field-relative speed, in meters per second, considered for motion compensation. */
   public static final double MOTION_COMP_MAX_SPEED_MPS = 4.5;
+
+  /** Default projectile time-to-target-plane estimate in seconds before a solution is available. */
   public static final double DEFAULT_TIME_TO_PLANE_SEC = 0.18;
+
+  /** Default moving-shot tuning used when an action profile does not provide custom values. */
   public static final MovingShotSolver.Config DEFAULT_MOVING_SHOT_CONFIG =
       MovingShotSolver.Config.defaults();
 
   private ProjectileCycleRuntime() {}
 
+  /**
+   * Aim result consumed by behaviours and shooter IO. Static and moving-shot solutions are both
+   * carried so the behaviour can fall back to a stop-and-shoot pose when moving release gates are
+   * not satisfied.
+   *
+   * @param shootPose field-relative static shot pose selected by the profile search
+   * @param shotSolution static shot solution for the selected pose
+   * @param movingShot optional moving-shot result using the current field-relative velocity
+   */
   public record Aim(
       Pose2d shootPose,
       Optional<ShotSolution> shotSolution,
       Optional<MovingShotSolver.Result> movingShot) {
+    /**
+     * Creates an aim result without moving-shot compensation.
+     *
+     * @param shootPose field-relative pose the robot should drive toward
+     * @param shotSolution static projectile solution at that pose
+     */
     public Aim(Pose2d shootPose, Optional<ShotSolution> shotSolution) {
       this(shootPose, shotSolution, Optional.empty());
     }
 
+    /**
+     * Selects the solution that should currently be published to the shooter mechanism.
+     *
+     * @return moving-shot solution when present, otherwise the static solution
+     */
     public Optional<ShotSolution> activeShotSolution() {
       if (movingShot.isPresent()) {
         return Optional.of(movingShot.get().solution());
@@ -67,15 +103,33 @@ public final class ProjectileCycleRuntime {
       return shotSolution;
     }
 
+    /**
+     * Selects the pose that should currently be used for heading and release checks.
+     *
+     * @return predicted moving release pose when present, otherwise the static shot pose
+     */
     public Pose2d activeShootPose() {
       return movingShot.map(MovingShotSolver.Result::predictedReleasePose).orElse(shootPose);
     }
 
+    /**
+     * Reports whether moving-shot gates allow release without stopping at the static pose.
+     *
+     * @return true when a moving-shot result exists and all release gates are satisfied
+     */
     public boolean readyToReleaseMoving() {
       return movingShot.map(MovingShotSolver.Result::readyToRelease).orElse(false);
     }
   }
 
+  /**
+   * Builds a setpoint context from the current behaviour state.
+   *
+   * @param ctx behaviour runtime context containing robot dimensions, vision obstacles, and
+   *     mechanism target height
+   * @param robotPose current robot {@link Pose2d} in field-relative coordinates
+   * @return setpoint context for route resolution and shot planning
+   */
   public static SetpointContext makeCtx(BehaviourContext ctx, Pose2d robotPose) {
     double release;
     try {
@@ -93,6 +147,15 @@ public final class ProjectileCycleRuntime {
         ctx.vision.getObstacles());
   }
 
+  /**
+   * Estimates field-relative chassis translation velocity from two pose samples.
+   *
+   * @param prevPose previous field-relative robot pose
+   * @param prevNs previous timestamp in nanoseconds
+   * @param nowPose current field-relative robot pose
+   * @param nowNs current timestamp in nanoseconds
+   * @return clamped field-relative velocity in meters per second, or zero when samples are invalid
+   */
   public static Translation2d estimateFieldVelocity(
       Pose2d prevPose, long prevNs, Pose2d nowPose, long nowNs) {
     if (prevPose == null || prevNs == 0L || nowNs <= prevNs) {
@@ -114,6 +177,19 @@ public final class ProjectileCycleRuntime {
     return new Translation2d(vx, vy);
   }
 
+  /**
+   * Computes aim using the moving-shot tuning stored on the projectile action profile.
+   *
+   * @param profile configured projectile action for the current field profile
+   * @param geometry field geometry used to clamp candidate shot poses
+   * @param robotPose current robot pose in field-relative coordinates
+   * @param spCtx setpoint context containing robot dimensions, release height, and obstacles
+   * @param staticObstacles static field obstacles used to reject unsafe shot poses
+   * @param obstacles dynamic obstacles used to reject unsafe shot poses
+   * @param fieldVelocity estimated field-relative robot velocity in meters per second
+   * @param lastTimeToPlaneSec mutable cache of the previous projectile flight-time estimate
+   * @return static and optional moving-shot aim result for the behaviour to execute
+   */
   public static Aim computeAim(
       ProjectileShotAction profile,
       FieldGeometry geometry,
@@ -135,6 +211,24 @@ public final class ProjectileCycleRuntime {
         profile.movingShotConfig());
   }
 
+  /**
+   * Computes a projectile aim solution for the current robot pose and field state.
+   *
+   * <p>The static solution searches legal stand-off poses behind the target and rejects poses whose
+   * robot footprint intersects static or dynamic obstacles. When the action enables moving shots,
+   * the method also solves a velocity-compensated release using {@link MovingShotSolver}.
+   *
+   * @param profile configured projectile action for the current field profile
+   * @param geometry field geometry used to clamp candidate shot poses
+   * @param robotPose current robot pose in field-relative coordinates
+   * @param spCtx setpoint context containing robot dimensions, release height, and obstacles
+   * @param staticObstacles static field obstacles used to reject unsafe shot poses
+   * @param obstacles dynamic obstacles used to reject unsafe shot poses
+   * @param fieldVelocity estimated field-relative robot velocity in meters per second
+   * @param lastTimeToPlaneSec mutable cache updated with the latest valid flight-time estimate
+   * @param movingShotConfig tuning used by the velocity-compensated shot solver
+   * @return static and optional moving-shot aim result for the behaviour to execute
+   */
   public static Aim computeAim(
       ProjectileShotAction profile,
       FieldGeometry geometry,
@@ -217,6 +311,17 @@ public final class ProjectileCycleRuntime {
         fallbackShootPose(target, alliance, profile, geometry), Optional.empty(), movingShot);
   }
 
+  /**
+   * Publishes shot speed and angle outputs for the active aim solution.
+   *
+   * <p>If a current solution is unavailable, the last valid solution is reused to avoid abrupt
+   * mechanism commands. If no solution has ever been valid, both outputs are set to zero.
+   *
+   * @param aim aim result computed for the current cycle
+   * @param lastValidShot mutable cache of the previous valid shot solution
+   * @param shotSpeed NetworkTables-backed output for launch speed in meters per second
+   * @param shotAngle NetworkTables-backed output for launch angle in degrees
+   */
   public static void publishShotTelemetry(
       Aim aim,
       AtomicReference<ShotSolution> lastValidShot,
@@ -242,6 +347,15 @@ public final class ProjectileCycleRuntime {
     }
   }
 
+  /**
+   * Checks whether the robot is close enough to a static shot pose to release.
+   *
+   * @param robotPose current robot pose in field-relative coordinates
+   * @param goalPose desired shot pose in field-relative coordinates
+   * @param posTolMeters allowed translational error in meters
+   * @param yawTolDeg allowed heading error in degrees
+   * @return true when both translation and yaw are inside tolerance
+   */
   public static boolean isReadyToShoot(
       Pose2d robotPose, Pose2d goalPose, double posTolMeters, double yawTolDeg) {
     if (robotPose.getTranslation().getDistance(goalPose.getTranslation()) > posTolMeters) {
@@ -254,6 +368,19 @@ public final class ProjectileCycleRuntime {
     return e <= Math.toRadians(yawTolDeg);
   }
 
+  /**
+   * Checks whether a behaviour may release a projectile this cycle.
+   *
+   * <p>Moving-shot readiness bypasses the static pose tolerance because {@link MovingShotSolver}
+   * already evaluates yaw, speed, and vertical-error gates for the predicted release pose.
+   *
+   * @param aim current aim solution
+   * @param robotPose current robot pose in field-relative coordinates
+   * @param goalPose static shot pose in field-relative coordinates
+   * @param posTolMeters allowed static translational error in meters
+   * @param yawTolDeg allowed static heading error in degrees
+   * @return true when moving-shot gates pass or the static shot pose is reached
+   */
   public static boolean canRelease(
       Aim aim, Pose2d robotPose, Pose2d goalPose, double posTolMeters, double yawTolDeg) {
     if (aim.readyToReleaseMoving()) {
@@ -297,10 +424,23 @@ public final class ProjectileCycleRuntime {
         result.compensatedShooterVelocity().getNorm());
   }
 
+  /**
+   * Returns the shortest angle rad value maintained by this Repulsor component.
+   *
+   * @param from value used by this operation.
+   * @param to value used by this operation.
+   * @return value produced by this operation.
+   */
   public static double shortestAngleRad(double from, double to) {
     return MathUtil.angleModulus(to - from);
   }
 
+  /**
+   * Returns the safe piece count value maintained by this Repulsor component.
+   *
+   * @param countValue value used by this operation.
+   * @return value produced by this operation.
+   */
   public static long safePieceCount(NetworkTablesValue<Long> countValue) {
     Long value = countValue.get();
     if (value == null) {

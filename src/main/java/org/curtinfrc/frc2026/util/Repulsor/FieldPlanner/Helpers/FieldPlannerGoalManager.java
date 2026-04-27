@@ -29,6 +29,12 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.GatedAttractor
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
 import org.littletonrobotics.junction.Logger;
 
+/**
+ * Provides field planner goal manager functionality for the Repulsor repulsor-field planner that
+ * combines goals, obstacles, and force samples. Use this type from robot code, field profiles, or
+ * tests when integrating the corresponding Repulsor subsystem. Coordinates are field-relative
+ * unless a method documents robot-relative motion.
+ */
 public final class FieldPlannerGoalManager {
   private static final double STAGED_CENTER_BAND_M = 3.648981;
   private static final double STAGED_RESTAGE_DIST_M = 1.5;
@@ -92,15 +98,33 @@ public final class FieldPlannerGoalManager {
   private final double fieldLengthMeters;
   private final double fieldWidthMeters;
 
+  /**
+   * Returns the field planner goal manager value maintained by this Repulsor component.
+   *
+   * @param gatedAttractors value used by this operation.
+   */
   public FieldPlannerGoalManager(List<GatedAttractorObstacle> gatedAttractors) {
     this(gatedAttractors, COMPATIBILITY_FIELD_GEOMETRY);
   }
 
+  /**
+   * Returns the field planner goal manager value maintained by this Repulsor component.
+   *
+   * @param gatedAttractors value used by this operation.
+   * @param fieldGeometry distance or field-coordinate value in meters.
+   */
   public FieldPlannerGoalManager(
       List<GatedAttractorObstacle> gatedAttractors, FieldGeometry fieldGeometry) {
     this(gatedAttractors, fieldGeometry.lengthMeters(), fieldGeometry.widthMeters());
   }
 
+  /**
+   * Returns the field planner goal manager value maintained by this Repulsor component.
+   *
+   * @param gatedAttractors value used by this operation.
+   * @param fieldLengthMeters distance or field-coordinate value in meters.
+   * @param fieldWidthMeters distance or field-coordinate value in meters.
+   */
   public FieldPlannerGoalManager(
       List<GatedAttractorObstacle> gatedAttractors,
       double fieldLengthMeters,
@@ -115,18 +139,40 @@ public final class FieldPlannerGoalManager {
             .toArray(Pose2d[]::new));
   }
 
+  /**
+   * Returns the get goal pose value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Pose2d getGoalPose() {
     return goal;
   }
 
+  /**
+   * Returns the get requested goal pose value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Pose2d getRequestedGoalPose() {
     return requestedGoal;
   }
 
+  /**
+   * Returns the get goal translation value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Translation2d getGoalTranslation() {
     return goal.getTranslation();
   }
 
+  /**
+   * Updates set requested goal state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param requested value used by this operation.
+   */
   public void setRequestedGoal(Pose2d requested) {
     Logger.recordOutput("RequestedGoal", requested);
     boolean same = isPoseNear(this.requestedGoal, requested);
@@ -143,11 +189,27 @@ public final class FieldPlannerGoalManager {
     }
   }
 
+  /**
+   * Updates set active goal state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param active value used by this operation.
+   */
   public void setActiveGoal(Pose2d active) {
     this.goal = active;
     Logger.recordOutput("ActiveGoal", this.goal);
   }
 
+  /**
+   * Updates update staged goal state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param curPos value used by this operation.
+   * @param obstacles obstacle set used for safety checks, costs, or replanning.
+   * @return value produced by this operation.
+   */
   public boolean updateStagedGoal(Translation2d curPos, List<? extends Obstacle> obstacles) {
     if (gatedAttractors.isEmpty()) {
       goal = requestedGoal;

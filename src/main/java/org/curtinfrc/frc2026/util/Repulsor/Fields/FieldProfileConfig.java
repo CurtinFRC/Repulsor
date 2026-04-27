@@ -23,10 +23,31 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.MovingShotSolver;
 
+/**
+ * Provides field profile config functionality for the Repulsor field/profile definition layer used
+ * to tune Repulsor for a specific game. Use this type from robot code, field profiles, or tests
+ * when integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+ * method documents robot-relative motion.
+ */
 public class FieldProfileConfig {
+  /**
+   * Configuration value for id. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public String id;
+
+  /**
+   * Configuration value for game name. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public String gameName;
+
+  /**
+   * Configuration value for game year. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public Integer gameYear;
+
   public GeometryConfig geometry = new GeometryConfig();
   public Map<String, ResourceConfig> resources = new LinkedHashMap<>();
   public Map<String, ProjectileShotConfig> projectileShots = new LinkedHashMap<>();
@@ -37,12 +58,26 @@ public class FieldProfileConfig {
 
   public RebuiltCorridorConfig rebuiltCorridor = new RebuiltCorridorConfig();
 
+  /**
+   * Returns the field geometry value maintained by this Repulsor component.
+   *
+   * @param fallbackLengthMeters distance or field-coordinate value in meters.
+   * @param fallbackWidthMeters distance or field-coordinate value in meters.
+   * @return field geometry result for field geometry.
+   */
   public FieldGeometry fieldGeometry(double fallbackLengthMeters, double fallbackWidthMeters) {
     return new FieldGeometry(
         finitePositive(geometry.lengthMeters, fallbackLengthMeters),
         finitePositive(geometry.widthMeters, fallbackWidthMeters));
   }
 
+  /**
+   * Returns the merge value maintained by this Repulsor component.
+   *
+   * @param base value used by this operation.
+   * @param overlay distance or field-coordinate value in meters.
+   * @return field profile config result for merge.
+   */
   public static FieldProfileConfig merge(FieldProfileConfig base, FieldProfileConfig overlay) {
     if (base == null) return overlay;
     if (overlay == null) return base;
@@ -202,37 +237,139 @@ public class FieldProfileConfig {
     }
   }
 
+  /**
+   * Returns the finite positive value maintained by this Repulsor component.
+   *
+   * @param value value used by this operation.
+   * @param fallback value used by this operation.
+   * @return value produced by this operation.
+   */
   static double finitePositive(Double value, double fallback) {
     return value != null && Double.isFinite(value) && value > 0.0 ? value : fallback;
   }
 
+  /**
+   * Returns the positive value maintained by this Repulsor component.
+   *
+   * @param value value used by this operation.
+   * @param fallback value used by this operation.
+   * @return value produced by this operation.
+   */
   static int positive(Integer value, int fallback) {
     return value != null && value > 0 ? value : fallback;
   }
 
+  /**
+   * Provides geometry config functionality for the Repulsor field/profile definition layer used to
+   * tune Repulsor for a specific game. Use this type from robot code, field profiles, or tests when
+   * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+   * method documents robot-relative motion.
+   */
   public static class GeometryConfig {
+    /**
+     * Configuration value for length meters. Distances use meters in WPILib field coordinates and
+     * should be treated as tunable when sourced from profiles.
+     */
     public Double lengthMeters;
+
+    /**
+     * Configuration value for width meters. Distances use meters in WPILib field coordinates and
+     * should be treated as tunable when sourced from profiles.
+     */
     public Double widthMeters;
   }
 
+  /**
+   * Provides resource config functionality for the Repulsor field/profile definition layer used to
+   * tune Repulsor for a specific game. Use this type from robot code, field profiles, or tests when
+   * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+   * method documents robot-relative motion.
+   */
   public static class ResourceConfig {
+    /**
+     * Configuration value for radius meters. Distances use meters in WPILib field coordinates and
+     * should be treated as tunable when sourced from profiles.
+     */
     public Double radiusMeters;
+
+    /**
+     * Configuration value for unit value. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     public Double unitValue;
+
+    /**
+     * Configuration value for sigma meters. Distances use meters in WPILib field coordinates and
+     * should be treated as tunable when sourced from profiles.
+     */
     public Double sigmaMeters;
   }
 
+  /**
+   * Provides projectile shot config functionality for the Repulsor field/profile definition layer
+   * used to tune Repulsor for a specific game. Use this type from robot code, field profiles, or
+   * tests when integrating the corresponding Repulsor subsystem. Coordinates are field-relative
+   * unless a method documents robot-relative motion.
+   */
   public static class ProjectileShotConfig {
+    /**
+     * Configuration value for enabled. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     public Boolean enabled;
+
+    /**
+     * Configuration value for role. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     public String role;
+
+    /**
+     * Configuration value for game piece id. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     public String gamePieceId;
+
     public TargetConfig target = new TargetConfig();
+
+    /**
+     * Configuration value for target height meters. Distances use meters in WPILib field
+     * coordinates and should be treated as tunable when sourced from profiles.
+     */
     public Double targetHeightMeters;
+
     public ShotConstraintsConfig constraints = new ShotConstraintsConfig();
+
+    /**
+     * Configuration value for route level. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     public String routeLevel;
+
+    /**
+     * Configuration value for route mechanism setpoint. The valid range and tuning source are
+     * defined by the owning subsystem or field profile.
+     */
     public String routeMechanismSetpoint;
+
+    /**
+     * Configuration value for behind target meters. Distances use meters in WPILib field
+     * coordinates and should be treated as tunable when sourced from profiles.
+     */
     public Double behindTargetMeters;
+
+    /**
+     * Configuration value for lateral offsets meters. Distances use meters in WPILib field
+     * coordinates and should be treated as tunable when sourced from profiles.
+     */
     public double[] lateralOffsetsMeters;
+
+    /**
+     * Configuration value for field margin meters. Distances use meters in WPILib field coordinates
+     * and should be treated as tunable when sourced from profiles.
+     */
     public Double fieldMarginMeters;
+
     public MovingShotConfig movingShot = new MovingShotConfig();
     public GamePiecePhysicsConfig fallbackGamePiece = new GamePiecePhysicsConfig();
   }
@@ -240,25 +377,101 @@ public class FieldProfileConfig {
   /** Compatibility config for older profile YAML. Prefer projectileShots. */
   public static class ShuttleShotConfig extends ProjectileShotConfig {}
 
+  /**
+   * Provides target config functionality for the Repulsor field/profile definition layer used to
+   * tune Repulsor for a specific game. Use this type from robot code, field profiles, or tests when
+   * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+   * method documents robot-relative motion.
+   */
   public static class TargetConfig {
+    /**
+     * Configuration value for kind. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     public String kind;
+
+    /**
+     * Configuration value for blue xmeters. Distances use meters in WPILib field coordinates and
+     * should be treated as tunable when sourced from profiles.
+     */
     public Double blueXMeters;
+
+    /**
+     * Configuration value for blue ymeters. Distances use meters in WPILib field coordinates and
+     * should be treated as tunable when sourced from profiles.
+     */
     public Double blueYMeters;
   }
 
+  /**
+   * Provides game piece physics config functionality for the Repulsor field/profile definition
+   * layer used to tune Repulsor for a specific game. Use this type from robot code, field profiles,
+   * or tests when integrating the corresponding Repulsor subsystem. Coordinates are field-relative
+   * unless a method documents robot-relative motion.
+   */
   public static class GamePiecePhysicsConfig {
+    /**
+     * Configuration value for mass kg. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     public Double massKg;
+
+    /**
+     * Configuration value for cross section area m2. Time values use seconds and should be tuned
+     * against measured robot loop and mechanism latency.
+     */
     public Double crossSectionAreaM2;
+
+    /**
+     * Configuration value for drag coefficient. The valid range and tuning source are defined by
+     * the owning subsystem or field profile.
+     */
     public Double dragCoefficient;
   }
 
+  /**
+   * Provides shot constraints config functionality for the Repulsor field/profile definition layer
+   * used to tune Repulsor for a specific game. Use this type from robot code, field profiles, or
+   * tests when integrating the corresponding Repulsor subsystem. Coordinates are field-relative
+   * unless a method documents robot-relative motion.
+   */
   public static class ShotConstraintsConfig {
+    /**
+     * Configuration value for min launch speed meters per second. Distances use meters in WPILib
+     * field coordinates and should be treated as tunable when sourced from profiles.
+     */
     public Double minLaunchSpeedMetersPerSecond;
+
+    /**
+     * Configuration value for max launch speed meters per second. Distances use meters in WPILib
+     * field coordinates and should be treated as tunable when sourced from profiles.
+     */
     public Double maxLaunchSpeedMetersPerSecond;
+
+    /**
+     * Configuration value for min launch angle degrees. Angles use WPILib rotation conventions;
+     * names ending in degrees are degrees, otherwise radians are assumed by the API.
+     */
     public Double minLaunchAngleDegrees;
+
+    /**
+     * Configuration value for max launch angle degrees. Angles use WPILib rotation conventions;
+     * names ending in degrees are degrees, otherwise radians are assumed by the API.
+     */
     public Double maxLaunchAngleDegrees;
+
+    /**
+     * Configuration value for shot style. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     public String shotStyle;
 
+    /**
+     * Returns the constraints value maintained by this Repulsor component.
+     *
+     * @param fallback value used by this operation.
+     * @return org.curtinfrc.frc2026.util.repulsor.shooting.constraints result for constraints.
+     */
     public org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints constraints(
         org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints fallback) {
       org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints base =
@@ -287,18 +500,80 @@ public class FieldProfileConfig {
     }
   }
 
+  /**
+   * Provides moving shot config functionality for the Repulsor field/profile definition layer used
+   * to tune Repulsor for a specific game. Use this type from robot code, field profiles, or tests
+   * when integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+   * method documents robot-relative motion.
+   */
   public static class MovingShotConfig {
+    /**
+     * Configuration value for enabled. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     public Boolean enabled;
+
+    /**
+     * Configuration value for release latency seconds. Time values use seconds and should be tuned
+     * against measured robot loop and mechanism latency.
+     */
     public Double releaseLatencySeconds;
+
+    /**
+     * Configuration value for min flight prediction seconds. Time values use seconds and should be
+     * tuned against measured robot loop and mechanism latency.
+     */
     public Double minFlightPredictionSeconds;
+
+    /**
+     * Configuration value for max flight prediction seconds. Time values use seconds and should be
+     * tuned against measured robot loop and mechanism latency.
+     */
     public Double maxFlightPredictionSeconds;
+
+    /**
+     * Configuration value for default flight prediction seconds. Time values use seconds and should
+     * be tuned against measured robot loop and mechanism latency.
+     */
     public Double defaultFlightPredictionSeconds;
+
+    /**
+     * Configuration value for max compensated speed meters per second. Distances use meters in
+     * WPILib field coordinates and should be treated as tunable when sourced from profiles.
+     */
     public Double maxCompensatedSpeedMetersPerSecond;
+
+    /**
+     * Configuration value for max release speed meters per second. Distances use meters in WPILib
+     * field coordinates and should be treated as tunable when sourced from profiles.
+     */
     public Double maxReleaseSpeedMetersPerSecond;
+
+    /**
+     * Configuration value for yaw tolerance degrees. Angles use WPILib rotation conventions; names
+     * ending in degrees are degrees, otherwise radians are assumed by the API.
+     */
     public Double yawToleranceDegrees;
+
+    /**
+     * Configuration value for max vertical error meters. Distances use meters in WPILib field
+     * coordinates and should be treated as tunable when sourced from profiles.
+     */
     public Double maxVerticalErrorMeters;
+
+    /**
+     * Configuration value for iterations. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     public Integer iterations;
 
+    /**
+     * Computes the solver config value for the current Repulsor planning state. Call this from
+     * periodic planning or tests when a fresh decision is required; inputs should already be
+     * expressed in the coordinate frame expected by the parameter names.
+     *
+     * @return moving shot solver.config result for solver config.
+     */
     public MovingShotSolver.Config solverConfig() {
       MovingShotSolver.Config defaults = MovingShotSolver.Config.defaults();
       return new MovingShotSolver.Config(
@@ -317,35 +592,172 @@ public class FieldProfileConfig {
     }
   }
 
+  /**
+   * Returns the finite non negative value maintained by this Repulsor component.
+   *
+   * @param value value used by this operation.
+   * @param fallback value used by this operation.
+   * @return value produced by this operation.
+   */
   static double finiteNonNegative(Double value, double fallback) {
     return value != null && Double.isFinite(value) && value >= 0.0 ? value : fallback;
   }
 
+  /**
+   * Provides rebuilt corridor config functionality for the Repulsor field/profile definition layer
+   * used to tune Repulsor for a specific game. Use this type from robot code, field profiles, or
+   * tests when integrating the corresponding Repulsor subsystem. Coordinates are field-relative
+   * unless a method documents robot-relative motion.
+   */
   public static class RebuiltCorridorConfig {
+    /**
+     * Configuration value for rect width meters. Distances use meters in WPILib field coordinates
+     * and should be treated as tunable when sourced from profiles.
+     */
     public Double rectWidthMeters;
+
+    /**
+     * Configuration value for rect height meters. Distances use meters in WPILib field coordinates
+     * and should be treated as tunable when sourced from profiles.
+     */
     public Double rectHeightMeters;
+
+    /**
+     * Configuration value for rect offset from center meters. Distances use meters in WPILib field
+     * coordinates and should be treated as tunable when sourced from profiles.
+     */
     public Double rectOffsetFromCenterMeters;
+
+    /**
+     * Configuration value for edge offset meters. Distances use meters in WPILib field coordinates
+     * and should be treated as tunable when sourced from profiles.
+     */
     public Double edgeOffsetMeters;
+
+    /**
+     * Configuration value for rect strength. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     public Double rectStrength;
+
+    /**
+     * Configuration value for rect range xmeters. Distances use meters in WPILib field coordinates
+     * and should be treated as tunable when sourced from profiles.
+     */
     public Double rectRangeXMeters;
+
+    /**
+     * Configuration value for rect range ymeters. Distances use meters in WPILib field coordinates
+     * and should be treated as tunable when sourced from profiles.
+     */
     public Double rectRangeYMeters;
+
+    /**
+     * Configuration value for bias strength. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     public Double biasStrength;
+
+    /**
+     * Configuration value for bias range meters. Distances use meters in WPILib field coordinates
+     * and should be treated as tunable when sourced from profiles.
+     */
     public Double biasRangeMeters;
+
+    /**
+     * Configuration value for bypass strength scale. The valid range and tuning source are defined
+     * by the owning subsystem or field profile.
+     */
     public Double bypassStrengthScale;
+
+    /**
+     * Configuration value for bypass range meters. Distances use meters in WPILib field coordinates
+     * and should be treated as tunable when sourced from profiles.
+     */
     public Double bypassRangeMeters;
+
+    /**
+     * Configuration value for side pull dx meters. Distances use meters in WPILib field coordinates
+     * and should be treated as tunable when sourced from profiles.
+     */
     public Double sidePullDxMeters;
+
+    /**
+     * Configuration value for side bias strength scale. The valid range and tuning source are
+     * defined by the owning subsystem or field profile.
+     */
     public Double sideBiasStrengthScale;
+
+    /**
+     * Configuration value for side bias range scale. The valid range and tuning source are defined
+     * by the owning subsystem or field profile.
+     */
     public Double sideBiasRangeScale;
+
+    /**
+     * Configuration value for side bypass strength scale. The valid range and tuning source are
+     * defined by the owning subsystem or field profile.
+     */
     public Double sideBypassStrengthScale;
+
+    /**
+     * Configuration value for side bypass range scale. The valid range and tuning source are
+     * defined by the owning subsystem or field profile.
+     */
     public Double sideBypassRangeScale;
+
+    /**
+     * Configuration value for rail xwindow meters. Distances use meters in WPILib field coordinates
+     * and should be treated as tunable when sourced from profiles.
+     */
     public Double railXWindowMeters;
+
+    /**
+     * Configuration value for rail min half width meters. Distances use meters in WPILib field
+     * coordinates and should be treated as tunable when sourced from profiles.
+     */
     public Double railMinHalfWidthMeters;
+
+    /**
+     * Configuration value for rail half width gap scale. Distances use meters in WPILib field
+     * coordinates and should be treated as tunable when sourced from profiles.
+     */
     public Double railHalfWidthGapScale;
+
+    /**
+     * Configuration value for rail strength. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     public Double railStrength;
+
+    /**
+     * Configuration value for rail max force. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     public Double railMaxForce;
+
+    /**
+     * Configuration value for center rail min window meters. Distances use meters in WPILib field
+     * coordinates and should be treated as tunable when sourced from profiles.
+     */
     public Double centerRailMinWindowMeters;
+
+    /**
+     * Configuration value for center rail window scale. The valid range and tuning source are
+     * defined by the owning subsystem or field profile.
+     */
     public Double centerRailWindowScale;
+
+    /**
+     * Configuration value for outer rail xoffset scale. The valid range and tuning source are
+     * defined by the owning subsystem or field profile.
+     */
     public Double outerRailXOffsetScale;
+
+    /**
+     * Configuration value for outer rail window meters. Distances use meters in WPILib field
+     * coordinates and should be treated as tunable when sourced from profiles.
+     */
     public Double outerRailWindowMeters;
   }
 }

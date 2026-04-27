@@ -21,6 +21,12 @@ package org.curtinfrc.frc2026.util.Repulsor.Shooting;
 
 import edu.wpi.first.math.geometry.Translation2d;
 
+/**
+ * Provides drag shot planner cache functionality for the Repulsor projectile and shot-planning
+ * layer. Use this type from robot code, field profiles, or tests when integrating the corresponding
+ * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+ * motion.
+ */
 final class DragShotPlannerCache {
   private static final int SOLVE_Q_MM = 20;
   private static final int SOLVE_Q_DEG_TENTH = 5;
@@ -52,6 +58,12 @@ final class DragShotPlannerCache {
 
   private DragShotPlannerCache() {}
 
+  /**
+   * Returns the latest value maintained by this Repulsor component.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @return shot solution result for get.
+   */
   static ShotSolution get(long key) {
     int idx = (int) mix64(key) & (SOLVE_CACHE_SIZE - 1);
     if (SOLVE_CACHE_KEYS[idx] == key) {
@@ -60,6 +72,12 @@ final class DragShotPlannerCache {
     return null;
   }
 
+  /**
+   * Runs put in the Repulsor runtime.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param val value used by this operation.
+   */
   static void put(long key, ShotSolution val) {
     int idx = (int) mix64(key) & (SOLVE_CACHE_SIZE - 1);
     Object g = SOLVE_CACHE_GUARDS[idx & (SOLVE_CACHE_LOCKS - 1)];
@@ -69,6 +87,12 @@ final class DragShotPlannerCache {
     }
   }
 
+  /**
+   * Returns the fast get value maintained by this Repulsor component.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @return shot solution result for fast get.
+   */
   static ShotSolution fastGet(long key) {
     int idx = (int) mix64(key) & (FAST_CACHE_SIZE - 1);
     if (FAST_CACHE_KEYS[idx] == key) {
@@ -77,6 +101,12 @@ final class DragShotPlannerCache {
     return null;
   }
 
+  /**
+   * Runs fast put in the Repulsor runtime.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param val value used by this operation.
+   */
   static void fastPut(long key, ShotSolution val) {
     int idx = (int) mix64(key) & (FAST_CACHE_SIZE - 1);
     Object g = FAST_CACHE_GUARDS[idx & (FAST_CACHE_LOCKS - 1)];
@@ -86,6 +116,20 @@ final class DragShotPlannerCache {
     }
   }
 
+  /**
+   * Returns the fast key value maintained by this Repulsor component.
+   *
+   * @param shooterPos value used by this operation.
+   * @param target value used by this operation.
+   * @param targetH value used by this operation.
+   * @param releaseH value used by this operation.
+   * @param minSpeed value used by this operation.
+   * @param maxSpeed value used by this operation.
+   * @param minAngDeg value used by this operation.
+   * @param maxAngDeg value used by this operation.
+   * @param style value used by this operation.
+   * @return value produced by this operation.
+   */
   static long fastKey(
       Translation2d shooterPos,
       Translation2d target,
@@ -128,6 +172,22 @@ final class DragShotPlannerCache {
     return k;
   }
 
+  /**
+   * Computes the solve key value for the current Repulsor planning state. Call this from periodic
+   * planning or tests when a fresh decision is required; inputs should already be expressed in the
+   * coordinate frame expected by the parameter names.
+   *
+   * @param shooterPos value used by this operation.
+   * @param target value used by this operation.
+   * @param targetH value used by this operation.
+   * @param releaseH value used by this operation.
+   * @param minSpeed value used by this operation.
+   * @param maxSpeed value used by this operation.
+   * @param minAngDeg value used by this operation.
+   * @param maxAngDeg value used by this operation.
+   * @param style value used by this operation.
+   * @return value produced by this operation.
+   */
   static long solveKey(
       Translation2d shooterPos,
       Translation2d target,

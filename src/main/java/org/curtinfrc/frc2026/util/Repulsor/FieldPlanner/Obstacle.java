@@ -23,17 +23,45 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import org.curtinfrc.frc2026.util.Repulsor.Force;
 
+/**
+ * Provides obstacle functionality for the Repulsor repulsor-field planner that combines goals,
+ * obstacles, and force samples. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public abstract class Obstacle {
   protected static final double EPS = 1e-9;
 
+  /**
+   * Configuration value for strength. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public double strength = 1.0;
+
+  /**
+   * Configuration value for positive. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public boolean positive = true;
 
+  /**
+   * Returns the obstacle value maintained by this Repulsor component.
+   *
+   * @param strength value used by this operation.
+   * @param positive value used by this operation.
+   */
   public Obstacle(double strength, boolean positive) {
     this.strength = strength;
     this.positive = positive;
   }
 
+  /**
+   * Returns the get force at position value maintained by this Repulsor component.
+   *
+   * @param position value used by this operation.
+   * @param target value used by this operation.
+   * @return value produced by this operation.
+   */
   public abstract Force getForceAtPosition(Translation2d position, Translation2d target);
 
   protected double distToForceMag(double dist) {
@@ -71,6 +99,12 @@ public abstract class Obstacle {
     return p.getDistance(projection);
   }
 
+  /**
+   * Returns the intersects rectangle value maintained by this Repulsor component.
+   *
+   * @param rectCorners value used by this operation.
+   * @return value produced by this operation.
+   */
   public boolean intersectsRectangle(Translation2d[] rectCorners) {
     return false;
   }

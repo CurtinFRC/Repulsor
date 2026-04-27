@@ -22,6 +22,11 @@ package org.curtinfrc.frc2026.util.Repulsor.Shooting;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 
+/**
+ * Provides shot solution functionality for the Repulsor projectile and shot-planning layer. Use
+ * this type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+ * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public final class ShotSolution {
   private final Translation2d shooterPosition;
   private final Rotation2d shooterYaw;
@@ -31,6 +36,17 @@ public final class ShotSolution {
   private final Translation2d impactFieldPosition;
   private final double verticalErrorMeters;
 
+  /**
+   * Returns the shot solution value maintained by this Repulsor component.
+   *
+   * @param shooterPosition value used by this operation.
+   * @param shooterYaw value used by this operation.
+   * @param launchSpeedMetersPerSecond distance or field-coordinate value in meters.
+   * @param launchAngle value used by this operation.
+   * @param timeToPlaneSeconds time value in seconds.
+   * @param impactFieldPosition value used by this operation.
+   * @param verticalErrorMeters distance or field-coordinate value in meters.
+   */
   public ShotSolution(
       Translation2d shooterPosition,
       Rotation2d shooterYaw,
@@ -49,30 +65,65 @@ public final class ShotSolution {
     this.verticalErrorMeters = verticalErrorMeters;
   }
 
+  /**
+   * Returns the shooter position value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Translation2d shooterPosition() {
     return shooterPosition;
   }
 
+  /**
+   * Returns the shooter yaw value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Rotation2d shooterYaw() {
     return shooterYaw;
   }
 
+  /**
+   * Returns the launch speed meters per second value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public double launchSpeedMetersPerSecond() {
     return launchSpeedMetersPerSecond;
   }
 
+  /**
+   * Returns the launch angle value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Rotation2d launchAngle() {
     return launchAngle;
   }
 
+  /**
+   * Returns the time to plane seconds value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public double timeToPlaneSeconds() {
     return timeToPlaneSeconds;
   }
 
+  /**
+   * Returns the impact field position value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Translation2d impactFieldPosition() {
     return impactFieldPosition;
   }
 
+  /**
+   * Returns the vertical error meters value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public double verticalErrorMeters() {
     return verticalErrorMeters;
   }

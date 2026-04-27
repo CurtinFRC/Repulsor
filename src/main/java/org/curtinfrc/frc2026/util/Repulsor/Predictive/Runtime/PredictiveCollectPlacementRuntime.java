@@ -22,25 +22,57 @@ import edu.wpi.first.math.geometry.Translation2d;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateOps;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.SpatialDyn;
 
+/**
+ * Provides predictive collect placement runtime functionality for the Repulsor runtime helper layer
+ * shared by behaviours and planners. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class PredictiveCollectPlacementRuntime {
   private PredictiveCollectPlacementRuntime() {}
 
+  /**
+   * Returns the clamp value maintained by this Repulsor component.
+   *
+   * @param x distance or field-coordinate value in meters.
+   * @param lo value used by this operation.
+   * @param hi value used by this operation.
+   * @return value produced by this operation.
+   */
   public static double clamp(double x, double lo, double hi) {
     return Math.max(lo, Math.min(hi, x));
   }
 
+  /**
+   * Returns the core radius for value maintained by this Repulsor component.
+   *
+   * @param cellM value used by this operation.
+   * @return value produced by this operation.
+   */
   public static double coreRadiusFor(double cellM) {
     double r = 0.55 * Math.max(0.10, cellM);
     return clamp(
         r, PredictiveFieldStateOps.COLLECT_CORE_R_MIN, PredictiveFieldStateOps.COLLECT_CORE_R_MAX);
   }
 
+  /**
+   * Returns the snap radius for value maintained by this Repulsor component.
+   *
+   * @param cellM value used by this operation.
+   * @return value produced by this operation.
+   */
   public static double snapRadiusFor(double cellM) {
     double r = 4.5 * coreRadiusFor(cellM);
     return clamp(
         r, PredictiveFieldStateOps.COLLECT_SNAP_R_MIN, PredictiveFieldStateOps.COLLECT_SNAP_R_MAX);
   }
 
+  /**
+   * Returns the micro centroid radius for value maintained by this Repulsor component.
+   *
+   * @param cellM value used by this operation.
+   * @return value produced by this operation.
+   */
   public static double microCentroidRadiusFor(double cellM) {
     double r = 2.6 * coreRadiusFor(cellM);
     return clamp(
@@ -49,6 +81,12 @@ public final class PredictiveCollectPlacementRuntime {
         PredictiveFieldStateOps.COLLECT_MICRO_CENTROID_R_MAX);
   }
 
+  /**
+   * Returns the jitter radius for value maintained by this Repulsor component.
+   *
+   * @param cellM value used by this operation.
+   * @return value produced by this operation.
+   */
   public static double jitterRadiusFor(double cellM) {
     double r = 1.15 * coreRadiusFor(cellM);
     return clamp(
@@ -57,6 +95,17 @@ public final class PredictiveCollectPlacementRuntime {
         PredictiveFieldStateOps.COLLECT_JITTER_R_MAX);
   }
 
+  /**
+   * Returns the snap to nearest then micro centroid value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param p value used by this operation.
+   * @param dyn value used by this operation.
+   * @param rSnap value used by this operation.
+   * @param rCentroid value used by this operation.
+   * @param minMass value used by this operation.
+   * @return value produced by this operation.
+   */
   public static Translation2d snapToNearestThenMicroCentroid(
       PredictiveFieldStateOps ops,
       Translation2d p,
@@ -83,6 +132,18 @@ public final class PredictiveCollectPlacementRuntime {
     return q;
   }
 
+  /**
+   * Returns the enforce hard stop on fuel value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param dyn value used by this operation.
+   * @param p value used by this operation.
+   * @param rCore value used by this operation.
+   * @param rSnap value used by this operation.
+   * @param rCentroid value used by this operation.
+   * @param minMass value used by this operation.
+   * @return value produced by this operation.
+   */
   public static Translation2d enforceHardStopOnFuel(
       PredictiveFieldStateOps ops,
       SpatialDyn dyn,
@@ -119,6 +180,18 @@ public final class PredictiveCollectPlacementRuntime {
     return dyn.nearestResourceTo(q, Math.max(0.01, rCore)) != null ? q : nearest2;
   }
 
+  /**
+   * Computes the pickup robust penalty value for the current Repulsor planning state. Call this
+   * from periodic planning or tests when a fresh decision is required; inputs should already be
+   * expressed in the coordinate frame expected by the parameter names.
+   *
+   * @param ops value used by this operation.
+   * @param dyn value used by this operation.
+   * @param p value used by this operation.
+   * @param rCore value used by this operation.
+   * @param jitterR value used by this operation.
+   * @return value produced by this operation.
+   */
   public static double pickupRobustPenalty(
       PredictiveFieldStateOps ops, SpatialDyn dyn, Translation2d p, double rCore, double jitterR) {
     if (dyn == null || p == null) return PredictiveFieldStateOps.COLLECT_NOFUEL_PENALTY;

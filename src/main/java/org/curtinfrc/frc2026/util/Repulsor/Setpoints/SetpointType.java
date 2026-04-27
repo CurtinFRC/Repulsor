@@ -19,6 +19,12 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Setpoints;
 
+/**
+ * Defines the setpoint type values used by the Repulsor game setpoint abstraction layer for
+ * field-relative goals and mechanisms. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public enum SetpointType {
   kHumanPlayer,
   kScore,

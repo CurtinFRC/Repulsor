@@ -27,6 +27,11 @@ import java.util.Random;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.GameSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.Setpoints;
 
+/**
+ * Provides agent controller functionality for the Repulsor simulation test harness layer. Use this
+ * type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+ * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public final class AgentController {
   private final Random rng;
   private final List<GameSetpoint> scoreCycle;
@@ -49,6 +54,12 @@ public final class AgentController {
   private double tRoamer = 0;
   private double tBlocker = 0;
 
+  /**
+   * Returns the agent controller value maintained by this Repulsor component.
+   *
+   * @param rng value used by this operation.
+   * @param scoreCycle value used by this operation.
+   */
   public AgentController(Random rng, List<GameSetpoint> scoreCycle) {
     this.rng = rng;
     this.scoreCycle = scoreCycle;
@@ -105,6 +116,13 @@ public final class AgentController {
     return selfPos.plus(fwd).plus(side);
   }
 
+  /**
+   * Returns the next target value maintained by this Repulsor component.
+   *
+   * @param a value used by this operation.
+   * @param dt value used by this operation.
+   * @return value produced by this operation.
+   */
   public Translation2d nextTarget(VisionSimWorld.Agent a, double dt) {
     switch (a.role) {
       case SCORER -> {
@@ -140,6 +158,13 @@ public final class AgentController {
     }
   }
 
+  /**
+   * Runs step in the Repulsor runtime.
+   *
+   * @param a value used by this operation.
+   * @param target value used by this operation.
+   * @param dt value used by this operation.
+   */
   public void step(VisionSimWorld.Agent a, Translation2d target, double dt) {
     double[] acc = a.ou.step(dt);
     double tx = target.getX();

@@ -6,6 +6,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * Provides repulsor offload runtime functionality for the Repulsor offload serialization and
+ * native/JNI entrypoint boundary. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class RepulsorOffloadRuntime {
   private static final String OFFLOAD_BOOTSTRAP_CLASS =
       "org.curtinfrc.frc2026.util.Repulsor.Offload.OffloadBootstrap";
@@ -32,6 +38,7 @@ public final class RepulsorOffloadRuntime {
 
   private RepulsorOffloadRuntime() {}
 
+  /** Runs ensure initialized in the Repulsor runtime. */
   public static void ensureInitialized() {
     if (!INITIALIZED.compareAndSet(false, true)) {
       return;
@@ -61,6 +68,7 @@ public final class RepulsorOffloadRuntime {
     }
   }
 
+  /** Runs shutdown in the Repulsor runtime. */
   public static void shutdown() {
     Object current = client;
     if (current != null) {

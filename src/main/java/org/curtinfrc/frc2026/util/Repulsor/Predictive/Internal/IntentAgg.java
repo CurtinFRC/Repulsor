@@ -18,10 +18,31 @@
  */
 package org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal;
 
+/**
+ * Provides intent agg functionality for the Repulsor package-internal data structures used by the
+ * surrounding Repulsor subsystem. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class IntentAgg {
+  /**
+   * Configuration value for intent. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final double[] intent;
+
+  /**
+   * Configuration value for count. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final int count;
 
+  /**
+   * Returns the intent agg value maintained by this Repulsor component.
+   *
+   * @param intent value used by this operation.
+   * @param count value used by this operation.
+   */
   public IntentAgg(double[] intent, int count) {
     this.intent = intent;
     this.count = count;

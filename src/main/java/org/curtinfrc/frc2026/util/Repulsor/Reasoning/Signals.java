@@ -21,6 +21,12 @@ package org.curtinfrc.frc2026.util.Repulsor.Reasoning;
 
 import java.util.Optional;
 
+/**
+ * Contract for signals implementations used by the Repulsor rule-based strategy and signal
+ * reasoning layer. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public interface Signals {
   <T> void put(SignalKey<T> key, T value);
 
@@ -28,9 +34,21 @@ public interface Signals {
 
   <T> T getOr(SignalKey<T> key, T fallback);
 
+  /**
+   * Returns the has value maintained by this Repulsor component.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   boolean has(SignalKey<?> key);
 
+  /**
+   * Updates clear state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   */
   void clear();
 
+  /** Runs flush in the Repulsor runtime. */
   default void flush() {}
 }

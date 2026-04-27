@@ -20,10 +20,31 @@ package org.curtinfrc.frc2026.util.Repulsor.Tracking.Internal;
 
 import edu.wpi.first.math.geometry.Translation2d;
 
+/**
+ * Provides nearest point functionality for the Repulsor package-internal data structures used by
+ * the surrounding Repulsor subsystem. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class NearestPoint {
+  /**
+   * Configuration value for p. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final Translation2d p;
+
+  /**
+   * Configuration value for d. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final double d;
 
+  /**
+   * Returns the nearest point value maintained by this Repulsor component.
+   *
+   * @param p value used by this operation.
+   * @param d value used by this operation.
+   */
   public NearestPoint(Translation2d p, double d) {
     this.p = p;
     this.d = d;

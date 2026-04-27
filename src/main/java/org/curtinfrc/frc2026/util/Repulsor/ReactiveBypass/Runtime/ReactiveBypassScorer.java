@@ -27,9 +27,32 @@ import java.util.function.Function;
 import org.curtinfrc.frc2026.util.Repulsor.ExtraPathing;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 
+/**
+ * Provides reactive bypass scorer functionality for the Repulsor runtime helper layer shared by
+ * behaviours and planners. Use this type from robot code, field profiles, or tests when integrating
+ * the corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 final class ReactiveBypassScorer {
   private ReactiveBypassScorer() {}
 
+  /**
+   * Computes the score candidate value for the current Repulsor planning state.
+   *
+   * @param cfg value used by this operation.
+   * @param preferredSide value used by this operation.
+   * @param timeSinceSideSwitchS value used by this operation.
+   * @param stuckNow value used by this operation.
+   * @param pose WPILib Pose2d in field-relative coordinates.
+   * @param waypoint value used by this operation.
+   * @param goal value used by this operation.
+   * @param headingTowardGoal value used by this operation.
+   * @param robotX distance or field-coordinate value in meters.
+   * @param robotY distance or field-coordinate value in meters.
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   * @param intersectsDynamicOnly distance or field-coordinate value in meters.
+   * @return reactive bypass score result for score candidate.
+   */
   static ReactiveBypassScore scoreCandidate(
       ReactiveBypassConfig cfg,
       int preferredSide,

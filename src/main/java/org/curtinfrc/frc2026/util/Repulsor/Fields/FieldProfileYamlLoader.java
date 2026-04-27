@@ -30,12 +30,25 @@ import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
+/**
+ * Provides field profile yaml loader functionality for the Repulsor field/profile definition layer
+ * used to tune Repulsor for a specific game. Use this type from robot code, field profiles, or
+ * tests when integrating the corresponding Repulsor subsystem. Coordinates are field-relative
+ * unless a method documents robot-relative motion.
+ */
 public final class FieldProfileYamlLoader {
   private static final String PROFILE_PATH_PROPERTY = "repulsor.profile.path";
   private static final String PROFILE_DIR_PROPERTY = "repulsor.profile.dir";
 
   private FieldProfileYamlLoader() {}
 
+  /**
+   * Returns the load or default value maintained by this Repulsor component.
+   *
+   * @param profileId value used by this operation.
+   * @param defaults value used by this operation.
+   * @return field profile config result for load or default.
+   */
   public static FieldProfileConfig loadOrDefault(String profileId, FieldProfileConfig defaults) {
     FieldProfileConfig fallback = defaults == null ? new FieldProfileConfig() : defaults;
     Path path = findProfilePath(profileId);

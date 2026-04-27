@@ -32,9 +32,27 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.TeardropObstac
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.VerticalObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.VisionPlanner.VisionObstacle;
 
+/**
+ * Provides extra pathing clear path functionality for the Repulsor extra pathing geometry and
+ * collision helper layer. Use this type from robot code, field profiles, or tests when integrating
+ * the corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public final class ExtraPathingClearPath {
   private ExtraPathingClearPath() {}
 
+  /**
+   * Returns the is clear path value maintained by this Repulsor component.
+   *
+   * @param topicRoot value used by this operation.
+   * @param start value used by this operation.
+   * @param goal value used by this operation.
+   * @param obstacles obstacle set used for safety checks, costs, or replanning.
+   * @param robotLengthMeters distance or field-coordinate value in meters.
+   * @param robotWidthMeters distance or field-coordinate value in meters.
+   * @param publishSamples value used by this operation.
+   * @return value produced by this operation.
+   */
   public static boolean isClearPath(
       String topicRoot,
       Translation2d start,
@@ -59,7 +77,15 @@ public final class ExtraPathingClearPath {
     final double buffer = 0.2;
     final double corridorR = robotHalfDiag + buffer;
 
+    /**
+     * Configuration value for goal capture radius. Distances use meters in WPILib field coordinates
+     * and should be treated as tunable when sourced from profiles.
+     */
     final double GOAL_CAPTURE_RADIUS = 0.20;
+    /**
+     * Configuration value for push margin. Distances use meters in WPILib field coordinates and
+     * should be treated as tunable when sourced from profiles.
+     */
     final double PUSH_MARGIN = 0.05;
     final Translation2d goalEff = ExtraPathingMath.trimEnd(start, goal, GOAL_CAPTURE_RADIUS);
     ExtraPathingRecording.recordCircle(topicRoot + "/Goal/Capture", goal, GOAL_CAPTURE_RADIUS, 40);

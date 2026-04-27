@@ -108,6 +108,16 @@ public final class FrictionModel {
     return stictionVelocity;
   }
 
+  /**
+   * Computes the compute value for the current Repulsor planning state. Call this from periodic
+   * planning or tests when a fresh decision is required; inputs should already be expressed in the
+   * coordinate frame expected by the parameter names.
+   *
+   * @param velocity velocity input, normally field-relative unless the caller documents
+   *     robot-relative motion.
+   * @param effortWithoutFriction value used by this operation.
+   * @return friction result result for compute.
+   */
   FrictionResult compute(double velocity, double effortWithoutFriction) {
     double absVelocity = Math.abs(velocity);
     if (absVelocity < stictionVelocity && Math.abs(effortWithoutFriction) < staticFriction) {
@@ -127,6 +137,12 @@ public final class FrictionModel {
     return new FrictionResult(coulomb + viscous, false);
   }
 
+  /**
+   * Provides friction result functionality for the Repulsor mechanism and sensor simulation layer.
+   * Use this type from robot code, field profiles, or tests when integrating the corresponding
+   * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+   * motion.
+   */
   static final class FrictionResult {
     private final double frictionEffort;
     private final boolean stuck;

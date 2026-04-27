@@ -18,6 +18,12 @@
  */
 package org.curtinfrc.frc2026.util.Repulsor.Target;
 
+/**
+ * Provides target config functionality for the Repulsor sticky-target filtering and
+ * target-selection layer. Use this type from robot code, field profiles, or tests when integrating
+ * the corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public class TargetConfig {
   /*
    * Time the candidate target must stay unchanged before forcing a switch.

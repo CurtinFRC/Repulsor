@@ -33,9 +33,26 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.SpatialDyn;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
 
+/**
+ * Provides predictive field state tracking runtime functionality for the Repulsor runtime helper
+ * layer shared by behaviours and planners. Use this type from robot code, field profiles, or tests
+ * when integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+ * method documents robot-relative motion.
+ */
 public final class PredictiveFieldStateTrackingRuntime {
   private PredictiveFieldStateTrackingRuntime() {}
 
+  /**
+   * Updates update ally state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param ops value used by this operation.
+   * @param id value used by this operation.
+   * @param pos value used by this operation.
+   * @param velHint value used by this operation.
+   * @param speedCap value used by this operation.
+   */
   public static void updateAlly(
       PredictiveFieldStateOps ops,
       int id,
@@ -81,6 +98,17 @@ public final class PredictiveFieldStateTrackingRuntime {
     ops.allyMap.put(id, t);
   }
 
+  /**
+   * Updates update enemy state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param ops value used by this operation.
+   * @param id value used by this operation.
+   * @param pos value used by this operation.
+   * @param velHint value used by this operation.
+   * @param speedCap value used by this operation.
+   */
   public static void updateEnemy(
       PredictiveFieldStateOps ops,
       int id,
@@ -126,12 +154,30 @@ public final class PredictiveFieldStateTrackingRuntime {
     ops.enemyMap.put(id, t);
   }
 
+  /**
+   * Updates clear stale state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param ops value used by this operation.
+   * @param maxAgeS value used by this operation.
+   */
   public static void clearStale(PredictiveFieldStateOps ops, double maxAgeS) {
     double now = PredictiveClock.nowSeconds();
     ops.allyMap.entrySet().removeIf(e -> now - e.getValue().lastTs > maxAgeS);
     ops.enemyMap.entrySet().removeIf(e -> now - e.getValue().lastTs > maxAgeS);
   }
 
+  /**
+   * Returns the rank value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param ourPos value used by this operation.
+   * @param ourSpeedCap value used by this operation.
+   * @param cat value used by this operation.
+   * @param limit value used by this operation.
+   * @return value produced by this operation.
+   */
   public static List<Candidate> rank(
       PredictiveFieldStateOps ops,
       Translation2d ourPos,
@@ -217,10 +263,24 @@ public final class PredictiveFieldStateTrackingRuntime {
     return out;
   }
 
+  /**
+   * Runs sort idx by key in the Repulsor runtime.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param idx distance or field-coordinate value in meters.
+   */
   public static void sortIdxByKey(double[] key, int[] idx) {
     quickSortIdx(key, idx, 0, idx.length - 1);
   }
 
+  /**
+   * Runs quick sort idx in the Repulsor runtime.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param idx distance or field-coordinate value in meters.
+   * @param lo value used by this operation.
+   * @param hi value used by this operation.
+   */
   public static void quickSortIdx(double[] key, int[] idx, int lo, int hi) {
     while (lo < hi) {
       int i = lo;
@@ -249,6 +309,16 @@ public final class PredictiveFieldStateTrackingRuntime {
     }
   }
 
+  /**
+   * Returns the rank setpoints value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param ourPos value used by this operation.
+   * @param ourSpeedCap value used by this operation.
+   * @param cat value used by this operation.
+   * @param limit value used by this operation.
+   * @return list of repulsor setpoint values produced by this operation.
+   */
   public static List<RepulsorSetpoint> rankSetpoints(
       PredictiveFieldStateOps ops,
       Translation2d ourPos,
@@ -261,12 +331,27 @@ public final class PredictiveFieldStateTrackingRuntime {
     return out;
   }
 
+  /**
+   * Returns the resource observation count value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @return value produced by this operation.
+   */
   public static int resourceObservationCount(PredictiveFieldStateOps ops) {
     SpatialDyn d = ops.cachedDyn();
     if (d == null) return 0;
     return d.resources.size();
   }
 
+  /**
+   * Returns the snap to collect centroid value maintained by this Repulsor component.
+   *
+   * @param ops value used by this operation.
+   * @param seed value used by this operation.
+   * @param r value used by this operation.
+   * @param minMass value used by this operation.
+   * @return value produced by this operation.
+   */
   public static Translation2d snapToCollectCentroid(
       PredictiveFieldStateOps ops, Translation2d seed, double r, double minMass) {
     if (seed == null) return null;
@@ -291,6 +376,14 @@ public final class PredictiveFieldStateTrackingRuntime {
     return seed;
   }
 
+  /**
+   * Computes the nearest collect resource value for the current Repulsor planning state.
+   *
+   * @param ops value used by this operation.
+   * @param p value used by this operation.
+   * @param maxDist value used by this operation.
+   * @return value produced by this operation.
+   */
   public static Translation2d nearestCollectResource(
       PredictiveFieldStateOps ops, Translation2d p, double maxDist) {
     if (p == null) return null;

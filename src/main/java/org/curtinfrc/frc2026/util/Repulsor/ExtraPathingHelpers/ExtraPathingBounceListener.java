@@ -23,17 +23,36 @@ import edu.wpi.first.math.geometry.Pose2d;
 import java.util.LinkedList;
 import java.util.Queue;
 
+/**
+ * Provides extra pathing bounce listener functionality for the Repulsor extra pathing geometry and
+ * collision helper layer. Use this type from robot code, field profiles, or tests when integrating
+ * the corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public class ExtraPathingBounceListener {
   private final double bounceDistanceThreshold;
   private final int bounceHistoryLimit;
   private final Queue<Pose2d> recentGoals = new LinkedList<>();
   private boolean isBouncing;
 
+  /**
+   * Returns the extra pathing bounce listener value maintained by this Repulsor component.
+   *
+   * @param bounceDistanceThreshold value used by this operation.
+   * @param bounceHistoryLimit value used by this operation.
+   */
   public ExtraPathingBounceListener(double bounceDistanceThreshold, int bounceHistoryLimit) {
     this.bounceDistanceThreshold = bounceDistanceThreshold;
     this.bounceHistoryLimit = bounceHistoryLimit;
   }
 
+  /**
+   * Updates update state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   *
+   * @param currentGoal value used by this operation.
+   */
   public void update(Pose2d currentGoal) {
     recentGoals.add(currentGoal);
     if (recentGoals.size() > bounceHistoryLimit) {
@@ -61,11 +80,21 @@ public class ExtraPathingBounceListener {
     return similarCount >= (totalPairs * 0.6);
   }
 
+  /**
+   * Updates clear history state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   */
   public void clearHistory() {
     recentGoals.clear();
     isBouncing = false;
   }
 
+  /**
+   * Returns the is bouncing value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public boolean isBouncing() {
     return isBouncing;
   }

@@ -23,9 +23,37 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import org.curtinfrc.frc2026.util.Repulsor.Profiler.Profiler;
 
+/**
+ * Provides drag shot planner solve at position functionality for the Repulsor projectile and
+ * shot-planning layer. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 final class DragShotPlannerSolveAtPosition {
   private DragShotPlannerSolveAtPosition() {}
 
+  /**
+   * Computes the solve best at shooter position value for the current Repulsor planning state. Call
+   * this from periodic planning or tests when a fresh decision is required; inputs should already
+   * be expressed in the coordinate frame expected by the parameter names.
+   *
+   * @param gamePiece value used by this operation.
+   * @param shooterFieldPosition value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param targetHeightMeters distance or field-coordinate value in meters.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @param minSpeed value used by this operation.
+   * @param maxSpeed value used by this operation.
+   * @param minAngleDeg value used by this operation.
+   * @param maxAngleDeg value used by this operation.
+   * @param fixedAngle value used by this operation.
+   * @param acceptableVerticalErrorMeters distance or field-coordinate value in meters.
+   * @param shotStyle value used by this operation.
+   * @param speedStep velocity input, normally field-relative unless the caller documents
+   *     robot-relative motion.
+   * @param angleStepDeg value used by this operation.
+   * @return shot solution result for solve best at shooter position.
+   */
   static ShotSolution solveBestAtShooterPosition(
       GamePiecePhysics gamePiece,
       Translation2d shooterFieldPosition,

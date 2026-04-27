@@ -19,6 +19,12 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Tracking.Model;
 
+/**
+ * Defines the alliance values used by the Repulsor typed model layer for field objects and
+ * prediction inputs. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public enum Alliance {
   kBlue,
   kRed

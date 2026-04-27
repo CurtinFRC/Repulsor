@@ -21,6 +21,19 @@ package org.curtinfrc.frc2026.util.Repulsor.Strategy;
 
 import edu.wpi.first.math.geometry.Translation2d;
 
+/**
+ * Summarizes available resources in a strategic field region. Reasoners convert raw tracker output
+ * into this generic record so {@link CycleStrategyEvaluator} can compare options without knowing
+ * the current game piece type.
+ *
+ * @param id stable region identifier used in logs and directives
+ * @param resourceUnits quantity of available resources, normalized to game-independent units
+ * @param resourceValue expected value of those resources before time and risk penalties
+ * @param nearestResource nearest field-relative resource location in meters, or {@code null}
+ * @param nearestDistanceMeters distance from robot to nearest resource in meters
+ * @param trafficRisk normalized traffic/defence cost for this region
+ * @param obstacleRisk normalized obstacle or blocked-path cost for this region
+ */
 public record ResourceRegionSummary(
     String id,
     double resourceUnits,
@@ -41,10 +54,21 @@ public record ResourceRegionSummary(
     obstacleRisk = finiteNonNegative(obstacleRisk);
   }
 
+  /**
+   * Creates an empty region summary for fallback decisions.
+   *
+   * @param id region identifier to preserve in telemetry
+   * @return summary with no resources and no risk
+   */
   public static ResourceRegionSummary empty(String id) {
     return new ResourceRegionSummary(id, 0.0, 0.0, null, Double.POSITIVE_INFINITY, 0.0, 0.0);
   }
 
+  /**
+   * Reports whether the region has enough quantified resource evidence to be actionable.
+   *
+   * @return true when units, value, and nearest resource are all present
+   */
   public boolean hasResources() {
     return resourceUnits > 1e-9 && resourceValue > 1e-9 && nearestResource != null;
   }

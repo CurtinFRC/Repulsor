@@ -19,21 +19,65 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Tuning;
 
+/**
+ * Provides drive tuning functionality for the Repulsor drive and turn tuning model layer. Use this
+ * type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+ * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public abstract class DriveTuning extends Tuning {
   protected DriveTuning(String key) {
     super(key);
   }
 
+  /**
+   * Returns the max linear speed mps value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public abstract double maxLinearSpeedMps();
 
+  /**
+   * Returns the min step meters value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public abstract double minStepMeters();
 
+  /**
+   * Returns the base step meters value maintained by this Repulsor component.
+   *
+   * @param distanceMeters distance or field-coordinate value in meters.
+   * @param slowDown value used by this operation.
+   * @return value produced by this operation.
+   */
   public abstract double baseStepMeters(double distanceMeters, boolean slowDown);
 
+  /**
+   * Returns the near goal scale value maintained by this Repulsor component.
+   *
+   * @param distanceMeters distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   public abstract double nearGoalScale(double distanceMeters);
 
+  /**
+   * Returns the scale for turning value maintained by this Repulsor component.
+   *
+   * @param yawDeltaRad value used by this operation.
+   * @param isScoring value used by this operation.
+   * @return value produced by this operation.
+   */
   public abstract double scaleForTurning(double yawDeltaRad, boolean isScoring);
 
+  /**
+   * Returns the step size meters value maintained by this Repulsor component.
+   *
+   * @param distanceMeters distance or field-coordinate value in meters.
+   * @param obstacleMag obstacle set used for safety checks, costs, or replanning.
+   * @param isScoring value used by this operation.
+   * @param slowDown value used by this operation.
+   * @return value produced by this operation.
+   */
   public double stepSizeMeters(
       double distanceMeters, double obstacleMag, boolean isScoring, boolean slowDown) {
     double base = baseStepMeters(Math.max(0.0, distanceMeters), slowDown);

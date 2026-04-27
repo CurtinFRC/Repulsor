@@ -41,6 +41,11 @@ import java.util.Objects;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE)
+/**
+ * Provides force functionality for the Repulsor core Repulsor coordination layer. Use this type
+ * from robot code, field profiles, or tests when integrating the corresponding Repulsor subsystem.
+ * Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public class Force implements Interpolatable<Force>, ProtobufSerializable, StructSerializable {
   /**
    * A preallocated Force representing the origin.
@@ -289,6 +294,11 @@ public class Force implements Interpolatable<Force>, ProtobufSerializable, Struc
     return Collections.min(translations, Comparator.comparing(this::getDistance));
   }
 
+  /**
+   * Returns the to string value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public String toString() {
     return String.format("Force(X: %.2f, Y: %.2f)", m_x, m_y);
@@ -307,11 +317,23 @@ public class Force implements Interpolatable<Force>, ProtobufSerializable, Struc
         && Math.abs(other.m_y - m_y) < 1E-9;
   }
 
+  /**
+   * Returns the hash code value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public int hashCode() {
     return Objects.hash(m_x, m_y);
   }
 
+  /**
+   * Returns the interpolate value maintained by this Repulsor component.
+   *
+   * @param endValue value used by this operation.
+   * @param t value used by this operation.
+   * @return value produced by this operation.
+   */
   @Override
   public Force interpolate(Force endValue, double t) {
     return new Force(

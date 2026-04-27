@@ -599,9 +599,29 @@ public abstract class MechanismSimBase {
     return sum / steps;
   }
 
+  /**
+   * Provides actuator output functionality for the Repulsor mechanism and sensor simulation layer.
+   * Use this type from robot code, field profiles, or tests when integrating the corresponding
+   * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+   * motion.
+   */
   static final class ActuatorOutput {
+    /**
+     * Configuration value for output effort. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     final double outputEffort;
+
+    /**
+     * Configuration value for motor current amps. The valid range and tuning source are defined by
+     * the owning subsystem or field profile.
+     */
     final double motorCurrentAmps;
+
+    /**
+     * Configuration value for motor torque nm. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     final double motorTorqueNm;
 
     ActuatorOutput(double outputEffort, double motorCurrentAmps, double motorTorqueNm) {

@@ -20,10 +20,31 @@ package org.curtinfrc.frc2026.util.Repulsor.Tracking.Internal;
 
 import edu.wpi.first.math.geometry.Translation2d;
 
+/**
+ * Provides group candidate functionality for the Repulsor package-internal data structures used by
+ * the surrounding Repulsor subsystem. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class _GroupCandidate {
+  /**
+   * Configuration value for point. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final Translation2d point;
+
+  /**
+   * Configuration value for group score. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   public final double groupScore;
 
+  /**
+   * Returns the group candidate value maintained by this Repulsor component.
+   *
+   * @param point value used by this operation.
+   * @param groupScore value used by this operation.
+   */
   public _GroupCandidate(Translation2d point, double groupScore) {
     this.point = point;
     this.groupScore = groupScore;

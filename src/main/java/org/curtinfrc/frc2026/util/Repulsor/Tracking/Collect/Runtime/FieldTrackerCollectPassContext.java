@@ -25,6 +25,37 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
 
+/**
+ * Immutable data record for field tracker collect pass context values passed through the Repulsor
+ * runtime helper layer shared by behaviours and planners. Use this type from robot code, field
+ * profiles, or tests when integrating the corresponding Repulsor subsystem. Coordinates are
+ * field-relative unless a method documents robot-relative motion.
+ *
+ * @param robotPoseBlue component of the field tracker collect pass context model
+ * @param robotPos record component for the field tracker collect pass context model
+ * @param cap record component for the field tracker collect pass context model
+ * @param usePts record component for the field tracker collect pass context model
+ * @param robotInCenterBand record component for the field tracker collect pass context model
+ * @param dynAll record component for the field tracker collect pass context model
+ * @param dynUse record component for the field tracker collect pass context model
+ * @param lockHalf record component for the field tracker collect pass context model
+ * @param sensedHalf record component for the field tracker collect pass context model
+ * @param nowNs record component for the field tracker collect pass context model
+ * @param dt record component for the field tracker collect pass context model
+ * @param midX record component for the field tracker collect pass context model
+ * @param leftBandX0 record component for the field tracker collect pass context model
+ * @param leftBandX1 record component for the field tracker collect pass context model
+ * @param rightBandX0 record component for the field tracker collect pass context model
+ * @param rightBandX1 record component for the field tracker collect pass context model
+ * @param clampToFieldRobotSafe record component for the field tracker collect pass context model
+ * @param inForbidden record component for the field tracker collect pass context model
+ * @param violatesWall record component for the field tracker collect pass context model
+ * @param nudgeOutOfForbidden record component for the field tracker collect pass context model
+ * @param safePushedFromRobot record component for the field tracker collect pass context model
+ * @param holdPose record component for the field tracker collect pass context model
+ * @param nearbyFuelCount record component for the field tracker collect pass context model
+ * @param nearbyCentroid record component for the field tracker collect pass context snapshot
+ */
 public record FieldTrackerCollectPassContext(
     Pose2d robotPoseBlue,
     Translation2d robotPos,

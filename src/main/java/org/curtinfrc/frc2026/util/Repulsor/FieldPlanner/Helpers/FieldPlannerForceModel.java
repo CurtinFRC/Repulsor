@@ -30,6 +30,12 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Force;
 
+/**
+ * Provides field planner force model functionality for the Repulsor repulsor-field planner that
+ * combines goals, obstacles, and force samples. Use this type from robot code, field profiles, or
+ * tests when integrating the corresponding Repulsor subsystem. Coordinates are field-relative
+ * unless a method documents robot-relative motion.
+ */
 public final class FieldPlannerForceModel {
   private static final int ARROWS_X = isSimulationSafe() ? 40 : 0;
   private static final int ARROWS_Y = isSimulationSafe() ? 20 : 0;
@@ -44,6 +50,14 @@ public final class FieldPlannerForceModel {
   private final Pose2d arrowBackstage =
       new Pose2d(-10, -10, edu.wpi.first.math.geometry.Rotation2d.kZero);
 
+  /**
+   * Returns the field planner force model value maintained by this Repulsor component.
+   *
+   * @param fieldObstacles obstacle set used for safety checks, costs, or replanning.
+   * @param walls value used by this operation.
+   * @param fieldLengthMeters distance or field-coordinate value in meters.
+   * @param fieldWidthMeters distance or field-coordinate value in meters.
+   */
   public FieldPlannerForceModel(
       List<Obstacle> fieldObstacles,
       List<Obstacle> walls,
@@ -78,6 +92,14 @@ public final class FieldPlannerForceModel {
     return true;
   }
 
+  /**
+   * Updates update arrows state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param goal value used by this operation.
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   */
   public void updateArrows(Translation2d goal, List<? extends Obstacle> dynamicObstacles) {
     if (isOffloadWorkerThread() || isRealSafe()) {
       return;
@@ -110,10 +132,22 @@ public final class FieldPlannerForceModel {
     }
   }
 
+  /**
+   * Returns the get arrows value maintained by this Repulsor component.
+   *
+   * @return array list of pose2d result for get arrows.
+   */
   public ArrayList<Pose2d> getArrows() {
     return arrows;
   }
 
+  /**
+   * Returns the get goal force value maintained by this Repulsor component.
+   *
+   * @param curLocation value used by this operation.
+   * @param goal value used by this operation.
+   * @return value produced by this operation.
+   */
   public Force getGoalForce(Translation2d curLocation, Translation2d goal) {
     var displacement = goal.minus(curLocation);
     if (displacement.getNorm() == 0) return new Force();
@@ -124,12 +158,27 @@ public final class FieldPlannerForceModel {
     return new Force(mag, direction);
   }
 
+  /**
+   * Returns the get wall force value maintained by this Repulsor component.
+   *
+   * @param curLocation value used by this operation.
+   * @param target value used by this operation.
+   * @return value produced by this operation.
+   */
   public Force getWallForce(Translation2d curLocation, Translation2d target) {
     var force = Force.kZero;
     for (Obstacle obs : walls) force = force.plus(obs.getForceAtPosition(curLocation, target));
     return force;
   }
 
+  /**
+   * Returns the get obstacle force value maintained by this Repulsor component.
+   *
+   * @param curLocation value used by this operation.
+   * @param target value used by this operation.
+   * @param extra value used by this operation.
+   * @return value produced by this operation.
+   */
   public Force getObstacleForce(
       Translation2d curLocation, Translation2d target, List<? extends Obstacle> extra) {
     var force = Force.kZero;
@@ -147,6 +196,13 @@ public final class FieldPlannerForceModel {
     return force;
   }
 
+  /**
+   * Returns the get obstacle force value maintained by this Repulsor component.
+   *
+   * @param curLocation value used by this operation.
+   * @param target value used by this operation.
+   * @return value produced by this operation.
+   */
   public Force getObstacleForce(Translation2d curLocation, Translation2d target) {
     var force = Force.kZero;
     for (Obstacle obs : fieldObstacles)
@@ -154,6 +210,13 @@ public final class FieldPlannerForceModel {
     return force;
   }
 
+  /**
+   * Returns the get force value maintained by this Repulsor component.
+   *
+   * @param curLocation value used by this operation.
+   * @param target value used by this operation.
+   * @return value produced by this operation.
+   */
   public Force getForce(Translation2d curLocation, Translation2d target) {
     return getGoalForce(curLocation, target)
         .plus(getObstacleForce(curLocation, target))

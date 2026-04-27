@@ -55,6 +55,12 @@ import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
 import org.littletonrobotics.junction.Logger;
 
+/**
+ * Provides auto path behaviour functionality for the Repulsor command-behaviour layer that converts
+ * strategy and state into WPILib commands. Use this type from robot code, field profiles, or tests
+ * when integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+ * method documents robot-relative motion.
+ */
 public class AutoPathBehaviour extends Behaviour {
   private final int prio;
   private final Supplier<Boolean> inScoring;
@@ -72,6 +78,19 @@ public class AutoPathBehaviour extends Behaviour {
   private final NetworkTablesValue<Boolean> shooterPassthrough =
       NetworkTablesValue.ofBoolean(NetworkTableInstance.getDefault(), "/ShooterPassthrough", false);
 
+  /**
+   * Returns the auto path behaviour value maintained by this Repulsor component.
+   *
+   * @param priority distance or field-coordinate value in meters.
+   * @param inScoring value used by this operation.
+   * @param inCollecting value used by this operation.
+   * @param nextScore value used by this operation.
+   * @param hpOptions value used by this operation.
+   * @param atHPStation value used by this operation.
+   * @param hasPiece value used by this operation.
+   * @param stationKeyFn value used by this operation.
+   * @param ourSpeedCap value used by this operation.
+   */
   public AutoPathBehaviour(
       int priority,
       Supplier<Boolean> inScoring,
@@ -93,16 +112,33 @@ public class AutoPathBehaviour extends Behaviour {
     this.ourSpeedCap = ourSpeedCap;
   }
 
+  /**
+   * Returns the name value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public String name() {
     return "AutoPath";
   }
 
+  /**
+   * Returns the priority value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public int priority() {
     return prio;
   }
 
+  /**
+   * Returns the should run value maintained by this Repulsor component.
+   *
+   * @param flags value used by this operation.
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   * @return value produced by this operation.
+   */
   @Override
   public boolean shouldRun(EnumSet<BehaviourFlag> flags, BehaviourContext ctx) {
     return flags.contains(BehaviourFlag.AUTOPATH_MODE);
@@ -136,18 +172,43 @@ public class AutoPathBehaviour extends Behaviour {
         ctx.vision.getObstacles());
   }
 
+  /**
+   * Returns the current driver station alliance or blue value maintained by this Repulsor
+   * component.
+   *
+   * @return driver station.alliance result for current driver station alliance or blue.
+   */
   static DriverStation.Alliance currentDriverStationAllianceOrBlue() {
     return DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue);
   }
 
+  /**
+   * Returns the to repulsor alliance value maintained by this Repulsor component.
+   *
+   * @param alliance value used by this operation.
+   * @return value produced by this operation.
+   */
   static Alliance toRepulsorAlliance(DriverStation.Alliance alliance) {
     return alliance == DriverStation.Alliance.Red ? Alliance.kRed : Alliance.kBlue;
   }
 
+  /**
+   * Returns the preferred alliance from driver station value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   static Alliance preferredAllianceFromDriverStation() {
     return toRepulsorAlliance(currentDriverStationAllianceOrBlue());
   }
 
+  /**
+   * Returns the resolve planner goal pose value maintained by this Repulsor component.
+   *
+   * @param setpoint value used by this operation.
+   * @param setpointContext runtime context carrying robot state, setpoints, and subsystem access.
+   * @param driverAlliance value used by this operation.
+   * @return value produced by this operation.
+   */
   static Pose2d resolvePlannerGoalPose(
       RepulsorSetpoint setpoint,
       SetpointContext setpointContext,
@@ -159,10 +220,27 @@ public class AutoPathBehaviour extends Behaviour {
     return setpoint.getForAlliance(driverAlliance, setpointContext);
   }
 
+  /**
+   * Returns the resolve planner goal pose value maintained by this Repulsor component.
+   *
+   * @param setpoint value used by this operation.
+   * @param setpointContext runtime context carrying robot state, setpoints, and subsystem access.
+   * @return value produced by this operation.
+   */
   static Pose2d resolvePlannerGoalPose(RepulsorSetpoint setpoint, SetpointContext setpointContext) {
     return resolvePlannerGoalPose(setpoint, setpointContext, currentDriverStationAllianceOrBlue());
   }
 
+  /**
+   * Computes the choose planner setpoint value for the current Repulsor planning state. Call this
+   * from periodic planning or tests when a fresh decision is required; inputs should already be
+   * expressed in the coordinate frame expected by the parameter names.
+   *
+   * @param cat value used by this operation.
+   * @param desired value used by this operation.
+   * @param plannerOverride value used by this operation.
+   * @return repulsor setpoint result for choose planner setpoint.
+   */
   static RepulsorSetpoint choosePlannerSetpoint(
       CategorySpec cat, RepulsorSetpoint desired, RepulsorSetpoint plannerOverride) {
     if (cat == CategorySpec.kCollect) {
@@ -205,6 +283,12 @@ public class AutoPathBehaviour extends Behaviour {
 
   private Command resetCommand = null;
 
+  /**
+   * Builds the WPILib command sequence for the current behaviour context.
+   *
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   * @return value produced by this operation.
+   */
   @Override
   public Command build(BehaviourContext ctx) {
     AtomicReference<RepulsorSetpoint> lastActive = new AtomicReference<>(null);
@@ -216,18 +300,62 @@ public class AutoPathBehaviour extends Behaviour {
     AtomicReference<RepulsorSetpoint> lastEpisodeGoal = new AtomicReference<>(null);
     AtomicLong lastEpisodeFinalizeNs = new AtomicLong(0L);
 
+    /**
+     * Configuration value for ep cooldown ns. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     final long EP_COOLDOWN_NS = 1_000_000_000L;
+    /**
+     * Configuration value for pinned fail ns. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     final long PINNED_FAIL_NS = 2_000_000_000L;
+    /**
+     * Configuration value for stuck fail ns. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     final long STUCK_FAIL_NS = 3_000_000_000L;
+    /**
+     * Configuration value for progress eps meters. Distances use meters in WPILib field coordinates
+     * and should be treated as tunable when sourced from profiles.
+     */
     final double PROGRESS_EPS_METERS = 0.03;
+    /**
+     * Configuration value for pinned progress min meters. Distances use meters in WPILib field
+     * coordinates and should be treated as tunable when sourced from profiles.
+     */
     final double PINNED_PROGRESS_MIN_METERS = 0.15;
+    /**
+     * Configuration value for stuck dist min meters. Distances use meters in WPILib field
+     * coordinates and should be treated as tunable when sourced from profiles.
+     */
     final double STUCK_DIST_MIN_METERS = 0.5;
+    /**
+     * Configuration value for success near dist meters. Distances use meters in WPILib field
+     * coordinates and should be treated as tunable when sourced from profiles.
+     */
     final double SUCCESS_NEAR_DIST_METERS = 0.40;
 
+    /**
+     * Configuration value for collect goal units. The valid range and tuning source are defined by
+     * the owning subsystem or field profile.
+     */
     final int COLLECT_GOAL_UNITS = 3;
 
+    /**
+     * Configuration value for shoot lock enter m. The valid range and tuning source are defined by
+     * the owning subsystem or field profile.
+     */
     final double SHOOT_LOCK_ENTER_M = 3.0;
+    /**
+     * Configuration value for shoot lock exit m. The valid range and tuning source are defined by
+     * the owning subsystem or field profile.
+     */
     final double SHOOT_LOCK_EXIT_M = 3.6;
+    /**
+     * Configuration value for shoot lock min rot deg. Angles use WPILib rotation conventions; names
+     * ending in degrees are degrees, otherwise radians are assumed by the API.
+     */
     final double SHOOT_LOCK_MIN_ROT_DEG = 8.0;
 
     AtomicBoolean shootGoalLocked = new AtomicBoolean(false);
@@ -547,10 +675,27 @@ public class AutoPathBehaviour extends Behaviour {
             });
   }
 
+  /**
+   * Computes the pick predicted value for the current Repulsor planning state. Call this from
+   * periodic planning or tests when a fresh decision is required; inputs should already be
+   * expressed in the coordinate frame expected by the parameter names.
+   *
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   * @return repulsor setpoint result for pick predicted.
+   */
   RepulsorSetpoint pickPredicted(BehaviourContext ctx) {
     return pickPredicted(ctx, preferredAllianceFromDriverStation());
   }
 
+  /**
+   * Computes the pick predicted value for the current Repulsor planning state. Call this from
+   * periodic planning or tests when a fresh decision is required; inputs should already be
+   * expressed in the coordinate frame expected by the parameter names.
+   *
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   * @param alliance value used by this operation.
+   * @return repulsor setpoint result for pick predicted.
+   */
   RepulsorSetpoint pickPredicted(BehaviourContext ctx, Alliance alliance) {
     FieldTrackerCore ft = FieldTrackerCore.getInstance();
     ft.updatePredictorWorld(alliance);
@@ -593,7 +738,15 @@ public class AutoPathBehaviour extends Behaviour {
       BehaviourContext ctx, FieldTrackerCore tracker, Pose2d robotPose, Pose2d currentCandidate) {
     if (tracker == null || robotPose == null || currentCandidate == null) return currentCandidate;
 
+    /**
+     * Configuration value for hold goal near m. The valid range and tuning source are defined by
+     * the owning subsystem or field profile.
+     */
     final double HOLD_GOAL_NEAR_M = 0.25;
+    /**
+     * Configuration value for far fuel min dist m. The valid range and tuning source are defined by
+     * the owning subsystem or field profile.
+     */
     final double FAR_FUEL_MIN_DIST_M = 1.10;
 
     double candidateDist =

@@ -34,9 +34,26 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.TeardropObstac
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.VerticalObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.VisionPlanner.VisionObstacle;
 
+/**
+ * Provides extra pathing recording functionality for the Repulsor extra pathing geometry and
+ * collision helper layer. Use this type from robot code, field profiles, or tests when integrating
+ * the corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 final class ExtraPathingRecording {
   private ExtraPathingRecording() {}
 
+  /**
+   * Updates record ellipse state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param c value used by this operation.
+   * @param rx distance or field-coordinate value in meters.
+   * @param ry distance or field-coordinate value in meters.
+   * @param samples value used by this operation.
+   */
   static void recordEllipse(String key, Translation2d c, double rx, double ry, int samples) {
     List<Translation2d> pts = new ArrayList<>(samples + 1);
     for (int i = 0; i <= samples; i++) {
@@ -46,10 +63,31 @@ final class ExtraPathingRecording {
     recordPath(key, pts);
   }
 
+  /**
+   * Updates record path state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param points value used by this operation.
+   */
   static void recordPath(String key, List<Translation2d> points) {
     // Logger.recordOutput(key, polylineToTrajectory(points));
   }
 
+  /**
+   * Updates record forbidden grid state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param root value used by this operation.
+   * @param obstacles obstacle set used for safety checks, costs, or replanning.
+   * @param robotLength value used by this operation.
+   * @param robotWidth value used by this operation.
+   * @param step value used by this operation.
+   * @param goal value used by this operation.
+   * @param goalCaptureRadius value used by this operation.
+   */
   static void recordForbiddenGrid(
       String root,
       List<? extends Obstacle> obstacles,
@@ -88,6 +126,16 @@ final class ExtraPathingRecording {
     recordPoints(root + "/Free", free);
   }
 
+  /**
+   * Updates record corridor state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param root value used by this operation.
+   * @param a value used by this operation.
+   * @param b value used by this operation.
+   * @param r value used by this operation.
+   */
   static void recordCorridor(String root, Translation2d a, Translation2d b, double r) {
     Translation2d d = b.minus(a);
     double n = d.getNorm();
@@ -100,6 +148,13 @@ final class ExtraPathingRecording {
     recordPath(root + "/Right", List.of(aR, bR));
   }
 
+  /**
+   * Runs render obstacles in the Repulsor runtime.
+   *
+   * @param root value used by this operation.
+   * @param obstacles obstacle set used for safety checks, costs, or replanning.
+   * @param corridorR value used by this operation.
+   */
   static void renderObstacles(String root, List<? extends Obstacle> obstacles, double corridorR) {
     int i = 0;
     for (Obstacle ob : obstacles) {
@@ -132,6 +187,16 @@ final class ExtraPathingRecording {
     }
   }
 
+  /**
+   * Updates record circle state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param c value used by this operation.
+   * @param r value used by this operation.
+   * @param samples value used by this operation.
+   */
   static void recordCircle(String key, Translation2d c, double r, int samples) {
     List<Translation2d> pts = new ArrayList<>(samples + 1);
     for (int i = 0; i <= samples; i++) {
@@ -141,6 +206,14 @@ final class ExtraPathingRecording {
     recordPath(key, pts);
   }
 
+  /**
+   * Updates record points state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param pts value used by this operation.
+   */
   static void recordPoints(String key, List<Translation2d> pts) {
     Pose2d[] poses = new Pose2d[pts.size()];
     for (int i = 0; i < pts.size(); i++) {
@@ -149,6 +222,12 @@ final class ExtraPathingRecording {
     // Logger.recordOutput(key, poses);
   }
 
+  /**
+   * Returns the polyline to trajectory value maintained by this Repulsor component.
+   *
+   * @param pts value used by this operation.
+   * @return value produced by this operation.
+   */
   static Trajectory polylineToTrajectory(List<Translation2d> pts) {
     if (pts.size() < 2) {
       Pose2d p = pts.isEmpty() ? new Pose2d() : new Pose2d(pts.get(0), new Rotation2d());

@@ -19,9 +19,20 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Shooting;
 
+/**
+ * Provides drag shot planner util functionality for the Repulsor projectile and shot-planning
+ * layer. Use this type from robot code, field profiles, or tests when integrating the corresponding
+ * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+ * motion.
+ */
 final class DragShotPlannerUtil {
   private DragShotPlannerUtil() {}
 
+  /**
+   * Runs close quietly in the Repulsor runtime.
+   *
+   * @param c value used by this operation.
+   */
   static void closeQuietly(AutoCloseable c) {
     if (c == null) return;
     try {
@@ -30,6 +41,14 @@ final class DragShotPlannerUtil {
     }
   }
 
+  /**
+   * Returns the estimate speed no drag value maintained by this Repulsor component.
+   *
+   * @param horizontalDistanceMeters distance or field-coordinate value in meters.
+   * @param heightDeltaMeters distance or field-coordinate value in meters.
+   * @param angleRad value used by this operation.
+   * @return value produced by this operation.
+   */
   static double estimateSpeedNoDrag(
       double horizontalDistanceMeters, double heightDeltaMeters, double angleRad) {
     double cos = Math.cos(angleRad);

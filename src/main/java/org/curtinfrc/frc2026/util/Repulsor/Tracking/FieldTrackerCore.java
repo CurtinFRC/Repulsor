@@ -49,10 +49,20 @@ import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Vision.FieldVision;
 
+/**
+ * Provides field tracker core functionality for the Repulsor field-object tracking and collection
+ * objective layer. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public class FieldTrackerCore {
   private static volatile FieldTrackerCore instance;
   private static volatile FieldLayoutProvider defaultProvider = Constants.FIELD;
 
+  /**
+   * Configuration value for field map. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public GameElement[] field_map;
 
   private final PredictiveFieldStateRuntime predictor;
@@ -63,6 +73,11 @@ public class FieldTrackerCore {
 
   private final ConcurrentHashMap<String, String> typeAliases = new ConcurrentHashMap<>();
 
+  /**
+   * Returns the get instance value maintained by this Repulsor component.
+   *
+   * @return field tracker core result for get instance.
+   */
   public static FieldTrackerCore getInstance() {
     FieldTrackerCore local = instance;
     if (local == null) {
@@ -77,11 +92,25 @@ public class FieldTrackerCore {
     return local;
   }
 
+  /**
+   * Updates set default provider state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param provider value used by this operation.
+   */
   public static void setDefaultProvider(FieldLayoutProvider provider) {
     if (provider == null) throw new IllegalArgumentException("provider cannot be null");
     defaultProvider = provider;
   }
 
+  /**
+   * Updates reset instance state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param provider value used by this operation.
+   */
   public static void resetInstance(FieldLayoutProvider provider) {
     if (provider == null) throw new IllegalArgumentException("provider cannot be null");
     synchronized (FieldTrackerCore.class) {
@@ -89,10 +118,16 @@ public class FieldTrackerCore {
     }
   }
 
+  /** Returns the field tracker core value maintained by this Repulsor component. */
   public FieldTrackerCore() {
     this(defaultProvider);
   }
 
+  /**
+   * Returns the field tracker core value maintained by this Repulsor component.
+   *
+   * @param provider value used by this operation.
+   */
   public FieldTrackerCore(FieldLayoutProvider provider) {
     if (provider == null) throw new IllegalArgumentException("provider cannot be null");
 
@@ -110,10 +145,23 @@ public class FieldTrackerCore {
     provider.configureTracker(this);
   }
 
+  /**
+   * Updates reset all state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   */
   public void resetAll() {
     collectPlanner.resetAll();
   }
 
+  /**
+   * Updates register type alias state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param from value used by this operation.
+   * @param to value used by this operation.
+   */
   public void registerTypeAlias(String from, String to) {
     if (from == null || from.isEmpty()) {
       throw new IllegalArgumentException("from cannot be null/empty");
@@ -122,6 +170,12 @@ public class FieldTrackerCore {
     typeAliases.put(from, to);
   }
 
+  /**
+   * Returns the canonicalize type value maintained by this Repulsor component.
+   *
+   * @param type value used by this operation.
+   * @return value produced by this operation.
+   */
   public String canonicalizeType(String type) {
     if (type == null || type.isEmpty()) return "unknown";
     String t = type;
@@ -133,6 +187,11 @@ public class FieldTrackerCore {
     return t;
   }
 
+  /**
+   * Returns the get predictor value maintained by this Repulsor component.
+   *
+   * @return predictive field state runtime result for get predictor.
+   */
   public PredictiveFieldStateRuntime getPredictor() {
     return predictor;
   }
@@ -142,6 +201,14 @@ public class FieldTrackerCore {
     return predictor != null ? predictor.isCollectResourceType(type) : false;
   }
 
+  /**
+   * Updates configure collect resource profile state or telemetry as part of the Repulsor runtime
+   * loop. This may mutate local state, NetworkTables output, planner caches, or command-side
+   * runtime state depending on the owning type.
+   *
+   * @param type value used by this operation.
+   * @param resourceSpec value used by this operation.
+   */
   public void configureCollectResourceProfile(String type, ResourceSpec resourceSpec) {
     if (type == null || type.isEmpty()) throw new IllegalArgumentException("type cannot be empty");
     if (resourceSpec == null) throw new IllegalArgumentException("resourceSpec cannot be null");
@@ -150,11 +217,25 @@ public class FieldTrackerCore {
     predictor.addCollectResourceType(type);
   }
 
+  /**
+   * Updates set collect resource types state or telemetry as part of the Repulsor runtime loop.
+   * This may mutate local state, NetworkTables output, planner caches, or command-side runtime
+   * state depending on the owning type.
+   *
+   * @param types value used by this operation.
+   */
   public void setCollectResourceTypes(Set<String> types) {
     collectResourceSpecs.keySet().removeIf(type -> types == null || !types.contains(type));
     predictor.setCollectResourceTypes(types == null ? Set.of() : types);
   }
 
+  /**
+   * Updates update predictor world state or telemetry as part of the Repulsor runtime loop. This
+   * may mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param ours value used by this operation.
+   */
   public void updatePredictorWorld(Alliance ours) {
     GameElement[] fm = field_map;
     if (fm == null || fm.length == 0) {
@@ -168,6 +249,11 @@ public class FieldTrackerCore {
     predictor.setDynamicObjects(snapshotDynamics());
   }
 
+  /**
+   * Runs rebuild in the Repulsor runtime.
+   *
+   * @param provider value used by this operation.
+   */
   public void rebuild(FieldLayoutProvider provider) {
     if (provider == null) throw new IllegalArgumentException("provider cannot be null");
     this.field_map = provider.build(this);
@@ -175,6 +261,11 @@ public class FieldTrackerCore {
     provider.configureTracker(this);
   }
 
+  /**
+   * Returns the get field map value maintained by this Repulsor component.
+   *
+   * @return game element[] result for get field map.
+   */
   public GameElement[] getFieldMap() {
     GameElement[] fm = field_map;
     if (fm == null) return new GameElement[0];
@@ -183,6 +274,12 @@ public class FieldTrackerCore {
     return copy;
   }
 
+  /**
+   * Returns the get available elements value maintained by this Repulsor component.
+   *
+   * @param pred value used by this operation.
+   * @return list of game element values produced by this operation.
+   */
   public List<GameElement> getAvailableElements(Predicate<GameElement> pred) {
     GameElement[] fm = field_map;
     if (fm == null || fm.length == 0) return List.of();
@@ -194,6 +291,14 @@ public class FieldTrackerCore {
     return out;
   }
 
+  /**
+   * Returns the get scoring candidates value maintained by this Repulsor component.
+   *
+   * @param alliance value used by this operation.
+   * @param from value used by this operation.
+   * @param cat value used by this operation.
+   * @return list of repulsor setpoint values produced by this operation.
+   */
   public List<RepulsorSetpoint> getScoringCandidates(
       Alliance alliance, Translation2d from, CategorySpec cat) {
     GameElement[] fm = field_map;
@@ -223,26 +328,67 @@ public class FieldTrackerCore {
     return out;
   }
 
+  /**
+   * Runs predictor clear stale in the Repulsor runtime.
+   *
+   * @param maxAgeS value used by this operation.
+   */
   public void predictorClearStale(double maxAgeS) {
     predictor.clearStale(maxAgeS);
   }
 
+  /**
+   * Runs predictor update ally in the Repulsor runtime.
+   *
+   * @param id value used by this operation.
+   * @param pos value used by this operation.
+   * @param velHint value used by this operation.
+   * @param speedCap value used by this operation.
+   */
   public void predictorUpdateAlly(
       int id, Translation2d pos, Translation2d velHint, Double speedCap) {
     predictor.updateAlly(id, pos, velHint, speedCap);
   }
 
+  /**
+   * Runs predictor update enemy in the Repulsor runtime.
+   *
+   * @param id value used by this operation.
+   * @param pos value used by this operation.
+   * @param velHint value used by this operation.
+   * @param speedCap value used by this operation.
+   */
   public void predictorUpdateEnemy(
       int id, Translation2d pos, Translation2d velHint, Double speedCap) {
     predictor.updateEnemy(id, pos, velHint, speedCap);
   }
 
+  /**
+   * Returns the get predicted candidates value maintained by this Repulsor component.
+   *
+   * @param alliance value used by this operation.
+   * @param ourPos value used by this operation.
+   * @param ourSpeedCap value used by this operation.
+   * @param cat value used by this operation.
+   * @param limit value used by this operation.
+   * @return value produced by this operation.
+   */
   public List<Candidate> getPredictedCandidates(
       Alliance alliance, Translation2d ourPos, double ourSpeedCap, CategorySpec cat, int limit) {
     updatePredictorWorld(alliance);
     return predictor.rank(ourPos, ourSpeedCap, cat, limit);
   }
 
+  /**
+   * Returns the get predicted setpoints value maintained by this Repulsor component.
+   *
+   * @param alliance value used by this operation.
+   * @param ourPos value used by this operation.
+   * @param ourSpeedCap value used by this operation.
+   * @param cat value used by this operation.
+   * @param limit value used by this operation.
+   * @return list of repulsor setpoint values produced by this operation.
+   */
   public List<RepulsorSetpoint> getPredictedSetpoints(
       Alliance alliance, Translation2d ourPos, double ourSpeedCap, CategorySpec cat, int limit) {
     List<Candidate> c = getPredictedCandidates(alliance, ourPos, ourSpeedCap, cat, limit);
@@ -251,6 +397,14 @@ public class FieldTrackerCore {
     return out;
   }
 
+  /**
+   * Runs ingest tracked in the Repulsor runtime.
+   *
+   * @param id value used by this operation.
+   * @param type value used by this operation.
+   * @param p value used by this operation.
+   * @param nowNs value used by this operation.
+   */
   public void ingestTracked(String id, String type, Pose3d p, long nowNs) {
     dynamicTracker.ingestTracked(id, type, p, nowNs);
   }
@@ -265,6 +419,14 @@ public class FieldTrackerCore {
     return dynamicTracker.snapshotDynamics();
   }
 
+  /**
+   * Returns the summarize collect resources value maintained by this Repulsor component.
+   *
+   * @param id value used by this operation.
+   * @param robotPoseBlue value used by this operation.
+   * @param region value used by this operation.
+   * @return resource region summary result for summarize collect resources.
+   */
   public ResourceRegionSummary summarizeCollectResources(
       String id, Pose2d robotPoseBlue, Predicate<Translation2d> region) {
     if (robotPoseBlue == null || region == null) {
@@ -341,15 +503,41 @@ public class FieldTrackerCore {
     return out;
   }
 
+  /**
+   * Returns the next objective goal blue value maintained by this Repulsor component.
+   *
+   * @param robotPoseBlue value used by this operation.
+   * @param ourSpeedCap value used by this operation.
+   * @param goalUnits value used by this operation.
+   * @param cat value used by this operation.
+   * @return value produced by this operation.
+   */
   public Pose2d nextObjectiveGoalBlue(
       Pose2d robotPoseBlue, double ourSpeedCap, int goalUnits, CategorySpec cat) {
     return collectPlanner.nextObjectiveGoalBlue(robotPoseBlue, ourSpeedCap, goalUnits, cat);
   }
 
+  /**
+   * Returns the next collection goal blue value maintained by this Repulsor component.
+   *
+   * @param robotPoseBlue value used by this operation.
+   * @param ourSpeedCap value used by this operation.
+   * @param goalUnits value used by this operation.
+   * @return value produced by this operation.
+   */
   public Pose2d nextCollectionGoalBlue(Pose2d robotPoseBlue, double ourSpeedCap, int goalUnits) {
     return nextObjectiveGoalBlue(robotPoseBlue, ourSpeedCap, goalUnits, CategorySpec.kCollect);
   }
 
+  /**
+   * Returns the next alliance shuttle recovery goal blue value maintained by this Repulsor
+   * component.
+   *
+   * @param robotPoseBlue value used by this operation.
+   * @param ourSpeedCap value used by this operation.
+   * @param goalUnits value used by this operation.
+   * @return value produced by this operation.
+   */
   public Pose2d nextAllianceShuttleRecoveryGoalBlue(
       Pose2d robotPoseBlue, double ourSpeedCap, int goalUnits) {
     if (robotPoseBlue == null) {
@@ -362,6 +550,12 @@ public class FieldTrackerCore {
         robotPoseBlue, ourSpeedCap, goalUnits, flipRedToBlue, snapshotRecoveryDynamics());
   }
 
+  /**
+   * Returns the create field vision value maintained by this Repulsor component.
+   *
+   * @param name value used by this operation.
+   * @return field vision result for create field vision.
+   */
   public FieldVision createFieldVision(String name) {
     return new FieldVision(this, name);
   }

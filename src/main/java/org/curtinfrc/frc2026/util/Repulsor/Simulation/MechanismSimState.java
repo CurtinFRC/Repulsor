@@ -169,6 +169,11 @@ public final class MechanismSimState {
     return upperLimitTriggered;
   }
 
+  /**
+   * Runs copy from in the Repulsor runtime.
+   *
+   * @param other value used by this operation.
+   */
   void copyFrom(MechanismSimState other) {
     if (other == null) {
       return;
@@ -187,50 +192,135 @@ public final class MechanismSimState {
     upperLimitTriggered = other.upperLimitTriggered;
   }
 
+  /**
+   * Updates set position state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param position value used by this operation.
+   */
   void setPosition(double position) {
     this.position = position;
   }
 
+  /**
+   * Updates set velocity state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param velocity velocity input, normally field-relative unless the caller documents
+   *     robot-relative motion.
+   */
   void setVelocity(double velocity) {
     this.velocity = velocity;
   }
 
+  /**
+   * Updates set acceleration state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param acceleration value used by this operation.
+   */
   void setAcceleration(double acceleration) {
     this.acceleration = acceleration;
   }
 
+  /**
+   * Updates set applied voltage state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param appliedVoltage value used by this operation.
+   */
   void setAppliedVoltage(double appliedVoltage) {
     this.appliedVoltage = appliedVoltage;
   }
 
+  /**
+   * Updates set motor current amps state or telemetry as part of the Repulsor runtime loop. This
+   * may mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param motorCurrentAmps value used by this operation.
+   */
   void setMotorCurrentAmps(double motorCurrentAmps) {
     this.motorCurrentAmps = motorCurrentAmps;
   }
 
+  /**
+   * Updates set motor torque nm state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param motorTorqueNm value used by this operation.
+   */
   void setMotorTorqueNm(double motorTorqueNm) {
     this.motorTorqueNm = motorTorqueNm;
   }
 
+  /**
+   * Updates set output effort state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param outputEffort value used by this operation.
+   */
   void setOutputEffort(double outputEffort) {
     this.outputEffort = outputEffort;
   }
 
+  /**
+   * Updates set external effort state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param externalEffort value used by this operation.
+   */
   void setExternalEffort(double externalEffort) {
     this.externalEffort = externalEffort;
   }
 
+  /**
+   * Updates set friction effort state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param frictionEffort value used by this operation.
+   */
   void setFrictionEffort(double frictionEffort) {
     this.frictionEffort = frictionEffort;
   }
 
+  /**
+   * Updates set pressure effort state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param pressureEffort value used by this operation.
+   */
   void setPressureEffort(double pressureEffort) {
     this.pressureEffort = pressureEffort;
   }
 
+  /**
+   * Updates set lower limit triggered state or telemetry as part of the Repulsor runtime loop. This
+   * may mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param lowerLimitTriggered value used by this operation.
+   */
   void setLowerLimitTriggered(boolean lowerLimitTriggered) {
     this.lowerLimitTriggered = lowerLimitTriggered;
   }
 
+  /**
+   * Updates set upper limit triggered state or telemetry as part of the Repulsor runtime loop. This
+   * may mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param upperLimitTriggered value used by this operation.
+   */
   void setUpperLimitTriggered(boolean upperLimitTriggered) {
     this.upperLimitTriggered = upperLimitTriggered;
   }

@@ -23,9 +23,19 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.Objects;
 
+/**
+ * Provides intake footprint functionality for the Repulsor core Repulsor coordination layer. Use
+ * this type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+ * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public final class IntakeFootprint {
   private static IntakeFootprint instance = null;
 
+  /**
+   * Returns the get footprint value maintained by this Repulsor component.
+   *
+   * @return intake footprint result for get footprint.
+   */
   public static IntakeFootprint getFootprint() {
     if (instance == null) {
       throw new IllegalStateException(
@@ -34,6 +44,13 @@ public final class IntakeFootprint {
     return instance;
   }
 
+  /**
+   * Updates set footprint state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param footprint value used by this operation.
+   */
   public static void setFootprint(IntakeFootprint footprint) {
     if (instance != null) {
       throw new IllegalStateException("IntakeFootprint instance already set.");
@@ -41,16 +58,37 @@ public final class IntakeFootprint {
     instance = Objects.requireNonNull(footprint);
   }
 
+  /**
+   * Returns the robot square value maintained by this Repulsor component.
+   *
+   * @param robotSideMeters distance or field-coordinate value in meters.
+   * @return intake footprint result for robot square.
+   */
   public static IntakeFootprint robotSquare(double robotSideMeters) {
     double h = 0.5 * robotSideMeters;
     return new IntakeFootprint(new Rect(new Translation2d(0.0, 0.0), h, h));
   }
 
+  /**
+   * Returns the robot rect value maintained by this Repulsor component.
+   *
+   * @param robotLengthMeters distance or field-coordinate value in meters.
+   * @param robotWidthMeters distance or field-coordinate value in meters.
+   * @return intake footprint result for robot rect.
+   */
   public static IntakeFootprint robotRect(double robotLengthMeters, double robotWidthMeters) {
     return new IntakeFootprint(
         new Rect(new Translation2d(0.0, 0.0), 0.5 * robotLengthMeters, 0.5 * robotWidthMeters));
   }
 
+  /**
+   * Returns the front rect value maintained by this Repulsor component.
+   *
+   * @param robotLengthMeters distance or field-coordinate value in meters.
+   * @param intakeDepthMeters distance or field-coordinate value in meters.
+   * @param intakeWidthMeters distance or field-coordinate value in meters.
+   * @return intake footprint result for front rect.
+   */
   public static IntakeFootprint frontRect(
       double robotLengthMeters, double intakeDepthMeters, double intakeWidthMeters) {
     double hx = 0.5 * intakeDepthMeters;
@@ -65,14 +103,34 @@ public final class IntakeFootprint {
     this.shape = Objects.requireNonNull(shape);
   }
 
+  /**
+   * Returns the contains point robot frame value maintained by this Repulsor component.
+   *
+   * @param pRobot value used by this operation.
+   * @return value produced by this operation.
+   */
   public boolean containsPointRobotFrame(Translation2d pRobot) {
     return shape.contains(pRobot);
   }
 
+  /**
+   * Returns the support point robot frame value maintained by this Repulsor component.
+   *
+   * @param dirRobot value used by this operation.
+   * @return value produced by this operation.
+   */
   public Translation2d supportPointRobotFrame(Translation2d dirRobot) {
     return shape.support(dirRobot);
   }
 
+  /**
+   * Returns the snap center so footprint touches point value maintained by this Repulsor component.
+   *
+   * @param desiredCenterField value used by this operation.
+   * @param robotHeading value used by this operation.
+   * @param pointField value used by this operation.
+   * @return value produced by this operation.
+   */
   public Translation2d snapCenterSoFootprintTouchesPoint(
       Translation2d desiredCenterField, Rotation2d robotHeading, Translation2d pointField) {
 
@@ -90,6 +148,15 @@ public final class IntakeFootprint {
     return pointField.minus(contactField);
   }
 
+  /**
+   * Returns the snap center so point is inside footprint value maintained by this Repulsor
+   * component.
+   *
+   * @param desiredCenterField value used by this operation.
+   * @param robotHeading value used by this operation.
+   * @param pointField value used by this operation.
+   * @return value produced by this operation.
+   */
   public Translation2d snapCenterSoPointIsInsideFootprint(
       Translation2d desiredCenterField, Rotation2d robotHeading, Translation2d pointField) {
 
@@ -103,8 +170,20 @@ public final class IntakeFootprint {
   private interface Shape {
     boolean contains(Translation2d p);
 
+    /**
+     * Returns the support value maintained by this Repulsor component.
+     *
+     * @param dir value used by this operation.
+     * @return value produced by this operation.
+     */
     Translation2d support(Translation2d dir);
 
+    /**
+     * Returns the closest point inside value maintained by this Repulsor component.
+     *
+     * @param p value used by this operation.
+     * @return value produced by this operation.
+     */
     Translation2d closestPointInside(Translation2d p);
   }
 
@@ -119,6 +198,12 @@ public final class IntakeFootprint {
       this.hy = Math.max(0.0, halfY);
     }
 
+    /**
+     * Returns the contains value maintained by this Repulsor component.
+     *
+     * @param p value used by this operation.
+     * @return value produced by this operation.
+     */
     @Override
     public boolean contains(Translation2d p) {
       double dx = p.getX() - c.getX();
@@ -126,6 +211,12 @@ public final class IntakeFootprint {
       return Math.abs(dx) <= hx + 1e-9 && Math.abs(dy) <= hy + 1e-9;
     }
 
+    /**
+     * Returns the support value maintained by this Repulsor component.
+     *
+     * @param dir value used by this operation.
+     * @return value produced by this operation.
+     */
     @Override
     public Translation2d support(Translation2d dir) {
       double sx = dir.getX() >= 0.0 ? hx : -hx;
@@ -133,6 +224,12 @@ public final class IntakeFootprint {
       return new Translation2d(c.getX() + sx, c.getY() + sy);
     }
 
+    /**
+     * Returns the closest point inside value maintained by this Repulsor component.
+     *
+     * @param p value used by this operation.
+     * @return value produced by this operation.
+     */
     @Override
     public Translation2d closestPointInside(Translation2d p) {
       double x = clamp(p.getX(), c.getX() - hx, c.getX() + hx);

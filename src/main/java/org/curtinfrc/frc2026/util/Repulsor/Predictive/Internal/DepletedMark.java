@@ -20,16 +20,70 @@ package org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal;
 
 import edu.wpi.first.math.geometry.Translation2d;
 
+/**
+ * Provides depleted mark functionality for the Repulsor package-internal data structures used by
+ * the surrounding Repulsor subsystem. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class DepletedMark {
+  /**
+   * Configuration value for p. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final Translation2d p;
+
+  /**
+   * Configuration value for t. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public double t;
+
+  /**
+   * Configuration value for s. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public double s;
+
+  /**
+   * Configuration value for r. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public double r;
+
+  /**
+   * Configuration value for ttl. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public double ttl;
+
+  /**
+   * Configuration value for ring. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final boolean ring;
+
+  /**
+   * Configuration value for ring r0. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final double ringR0;
+
+  /**
+   * Configuration value for ring r1. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final double ringR1;
 
+  /**
+   * Returns the depleted mark value maintained by this Repulsor component.
+   *
+   * @param p value used by this operation.
+   * @param t value used by this operation.
+   * @param s value used by this operation.
+   * @param r value used by this operation.
+   * @param ttl value used by this operation.
+   */
   public DepletedMark(Translation2d p, double t, double s, double r, double ttl) {
     this.p = p != null ? p : new Translation2d();
     this.t = t;
@@ -41,6 +95,16 @@ public final class DepletedMark {
     this.ringR1 = 0.0;
   }
 
+  /**
+   * Returns the depleted mark value maintained by this Repulsor component.
+   *
+   * @param p value used by this operation.
+   * @param t value used by this operation.
+   * @param s value used by this operation.
+   * @param r0 value used by this operation.
+   * @param r1 value used by this operation.
+   * @param ttl value used by this operation.
+   */
   public DepletedMark(Translation2d p, double t, double s, double r0, double r1, double ttl) {
     this.p = p != null ? p : new Translation2d();
     this.t = t;

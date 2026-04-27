@@ -29,17 +29,65 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * Provides heatmap functionality for the Repulsor core Repulsor coordination layer. Use this type
+ * from robot code, field profiles, or tests when integrating the corresponding Repulsor subsystem.
+ * Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public final class Heatmap {
+  /**
+   * Contract for heatmap provider implementations used by the Repulsor core Repulsor coordination
+   * layer. Use this type from robot code, field profiles, or tests when integrating the
+   * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+   * robot-relative motion.
+   */
   public static interface HeatmapProvider {
+    /**
+     * Returns the get heatmap value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     Heatmap getHeatmap();
   }
 
+  /**
+   * Provides block functionality for the Repulsor core Repulsor coordination layer. Use this type
+   * from robot code, field profiles, or tests when integrating the corresponding Repulsor
+   * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+   */
   public static final class Block {
+    /**
+     * Configuration value for uid. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     public final String uid;
+
+    /**
+     * Configuration value for position. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     public final Translation2d position;
+
+    /**
+     * Configuration value for size. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     public final Transform2d size;
+
+    /**
+     * Configuration value for heat. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     public final double heat;
 
+    /**
+     * Returns the block value maintained by this Repulsor component.
+     *
+     * @param uid value used by this operation.
+     * @param position value used by this operation.
+     * @param size value used by this operation.
+     * @param heat value used by this operation.
+     */
     public Block(String uid, Translation2d position, Transform2d size, double heat) {
       this.uid = requireUid(uid);
       this.position = Objects.requireNonNull(position, "position");
@@ -47,50 +95,122 @@ public final class Heatmap {
       this.heat = heat;
     }
 
+    /**
+     * Returns the x0 value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     public double x0() {
       return position.getX();
     }
 
+    /**
+     * Returns the y0 value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     public double y0() {
       return position.getY();
     }
 
+    /**
+     * Returns w for the current Repulsor state.
+     *
+     * @return value produced by this operation.
+     */
     public double w() {
       return Math.max(0.0, size.getTranslation().getX());
     }
 
+    /**
+     * Returns h for the current Repulsor state.
+     *
+     * @return value produced by this operation.
+     */
     public double h() {
       return Math.max(0.0, size.getTranslation().getY());
     }
 
+    /**
+     * Returns the x1 value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     public double x1() {
       return x0() + w();
     }
 
+    /**
+     * Returns the y1 value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     public double y1() {
       return y0() + h();
     }
 
+    /**
+     * Returns the center value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     public Translation2d center() {
       return new Translation2d(x0() + 0.5 * w(), y0() + 0.5 * h());
     }
 
+    /**
+     * Returns the contains value maintained by this Repulsor component.
+     *
+     * @param p value used by this operation.
+     * @return value produced by this operation.
+     */
     public boolean contains(Translation2d p) {
       double x = p.getX();
       double y = p.getY();
       return x >= x0() && x <= x1() && y >= y0() && y <= y1();
     }
 
+    /**
+     * Returns the area value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     public double area() {
       return w() * h();
     }
   }
 
+  /**
+   * Provides transition functionality for the Repulsor core Repulsor coordination layer. Use this
+   * type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+   * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+   */
   public static final class Transition {
+    /**
+     * Configuration value for from. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     public final String from;
+
+    /**
+     * Configuration value for to. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     public final String to;
+
+    /**
+     * Configuration value for scale. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     public final double scale;
 
+    /**
+     * Returns the transition value maintained by this Repulsor component.
+     *
+     * @param from value used by this operation.
+     * @param to value used by this operation.
+     * @param scale value used by this operation.
+     */
     public Transition(String from, String to, double scale) {
       this.from = requireUid(from);
       this.to = requireUid(to);
@@ -98,28 +218,60 @@ public final class Heatmap {
     }
   }
 
+  /**
+   * Defines the blend mode values used by the Repulsor core Repulsor coordination layer. Use this
+   * type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+   * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+   */
   public enum BlendMode {
     MIN_T,
     MAX_EDGE_INFLUENCE,
     WEIGHTED_SUM
   }
 
+  /**
+   * Provides builder functionality for the Repulsor core Repulsor coordination layer. Use this type
+   * from robot code, field profiles, or tests when integrating the corresponding Repulsor
+   * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+   */
   public static final class Builder {
     private final Map<String, Block> blocks = new LinkedHashMap<>();
     private final List<Transition> transitions = new ArrayList<>();
     private double eps = 1e-9;
     private BlendMode blendMode = BlendMode.MAX_EDGE_INFLUENCE;
 
+    /**
+     * Returns the eps value maintained by this Repulsor component.
+     *
+     * @param eps value used by this operation.
+     * @return value produced by this operation.
+     */
     public Builder eps(double eps) {
       this.eps = Math.max(0.0, eps);
       return this;
     }
 
+    /**
+     * Returns the blend mode value maintained by this Repulsor component.
+     *
+     * @param mode value used by this operation.
+     * @return value produced by this operation.
+     */
     public Builder blendMode(BlendMode mode) {
       this.blendMode = Objects.requireNonNull(mode, "mode");
       return this;
     }
 
+    /**
+     * Returns the block value maintained by this Repulsor component.
+     *
+     * @param uid value used by this operation.
+     * @param pos value used by this operation.
+     * @param w value used by this operation.
+     * @param h value used by this operation.
+     * @param heat value used by this operation.
+     * @return value produced by this operation.
+     */
     public Builder block(String uid, Translation2d pos, double w, double h, double heat) {
       return block(
           new Block(
@@ -130,6 +282,12 @@ public final class Heatmap {
               heat));
     }
 
+    /**
+     * Returns the block value maintained by this Repulsor component.
+     *
+     * @param b value used by this operation.
+     * @return value produced by this operation.
+     */
     public Builder block(Block b) {
       Objects.requireNonNull(b, "b");
       if (blocks.containsKey(b.uid))
@@ -138,26 +296,58 @@ public final class Heatmap {
       return this;
     }
 
+    /**
+     * Returns the transition value maintained by this Repulsor component.
+     *
+     * @param from value used by this operation.
+     * @param to value used by this operation.
+     * @param scale value used by this operation.
+     * @return value produced by this operation.
+     */
     public Builder transition(String from, String to, double scale) {
       transitions.add(new Transition(from, to, scale));
       return this;
     }
 
+    /**
+     * Returns the bidirectional value maintained by this Repulsor component.
+     *
+     * @param a value used by this operation.
+     * @param b value used by this operation.
+     * @param scaleAB value used by this operation.
+     * @param scaleBA value used by this operation.
+     * @return value produced by this operation.
+     */
     public Builder bidirectional(String a, String b, double scaleAB, double scaleBA) {
       transitions.add(new Transition(a, b, scaleAB));
       transitions.add(new Transition(b, a, scaleBA));
       return this;
     }
 
+    /**
+     * Builds the WPILib command sequence for the current behaviour context.
+     *
+     * @return value produced by this operation.
+     */
     public Heatmap build() {
       return new Heatmap(new ArrayList<>(blocks.values()), transitions, eps, blendMode);
     }
   }
 
+  /**
+   * Returns the builder value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public static Builder builder() {
     return new Builder();
   }
 
+  /**
+   * Defines the side values used by the Repulsor core Repulsor coordination layer. Use this type
+   * from robot code, field profiles, or tests when integrating the corresponding Repulsor
+   * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+   */
   public enum Side {
     LEFT,
     RIGHT,
@@ -165,11 +355,40 @@ public final class Heatmap {
     TOP
   }
 
+  /**
+   * Provides transition zone functionality for the Repulsor core Repulsor coordination layer. Use
+   * this type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+   * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+   */
   public static final class TransitionZone {
+    /**
+     * Configuration value for from. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     public final String from;
+
+    /**
+     * Configuration value for to. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     public final String to;
+
+    /**
+     * Configuration value for side in to. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     public final Side sideInTo;
+
+    /**
+     * Configuration value for thickness. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     public final double thickness;
+
+    /**
+     * Configuration value for scale. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     public final double scale;
 
     private TransitionZone(String from, String to, Side sideInTo, double thickness, double scale) {
@@ -182,10 +401,34 @@ public final class Heatmap {
   }
 
   private static final class Incoming {
+    /**
+     * Configuration value for from. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     final Block from;
+
+    /**
+     * Configuration value for to. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     final Block to;
+
+    /**
+     * Configuration value for side. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     final Side side;
+
+    /**
+     * Configuration value for thickness. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     final double thickness;
+
+    /**
+     * Configuration value for scale. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     final double scale;
 
     Incoming(Block from, Block to, Side side, double thickness, double scale) {
@@ -274,24 +517,51 @@ public final class Heatmap {
     buildIncoming();
   }
 
+  /**
+   * Returns the blocks value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public List<Block> blocks() {
     return blocks;
   }
 
+  /**
+   * Returns the transitions value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public List<Transition> transitions() {
     return transitions;
   }
 
+  /**
+   * Returns the block value maintained by this Repulsor component.
+   *
+   * @param uid value used by this operation.
+   * @return value produced by this operation.
+   */
   public Block block(String uid) {
     return byUid.get(uid);
   }
 
+  /**
+   * Returns the total heat value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public double totalHeat() {
     double sum = 0.0;
     for (Block b : blocks) sum += b.heat;
     return sum;
   }
 
+  /**
+   * Returns the block at value maintained by this Repulsor component.
+   *
+   * @param p value used by this operation.
+   * @return value produced by this operation.
+   */
   public Block blockAt(Translation2d p) {
     Objects.requireNonNull(p, "p");
     for (Block b : blocks) {
@@ -300,6 +570,12 @@ public final class Heatmap {
     return null;
   }
 
+  /**
+   * Returns the heat at value maintained by this Repulsor component.
+   *
+   * @param p value used by this operation.
+   * @return value produced by this operation.
+   */
   public double heatAt(Translation2d p) {
     Objects.requireNonNull(p, "p");
     Block b = blockAt(p);
@@ -319,6 +595,13 @@ public final class Heatmap {
     }
   }
 
+  /**
+   * Returns the are touching value maintained by this Repulsor component.
+   *
+   * @param aUid value used by this operation.
+   * @param bUid value used by this operation.
+   * @return value produced by this operation.
+   */
   public boolean areTouching(String aUid, String bUid) {
     Block a = byUid.get(aUid);
     Block b = byUid.get(bUid);
@@ -326,6 +609,12 @@ public final class Heatmap {
     return detectTouch(a, b, eps) != null;
   }
 
+  /**
+   * Returns the zones for to value maintained by this Repulsor component.
+   *
+   * @param toUid value used by this operation.
+   * @return list of transition zone values produced by this operation.
+   */
   public List<TransitionZone> zonesForTo(String toUid) {
     List<Incoming> inc = incomingByTo.get(toUid);
     if (inc == null || inc.isEmpty()) return Collections.emptyList();
@@ -336,6 +625,11 @@ public final class Heatmap {
     return Collections.unmodifiableList(out);
   }
 
+  /**
+   * Returns the zones value maintained by this Repulsor component.
+   *
+   * @return list of transition zone values produced by this operation.
+   */
   public List<TransitionZone> zones() {
     List<TransitionZone> out = new ArrayList<>();
     for (Map.Entry<String, List<Incoming>> e : incomingByTo.entrySet()) {
@@ -422,6 +716,10 @@ public final class Heatmap {
   }
 
   private static final class Touch {
+    /**
+     * Configuration value for side. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     final Side side;
 
     Touch(Side side) {

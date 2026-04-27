@@ -21,5 +21,15 @@ package org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.Runtime;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 
+/**
+ * Immutable data record for field tracker collect pass sticky result values passed through the
+ * Repulsor runtime helper layer shared by behaviours and planners. Use this type from robot code,
+ * field profiles, or tests when integrating the corresponding Repulsor subsystem. Coordinates are
+ * field-relative unless a method documents robot-relative motion.
+ *
+ * @param desiredCollectPoint component of the field tracker collect pass sticky result model
+ * @param desiredDriveTarget record component for the field tracker collect pass sticky result model
+ * @param immediatePose record component for the field tracker collect pass sticky result snapshot
+ */
 public record FieldTrackerCollectPassStickyResult(
     Translation2d desiredCollectPoint, Translation2d desiredDriveTarget, Pose2d immediatePose) {}

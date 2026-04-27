@@ -23,43 +23,133 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 
+/**
+ * Provides turn tuning functionality for the Repulsor drive and turn tuning model layer. Use this
+ * type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+ * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public abstract class TurnTuning extends Tuning {
   protected TurnTuning(String key) {
     super(key);
   }
 
+  /**
+   * Contract for collision checker implementations used by the Repulsor drive and turn tuning model
+   * layer. Use this type from robot code, field profiles, or tests when integrating the
+   * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+   * robot-relative motion.
+   */
   public interface CollisionChecker {
     boolean intersects(Translation2d[] rect);
   }
 
+  /**
+   * Provides turn result functionality for the Repulsor drive and turn tuning model layer. Use this
+   * type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+   * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+   */
   public static final class TurnResult {
+    /**
+     * Configuration value for yaw. Angles use WPILib rotation conventions; names ending in degrees
+     * are degrees, otherwise radians are assumed by the API.
+     */
     public final Rotation2d yaw;
+
+    /**
+     * Configuration value for speed scale. The valid range and tuning source are defined by the
+     * owning subsystem or field profile.
+     */
     public final double speedScale;
 
+    /**
+     * Returns the turn result value maintained by this Repulsor component.
+     *
+     * @param yaw value used by this operation.
+     * @param speedScale velocity input, normally field-relative unless the caller documents
+     *     robot-relative motion.
+     */
     public TurnResult(Rotation2d yaw, double speedScale) {
       this.yaw = yaw;
       this.speedScale = speedScale;
     }
   }
 
+  /**
+   * Returns the max omega rad per sec value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public abstract double maxOmegaRadPerSec();
 
+  /**
+   * Returns the turn margin meters value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public abstract double turnMarginMeters();
 
+  /**
+   * Returns the turn samples value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public abstract int turnSamples();
 
+  /**
+   * Computes the score turn margin mult value for the current Repulsor planning state.
+   *
+   * @return value produced by this operation.
+   */
   public abstract double scoreTurnMarginMult();
 
+  /**
+   * Computes the score safety bubble meters value for the current Repulsor planning state.
+   *
+   * @return value produced by this operation.
+   */
   public abstract double scoreSafetyBubbleMeters();
 
+  /**
+   * Returns the dock blend start meters value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public abstract double dockBlendStartMeters();
 
+  /**
+   * Returns the dock blend end meters value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public abstract double dockBlendEndMeters();
 
+  /**
+   * Returns the dock blend samples value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public abstract int dockBlendSamples();
 
+  /**
+   * Computes the score turn slowdown factor value for the current Repulsor planning state.
+   *
+   * @return value produced by this operation.
+   */
   public abstract double scoreTurnSlowdownFactor();
 
+  /**
+   * Returns the plan value maintained by this Repulsor component.
+   *
+   * @param pose WPILib Pose2d in field-relative coordinates.
+   * @param goal value used by this operation.
+   * @param pathHeading value used by this operation.
+   * @param stepVec value used by this operation.
+   * @param isScoring value used by this operation.
+   * @param robotX distance or field-coordinate value in meters.
+   * @param robotY distance or field-coordinate value in meters.
+   * @param checker value used by this operation.
+   * @return turn result result for plan.
+   */
   public abstract TurnResult plan(
       Pose2d pose,
       Pose2d goal,
@@ -70,6 +160,15 @@ public abstract class TurnTuning extends Tuning {
       double robotY,
       CollisionChecker checker);
 
+  /**
+   * Returns the robot rect value maintained by this Repulsor component.
+   *
+   * @param center value used by this operation.
+   * @param yaw value used by this operation.
+   * @param rx distance or field-coordinate value in meters.
+   * @param ry distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   public static Translation2d[] robotRect(
       Translation2d center, Rotation2d yaw, double rx, double ry) {
     double hx = rx * 0.5, hy = ry * 0.5;

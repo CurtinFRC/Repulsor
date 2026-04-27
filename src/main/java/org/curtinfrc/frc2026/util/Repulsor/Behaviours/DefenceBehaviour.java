@@ -31,11 +31,24 @@ import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointContext;
 
+/**
+ * Provides defence behaviour functionality for the Repulsor command-behaviour layer that converts
+ * strategy and state into WPILib commands. Use this type from robot code, field profiles, or tests
+ * when integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+ * method documents robot-relative motion.
+ */
 public final class DefenceBehaviour extends Behaviour {
   private final int prio;
   private final Supplier<RepulsorSetpoint> defenseGoal;
   private final Supplier<Double> speedCap;
 
+  /**
+   * Returns the defence behaviour value maintained by this Repulsor component.
+   *
+   * @param priority distance or field-coordinate value in meters.
+   * @param defenseGoal value used by this operation.
+   * @param speedCap value used by this operation.
+   */
   public DefenceBehaviour(
       int priority, Supplier<RepulsorSetpoint> defenseGoal, Supplier<Double> speedCap) {
     this.prio = priority;
@@ -43,16 +56,33 @@ public final class DefenceBehaviour extends Behaviour {
     this.speedCap = speedCap;
   }
 
+  /**
+   * Returns the name value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public String name() {
     return "Defense";
   }
 
+  /**
+   * Returns the priority value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public int priority() {
     return prio;
   }
 
+  /**
+   * Returns the should run value maintained by this Repulsor component.
+   *
+   * @param flags value used by this operation.
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   * @return value produced by this operation.
+   */
   @Override
   public boolean shouldRun(EnumSet<BehaviourFlag> flags, BehaviourContext ctx) {
     return flags.contains(BehaviourFlag.DEFENCE_MODE);
@@ -67,6 +97,12 @@ public final class DefenceBehaviour extends Behaviour {
         ctx.vision.getObstacles());
   }
 
+  /**
+   * Builds the WPILib command sequence for the current behaviour context.
+   *
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   * @return value produced by this operation.
+   */
   @Override
   public Command build(BehaviourContext ctx) {
     return Commands.run(

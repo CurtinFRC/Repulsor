@@ -22,7 +22,17 @@ package org.curtinfrc.frc2026.util.Repulsor.Profiler;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 
+/**
+ * Provides profiler stats functionality for the Repulsor low-overhead profiling and event recording
+ * layer. Use this type from robot code, field profiles, or tests when integrating the corresponding
+ * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+ * motion.
+ */
 final class ProfilerStats {
+  /**
+   * Configuration value for name. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   final String name;
 
   final LongAdder wCount = new LongAdder();
@@ -30,10 +40,23 @@ final class ProfilerStats {
   final AtomicLong wMinNs = new AtomicLong(Long.MAX_VALUE);
   final AtomicLong wMaxNs = new AtomicLong(Long.MIN_VALUE);
 
+  /**
+   * Creates a profiler stats instance with the dependencies and tuning values used by this Repulsor
+   * component.
+   *
+   * @param name value used by this operation.
+   */
   ProfilerStats(String name) {
     this.name = name;
   }
 
+  /**
+   * Updates record state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   *
+   * @param durNs value used by this operation.
+   */
   void record(long durNs) {
     if (durNs <= 0) return;
     wCount.increment();
@@ -42,6 +65,11 @@ final class ProfilerStats {
     updateMax(wMaxNs, durNs);
   }
 
+  /**
+   * Returns the snapshot and reset window value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   Snapshot snapshotAndResetWindow() {
     long c = wCount.sum();
     long t = wTotalNs.sum();
@@ -74,11 +102,41 @@ final class ProfilerStats {
     }
   }
 
+  /**
+   * Provides snapshot functionality for the Repulsor low-overhead profiling and event recording
+   * layer. Use this type from robot code, field profiles, or tests when integrating the
+   * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+   * robot-relative motion.
+   */
   static final class Snapshot {
+    /**
+     * Configuration value for name. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     final String name;
+
+    /**
+     * Configuration value for count. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     final long count;
+
+    /**
+     * Configuration value for total ns. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     final long totalNs;
+
+    /**
+     * Configuration value for min ns. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     final long minNs;
+
+    /**
+     * Configuration value for max ns. The valid range and tuning source are defined by the owning
+     * subsystem or field profile.
+     */
     final long maxNs;
 
     Snapshot(String name, long count, long totalNs, long minNs, long maxNs) {

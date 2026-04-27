@@ -21,11 +21,29 @@ package org.curtinfrc.frc2026.util.Repulsor.Setpoints;
 
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.Specific.*;
 
+/**
+ * Provides setpoints functionality for the Repulsor game setpoint abstraction layer for
+ * field-relative goals and mechanisms. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public class Setpoints {
+  /**
+   * Provides rebuilt2026 functionality for the Repulsor game setpoint abstraction layer for
+   * field-relative goals and mechanisms. Use this type from robot code, field profiles, or tests
+   * when integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+   * method documents robot-relative motion.
+   */
   public static class Rebuilt2026 extends _Rebuilt2026 {
     private Rebuilt2026() {}
   }
 
+  /**
+   * Provides reefscape2025 functionality for the Repulsor game setpoint abstraction layer for
+   * field-relative goals and mechanisms. Use this type from robot code, field profiles, or tests
+   * when integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+   * method documents robot-relative motion.
+   */
   public static class Reefscape2025 extends _Reefscape2025 {
     private Reefscape2025() {}
   }

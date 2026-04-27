@@ -23,6 +23,12 @@ import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import java.util.Optional;
 
+/**
+ * Provides game state functionality for the Repulsor match-state storage and simulation driver
+ * layer. Use this type from robot code, field profiles, or tests when integrating the corresponding
+ * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+ * motion.
+ */
 public class GameState extends StaticState {
   private final double TELEOP_GAME_LENGTH = 140.0;
   private final double AUTONOMOUS_PERIOD_LENGTH = 20.0;
@@ -88,6 +94,11 @@ public class GameState extends StaticState {
     return gamePeriodNumber;
   }
 
+  /**
+   * Returns the is hub active value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public boolean isHubActive() {
     if (!(inactiveFirst.isPresent() && alliance.isPresent())) {
       return false;
@@ -104,10 +115,20 @@ public class GameState extends StaticState {
     return isActive;
   }
 
+  /**
+   * Returns the is hub inactive value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public boolean isHubInactive() {
     return !isHubActive();
   }
 
+  /**
+   * Returns the get remaining shift time value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public double getRemainingShiftTime() {
     double shiftEndTime;
     double gameTime = getMatchTime();
@@ -124,6 +145,13 @@ public class GameState extends StaticState {
     return shiftEndTime - gameTime;
   }
 
+  /**
+   * Updates update state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   *
+   * @param dt value used by this operation.
+   */
   @Override
   public void update(double dt) {
     updateGameData();

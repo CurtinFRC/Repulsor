@@ -31,24 +31,98 @@ import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerCollectO
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Internal.NearestPoint;
 import org.littletonrobotics.junction.Logger;
 
+/**
+ * Provides field tracker collect pass candidate step functionality for the Repulsor runtime helper
+ * layer shared by behaviours and planners. Use this type from robot code, field profiles, or tests
+ * when integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+ * method documents robot-relative motion.
+ */
 public final class FieldTrackerCollectPassCandidateStep {
   private FieldTrackerCollectPassCandidateStep() {}
 
+  /**
+   * Configuration value for canonical score drop limit. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   static final double CANONICAL_SCORE_DROP_LIMIT = 0.12;
+
+  /**
+   * Configuration value for richer units abs gain. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   static final double RICHER_UNITS_ABS_GAIN = 0.07;
+
+  /**
+   * Configuration value for richer units rel gain. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   static final double RICHER_UNITS_REL_GAIN = 1.45;
+
+  /**
+   * Configuration value for richer eta delta max s. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   static final double RICHER_ETA_DELTA_MAX_S = 0.95;
+
+  /**
+   * Configuration value for richer score drop limit. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   static final double RICHER_SCORE_DROP_LIMIT = 0.30;
+
+  /**
+   * Configuration value for live fuel prefer score margin. Distances use meters in WPILib field
+   * coordinates and should be treated as tunable when sourced from profiles.
+   */
   static final double LIVE_FUEL_PREFER_SCORE_MARGIN = 0.02;
+
+  /**
+   * Configuration value for hub front trap score penalty. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   static final double HUB_FRONT_TRAP_SCORE_PENALTY = 0.52;
+
+  /**
+   * Configuration value for hub front trap escape score allow drop. The valid range and tuning
+   * source are defined by the owning subsystem or field profile.
+   */
   static final double HUB_FRONT_TRAP_ESCAPE_SCORE_ALLOW_DROP = 0.16;
+
+  /**
+   * Configuration value for live fuel require near r m. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   static final double LIVE_FUEL_REQUIRE_NEAR_R_M =
       FieldTrackerCollectObjectiveLoop.COLLECT_NEARBY_RADIUS_M + 0.35;
+
+  /**
+   * Configuration value for live fuel require relaxed near r m. The valid range and tuning source
+   * are defined by the owning subsystem or field profile.
+   */
   static final double LIVE_FUEL_REQUIRE_RELAXED_NEAR_R_M =
       FieldTrackerCollectObjectiveLoop.COLLECT_NEARBY_RADIUS_M + 1.0;
+
+  /**
+   * Configuration value for direct fuel lock strict r m. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   static final double DIRECT_FUEL_LOCK_STRICT_R_M = 0.16;
+
+  /**
+   * Configuration value for direct fuel lock relaxed r m. The valid range and tuning source are
+   * defined by the owning subsystem or field profile.
+   */
   static final double DIRECT_FUEL_LOCK_RELAXED_R_M = 0.22;
 
+  /**
+   * Returns the maybe canonicalize candidate value maintained by this Repulsor component.
+   *
+   * @param bestCandidate value used by this operation.
+   * @param usePts value used by this operation.
+   * @param collectValid value used by this operation.
+   * @param scoreResource value used by this operation.
+   * @return value produced by this operation.
+   */
   static Translation2d maybeCanonicalizeCandidate(
       Translation2d bestCandidate,
       Translation2d[] usePts,
@@ -67,6 +141,18 @@ public final class FieldTrackerCollectPassCandidateStep {
     return canonicalized;
   }
 
+  /**
+   * Returns the prefer richer candidate value maintained by this Repulsor component.
+   *
+   * @param bestCandidate value used by this operation.
+   * @param usePts value used by this operation.
+   * @param robotPos value used by this operation.
+   * @param cap value used by this operation.
+   * @param collectValid value used by this operation.
+   * @param collectUnits value used by this operation.
+   * @param scoreResource value used by this operation.
+   * @return value produced by this operation.
+   */
   static Translation2d preferRicherCandidate(
       Translation2d bestCandidate,
       Translation2d[] usePts,
@@ -118,6 +204,16 @@ public final class FieldTrackerCollectPassCandidateStep {
     return bestCandidate;
   }
 
+  /**
+   * Returns the prefer live fuel candidate value maintained by this Repulsor component.
+   *
+   * @param currentCandidate value used by this operation.
+   * @param usePts value used by this operation.
+   * @param collectValid value used by this operation.
+   * @param hasLiveFuelNear value used by this operation.
+   * @param scoreResource value used by this operation.
+   * @return value produced by this operation.
+   */
   static Translation2d preferLiveFuelCandidate(
       Translation2d currentCandidate,
       Translation2d[] usePts,
@@ -155,6 +251,16 @@ public final class FieldTrackerCollectPassCandidateStep {
     return currentCandidate;
   }
 
+  /**
+   * Returns the prefer outside hub front trap value maintained by this Repulsor component.
+   *
+   * @param currentCandidate value used by this operation.
+   * @param usePts value used by this operation.
+   * @param collectValid value used by this operation.
+   * @param isHubFrontTrap value used by this operation.
+   * @param scoreResource value used by this operation.
+   * @return value produced by this operation.
+   */
   static Translation2d preferOutsideHubFrontTrap(
       Translation2d currentCandidate,
       Translation2d[] usePts,
@@ -186,6 +292,15 @@ public final class FieldTrackerCollectPassCandidateStep {
     return currentCandidate;
   }
 
+  /**
+   * Returns the should require live fuel evidence value maintained by this Repulsor component.
+   *
+   * @param robotPos value used by this operation.
+   * @param candidate value used by this operation.
+   * @param hasLiveCollectDynamics value used by this operation.
+   * @param nearRadiusM value used by this operation.
+   * @return value produced by this operation.
+   */
   static boolean shouldRequireLiveFuelEvidence(
       Translation2d robotPos,
       Translation2d candidate,
@@ -195,6 +310,16 @@ public final class FieldTrackerCollectPassCandidateStep {
     return robotPos.getDistance(candidate) <= Math.max(0.1, nearRadiusM);
   }
 
+  /**
+   * Computes the choose value for the current Repulsor planning state. Call this from periodic
+   * planning or tests when a fresh decision is required; inputs should already be expressed in the
+   * coordinate frame expected by the parameter names.
+   *
+   * @param loop value used by this operation.
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   * @param goalUnits value used by this operation.
+   * @return field tracker collect pass candidate result result for choose.
+   */
   public static FieldTrackerCollectPassCandidateResult choose(
       FieldTrackerCollectObjectiveLoop loop, FieldTrackerCollectPassContext ctx, int goalUnits) {
     HashMap<Long, CollectProbe> probeCache = new HashMap<>(512);
@@ -207,7 +332,15 @@ public final class FieldTrackerCollectPassCandidateStep {
     HashMap<Long, Boolean> validCache = new HashMap<>(512);
     HashMap<Long, Boolean> validRelaxedCache = new HashMap<>(512);
     HashMap<Long, Double> scoreCache = new HashMap<>(512);
+    /**
+     * Configuration value for live fuel strict r m. The valid range and tuning source are defined
+     * by the owning subsystem or field profile.
+     */
     final double LIVE_FUEL_STRICT_R_M = 0.35;
+    /**
+     * Configuration value for live fuel relaxed r m. The valid range and tuning source are defined
+     * by the owning subsystem or field profile.
+     */
     final double LIVE_FUEL_RELAXED_R_M = 0.55;
 
     boolean hasLiveCollectDynamics = false;

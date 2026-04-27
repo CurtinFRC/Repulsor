@@ -22,16 +22,73 @@ package org.curtinfrc.frc2026.util.Repulsor.Predictive.Model;
 import edu.wpi.first.math.geometry.Translation2d;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 
+/**
+ * Provides candidate functionality for the Repulsor typed model layer for field objects and
+ * prediction inputs. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public class Candidate {
+  /**
+   * Configuration value for setpoint. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final RepulsorSetpoint setpoint;
+
+  /**
+   * Configuration value for target xy. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final Translation2d targetXY;
+
+  /**
+   * Configuration value for our eta s. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final double ourEtaS;
+
+  /**
+   * Configuration value for enemy eta s. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   public final double enemyEtaS;
+
+  /**
+   * Configuration value for ally eta s. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final double allyEtaS;
+
+  /**
+   * Configuration value for congestion. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final double congestion;
+
+  /**
+   * Configuration value for pressure. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final double pressure;
+
+  /**
+   * Configuration value for score. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final double score;
 
+  /**
+   * Returns the candidate value maintained by this Repulsor component.
+   *
+   * @param sp value used by this operation.
+   * @param xy distance or field-coordinate value in meters.
+   * @param ourEtaS value used by this operation.
+   * @param enemyEtaS value used by this operation.
+   * @param allyEtaS value used by this operation.
+   * @param congestion value used by this operation.
+   * @param pressure value used by this operation.
+   * @param score value used by this operation.
+   */
   public Candidate(
       RepulsorSetpoint sp,
       Translation2d xy,

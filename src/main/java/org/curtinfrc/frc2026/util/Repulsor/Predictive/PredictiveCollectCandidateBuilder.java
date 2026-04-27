@@ -24,6 +24,12 @@ import java.util.HashMap;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
 
+/**
+ * Provides predictive collect candidate builder functionality for the Repulsor predictive
+ * field-state and collection-planning layer. Use this type from robot code, field profiles, or
+ * tests when integrating the corresponding Repulsor subsystem. Coordinates are field-relative
+ * unless a method documents robot-relative motion.
+ */
 public final class PredictiveCollectCandidateBuilder {
   private static final double COLLECT_AGE_DECAY = 0.75;
   private static final double COLLECT_SPREAD_SCORE_R = 0.85;
@@ -38,6 +44,14 @@ public final class PredictiveCollectCandidateBuilder {
 
   private PredictiveCollectCandidateBuilder() {}
 
+  /**
+   * Returns the peak finder value maintained by this Repulsor component.
+   *
+   * @param gridPoints value used by this operation.
+   * @param dyn value used by this operation.
+   * @param topN value used by this operation.
+   * @return value produced by this operation.
+   */
   public static Translation2d[] peakFinder(Translation2d[] gridPoints, SpatialDyn dyn, int topN) {
     if (gridPoints == null || gridPoints.length == 0 || dyn == null) return new Translation2d[0];
 
@@ -77,6 +91,14 @@ public final class PredictiveCollectCandidateBuilder {
     return tmp.toArray(new Translation2d[0]);
   }
 
+  /**
+   * Returns the build collect candidates value maintained by this Repulsor component.
+   *
+   * @param gridPoints value used by this operation.
+   * @param dyn value used by this operation.
+   * @param peakFinderTopN value used by this operation.
+   * @return value produced by this operation.
+   */
   public static Translation2d[] buildCollectCandidates(
       Translation2d[] gridPoints, SpatialDyn dyn, int peakFinderTopN) {
     Translation2d[] clusters = buildResourceClustersMulti(dyn, COLLECT_CLUSTER_MAX);
@@ -185,6 +207,13 @@ public final class PredictiveCollectCandidateBuilder {
         .toArray(new Translation2d[0]);
   }
 
+  /**
+   * Returns the dedup points value maintained by this Repulsor component.
+   *
+   * @param in value used by this operation.
+   * @param dupSkipM value used by this operation.
+   * @return array list of translation2d result for dedup points.
+   */
   public static ArrayList<Translation2d> dedupPoints(ArrayList<Translation2d> in, double dupSkipM) {
     if (in == null || in.isEmpty()) return new ArrayList<>();
     double d2 = dupSkipM * dupSkipM;
@@ -207,6 +236,13 @@ public final class PredictiveCollectCandidateBuilder {
     return out;
   }
 
+  /**
+   * Returns the spread collect points value maintained by this Repulsor component.
+   *
+   * @param in value used by this operation.
+   * @param dyn value used by this operation.
+   * @return array list of translation2d result for spread collect points.
+   */
   public static ArrayList<Translation2d> spreadCollectPoints(
       ArrayList<Translation2d> in, SpatialDyn dyn) {
     if (in == null || in.isEmpty()) return new ArrayList<>();
@@ -253,18 +289,37 @@ public final class PredictiveCollectCandidateBuilder {
     return out;
   }
 
+  /**
+   * Returns the adaptive dup skip value maintained by this Repulsor component.
+   *
+   * @param dyn value used by this operation.
+   * @return value produced by this operation.
+   */
   public static double adaptiveDupSkip(SpatialDyn dyn) {
     double total = dyn != null ? dyn.totalEvidence() : 0.0;
     double x = clamp01(total / 6.0);
     return lerp(0.18, 0.42, x);
   }
 
+  /**
+   * Returns the adaptive collect separation value maintained by this Repulsor component.
+   *
+   * @param dyn value used by this operation.
+   * @return value produced by this operation.
+   */
   public static double adaptiveCollectSeparation(SpatialDyn dyn) {
     double total = dyn != null ? dyn.totalEvidence() : 0.0;
     double x = clamp01(total / 6.0);
     return lerp(COLLECT_SPREAD_MIN, COLLECT_SPREAD_MAX, x);
   }
 
+  /**
+   * Returns the build resource clusters multi value maintained by this Repulsor component.
+   *
+   * @param dyn value used by this operation.
+   * @param maxClusters value used by this operation.
+   * @return value produced by this operation.
+   */
   public static Translation2d[] buildResourceClustersMulti(SpatialDyn dyn, int maxClusters) {
     if (dyn == null || dyn.resources.isEmpty() || dyn.specs.isEmpty()) return new Translation2d[0];
 
@@ -337,6 +392,15 @@ public final class PredictiveCollectCandidateBuilder {
     return out.toArray(new Translation2d[0]);
   }
 
+  /**
+   * Returns the mean shift refine value maintained by this Repulsor component.
+   *
+   * @param dyn value used by this operation.
+   * @param seed value used by this operation.
+   * @param r value used by this operation.
+   * @param iters value used by this operation.
+   * @return value produced by this operation.
+   */
   public static Translation2d meanShiftRefine(
       SpatialDyn dyn, Translation2d seed, double r, int iters) {
     if (dyn == null || seed == null) return null;

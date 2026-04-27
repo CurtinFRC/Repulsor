@@ -20,7 +20,22 @@ package org.curtinfrc.frc2026.util.Repulsor.Tracking.Internal;
 
 import edu.wpi.first.math.geometry.Translation2d;
 
+/**
+ * Provides objective cache functionality for the Repulsor package-internal data structures used by
+ * the surrounding Repulsor subsystem. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public final class ObjectiveCache {
+  /**
+   * Configuration value for points. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public volatile Translation2d[] points = new Translation2d[0];
+
+  /**
+   * Configuration value for last hash. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public volatile int lastHash = 0;
 }

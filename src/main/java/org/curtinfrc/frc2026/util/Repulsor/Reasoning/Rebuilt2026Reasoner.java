@@ -39,6 +39,12 @@ import org.curtinfrc.frc2026.util.Repulsor.Strategy.ResourceRegionSummary;
 import org.curtinfrc.frc2026.util.Repulsor.Strategy.StrategyDirective;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
 
+/**
+ * Provides rebuilt2026 reasoner functionality for the Repulsor rule-based strategy and signal
+ * reasoning layer. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public final class Rebuilt2026Reasoner
     implements Reasoner<BehaviourFlag, BehaviourContext>, AutoCloseable {
   private static final SignalKey<Boolean> WANT_DEFENSE = ReasoningKeys.boolKey("want_defense");
@@ -84,10 +90,17 @@ public final class Rebuilt2026Reasoner
   private final SequenceReasoner<BehaviourFlag, BehaviourContext> seq;
   private Intent currentCycleIntent = Intent.FALLBACK;
 
+  /** Returns the rebuilt2026 reasoner value maintained by this Repulsor component. */
   public Rebuilt2026Reasoner() {
     this(NetworkTableInstance.getDefault(), "/Repulsor/Reasoning");
   }
 
+  /**
+   * Returns the rebuilt2026 reasoner value maintained by this Repulsor component.
+   *
+   * @param inst value used by this operation.
+   * @param basePath value used by this operation.
+   */
   public Rebuilt2026Reasoner(NetworkTableInstance inst, String basePath) {
     NetworkTablesSignals nts = new NetworkTablesSignals(inst, basePath);
     nts.register(ReasoningKeys.ENABLED, false);
@@ -142,35 +155,83 @@ public final class Rebuilt2026Reasoner
     this.seq = b.build();
   }
 
+  /**
+   * Returns the signals value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Signals signals() {
     return seq.signals();
   }
 
+  /**
+   * Updates set want defense state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param v value used by this operation.
+   */
   public void setWantDefense(boolean v) {
     seq.signals().put(WANT_DEFENSE, v);
     seq.signals().flush();
   }
 
+  /**
+   * Updates set want autopath state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param v value used by this operation.
+   */
   public void setWantAutopath(boolean v) {
     seq.signals().put(WANT_AUTOPATH, v);
     seq.signals().flush();
   }
 
+  /**
+   * Updates set want shuttle state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param v value used by this operation.
+   */
   public void setWantShuttle(boolean v) {
     seq.signals().put(WANT_SHUTTLE, v);
     seq.signals().flush();
   }
 
+  /**
+   * Updates set want shuttle recovery state or telemetry as part of the Repulsor runtime loop. This
+   * may mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param v value used by this operation.
+   */
   public void setWantShuttleRecovery(boolean v) {
     seq.signals().put(WANT_SHUTTLE_RECOVERY, v);
     seq.signals().flush();
   }
 
+  /**
+   * Updates set testing state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param v value used by this operation.
+   */
   public void setTesting(boolean v) {
     seq.signals().put(TESTING, v);
     seq.signals().flush();
   }
 
+  /**
+   * Updates update state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   *
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   * @return enum set of behaviour flag result for update.
+   */
   @Override
   public EnumSet<BehaviourFlag> update(BehaviourContext ctx) {
     Signals signals = seq.signals();
@@ -430,6 +491,11 @@ public final class Rebuilt2026Reasoner
     }
   }
 
+  /**
+   * Updates reset state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   */
   @Override
   public void reset() {
     seq.reset();
@@ -437,6 +503,7 @@ public final class Rebuilt2026Reasoner
     seq.signals().flush();
   }
 
+  /** Runs close in the Repulsor runtime. */
   @Override
   public void close() {
     pieceCount.close();

@@ -142,19 +142,17 @@ public class AutoChooser extends LoggedNetworkInput {
   /**
    * Add an AutoRoutine to the chooser.
    *
-   * <p>The options of the chooser are actually a function that takes an {@link AutoFactory} and
-   * returns a {@link AutoRoutine}. These functions can be static, a lambda or belong to a local
-   * variable.
+   * <p>The options of the chooser are actually a function that creates and returns an {@link
+   * AutoRoutine}. These functions can be static, a lambda or belong to a local variable.
    *
    * <p>This is done to load AutoRoutines when and only when they are selected, in order to save
    * memory and file loading time for unused AutoRoutines.
    *
    * <p>One way to keep this clean is to make an `Autos` class that all of your subsystems/resources
    * are <a href="https://en.wikipedia.org/wiki/Dependency_injection">dependency injected</a> into.
-   * Then create methods inside that class that take an {@link AutoFactory} and return an {@link
-   * AutoRoutine}.
+   * Then create methods inside that class that return an {@link AutoRoutine}.
    *
-   * <h3>Example:</h3>
+   * <h4>Example:</h4>
    *
    * <pre><code>
    * AutoChooser chooser;
@@ -183,7 +181,7 @@ public class AutoChooser extends LoggedNetworkInput {
    * <p>This is done to load autonomous commands when and only when they are selected, in order to
    * save memory and file loading time for unused autonomous commands.
    *
-   * <h3>Example:</h3>
+   * <h4>Example:</h4>
    *
    * <pre><code>
    * AutoChooser chooser;

@@ -23,9 +23,33 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import org.curtinfrc.frc2026.util.Repulsor.Profiler.Profiler;
 
+/**
+ * Provides drag shot planner refine at position functionality for the Repulsor projectile and
+ * shot-planning layer. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 final class DragShotPlannerRefineAtPosition {
   private DragShotPlannerRefineAtPosition() {}
 
+  /**
+   * Returns the refine shot at position value maintained by this Repulsor component.
+   *
+   * @param gamePiece value used by this operation.
+   * @param shooterFieldPosition value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param targetHeightMeters distance or field-coordinate value in meters.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @param minSpeed value used by this operation.
+   * @param maxSpeed value used by this operation.
+   * @param minAngleDeg value used by this operation.
+   * @param maxAngleDeg value used by this operation.
+   * @param fixedAngle value used by this operation.
+   * @param acceptableVerticalErrorMeters distance or field-coordinate value in meters.
+   * @param coarseSpeed value used by this operation.
+   * @param coarseAngleRad value used by this operation.
+   * @return shot solution result for refine shot at position.
+   */
   static ShotSolution refineShotAtPosition(
       GamePiecePhysics gamePiece,
       Translation2d shooterFieldPosition,

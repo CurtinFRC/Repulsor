@@ -34,6 +34,12 @@ import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointContext;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.Setpoints;
 import org.curtinfrc.frc2026.util.Repulsor.Simulation.NetworkTablesValue;
 
+/**
+ * Provides test behaviour functionality for the Repulsor command-behaviour layer that converts
+ * strategy and state into WPILib commands. Use this type from robot code, field profiles, or tests
+ * when integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+ * method documents robot-relative motion.
+ */
 public final class TestBehaviour extends Behaviour {
   private final NetworkTablesValue<Double> shotAngle =
       NetworkTablesValue.ofDouble(
@@ -43,18 +49,36 @@ public final class TestBehaviour extends Behaviour {
       NetworkTablesValue.ofDouble(
           NetworkTableInstance.getDefault(), NetworkTablesValue.toAdvantageKit("/ShotSpeed"), 0.0);
 
+  /** Returns the test behaviour value maintained by this Repulsor component. */
   public TestBehaviour() {}
 
+  /**
+   * Returns the name value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public String name() {
     return "Test";
   }
 
+  /**
+   * Returns the priority value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   @Override
   public int priority() {
     return 1000;
   }
 
+  /**
+   * Returns the should run value maintained by this Repulsor component.
+   *
+   * @param flags value used by this operation.
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   * @return value produced by this operation.
+   */
   @Override
   public boolean shouldRun(EnumSet<BehaviourFlag> flags, BehaviourContext ctx) {
     return flags.contains(BehaviourFlag.TEST_MODE);
@@ -69,6 +93,12 @@ public final class TestBehaviour extends Behaviour {
         ctx.vision.getObstacles());
   }
 
+  /**
+   * Builds the WPILib command sequence for the current behaviour context.
+   *
+   * @param ctx runtime context carrying robot state, setpoints, and subsystem access.
+   * @return value produced by this operation.
+   */
   @Override
   public Command build(BehaviourContext ctx) {
     return Commands.run(

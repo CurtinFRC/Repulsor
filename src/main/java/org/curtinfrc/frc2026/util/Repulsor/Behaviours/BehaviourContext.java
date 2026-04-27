@@ -26,14 +26,60 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.Repulsor;
 import org.curtinfrc.frc2026.util.Repulsor.VisionPlanner;
 
+/**
+ * Provides behaviour context functionality for the Repulsor command-behaviour layer that converts
+ * strategy and state into WPILib commands. Use this type from robot code, field profiles, or tests
+ * when integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a
+ * method documents robot-relative motion.
+ */
 public class BehaviourContext {
+  /**
+   * Configuration value for repulsor. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final Repulsor repulsor;
+
+  /**
+   * Configuration value for planner. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final FieldPlanner planner;
+
+  /**
+   * Configuration value for vision. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final VisionPlanner vision;
+
+  /**
+   * Configuration value for drive. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final DriveRepulsor drive;
+
+  /**
+   * Configuration value for robot y. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final double robot_x, robot_y;
+
+  /**
+   * Configuration value for robot pose. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final Supplier<Pose2d> robotPose;
 
+  /**
+   * Returns the behaviour context value maintained by this Repulsor component.
+   *
+   * @param repulsor value used by this operation.
+   * @param planner value used by this operation.
+   * @param vision value used by this operation.
+   * @param drive value used by this operation.
+   * @param robot_x distance or field-coordinate value in meters.
+   * @param robot_y distance or field-coordinate value in meters.
+   * @param robotPose WPILib Pose2d in field-relative coordinates.
+   */
   public BehaviourContext(
       Repulsor repulsor,
       FieldPlanner planner,

@@ -25,9 +25,27 @@ import edu.wpi.first.math.geometry.Translation2d;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Provides reactive bypass waypoint planner functionality for the Repulsor runtime helper layer
+ * shared by behaviours and planners. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 final class ReactiveBypassWaypointPlanner {
   private ReactiveBypassWaypointPlanner() {}
 
+  /**
+   * Returns the generate candidates value maintained by this Repulsor component.
+   *
+   * @param cfg value used by this operation.
+   * @param lastOcc value used by this operation.
+   * @param preferredSide value used by this operation.
+   * @param pose WPILib Pose2d in field-relative coordinates.
+   * @param heading value used by this operation.
+   * @param biasSide value used by this operation.
+   * @param goal value used by this operation.
+   * @return value produced by this operation.
+   */
   static List<Pose2d> generateCandidates(
       ReactiveBypassConfig cfg,
       double lastOcc,
@@ -114,6 +132,17 @@ final class ReactiveBypassWaypointPlanner {
     return out;
   }
 
+  /**
+   * Returns the make waypoint value maintained by this Repulsor component.
+   *
+   * @param cfg value used by this operation.
+   * @param pose WPILib Pose2d in field-relative coordinates.
+   * @param heading value used by this operation.
+   * @param sideSign value used by this operation.
+   * @param lateral value used by this operation.
+   * @param forward value used by this operation.
+   * @return value produced by this operation.
+   */
   static Pose2d makeWaypoint(
       ReactiveBypassConfig cfg,
       Pose2d pose,
@@ -130,6 +159,16 @@ final class ReactiveBypassWaypointPlanner {
     return new Pose2d(tgt, heading);
   }
 
+  /**
+   * Returns the slew subgoal value maintained by this Repulsor component.
+   *
+   * @param cfg value used by this operation.
+   * @param currentLatchedSubgoal value used by this operation.
+   * @param target value used by this operation.
+   * @param pose WPILib Pose2d in field-relative coordinates.
+   * @param dt value used by this operation.
+   * @return value produced by this operation.
+   */
   static Pose2d slewSubgoal(
       ReactiveBypassConfig cfg,
       Pose2d currentLatchedSubgoal,
@@ -155,6 +194,13 @@ final class ReactiveBypassWaypointPlanner {
     return new Pose2d(next, target.getRotation());
   }
 
+  /**
+   * Returns the wall penalty value maintained by this Repulsor component.
+   *
+   * @param cfg value used by this operation.
+   * @param p value used by this operation.
+   * @return value produced by this operation.
+   */
   static double wallPenalty(ReactiveBypassConfig cfg, Translation2d p) {
     double dx = Math.min(p.getX(), cfg.fieldLen - p.getX());
     double dy = Math.min(p.getY(), cfg.fieldWid - p.getY());
@@ -162,10 +208,24 @@ final class ReactiveBypassWaypointPlanner {
     return 1.0 / (0.18 + d);
   }
 
+  /**
+   * Returns the aligned pose value maintained by this Repulsor component.
+   *
+   * @param p value used by this operation.
+   * @param desiredHeading value used by this operation.
+   * @return value produced by this operation.
+   */
   static Pose2d alignedPose(Pose2d p, Rotation2d desiredHeading) {
     return new Pose2d(p.getTranslation(), desiredHeading);
   }
 
+  /**
+   * Returns the clamp to field value maintained by this Repulsor component.
+   *
+   * @param cfg value used by this operation.
+   * @param t value used by this operation.
+   * @return value produced by this operation.
+   */
   static Translation2d clampToField(ReactiveBypassConfig cfg, Translation2d t) {
     double x = ReactiveBypassMath.clamp(t.getX(), 0.05, cfg.fieldLen - 0.05);
     double y = ReactiveBypassMath.clamp(t.getY(), 0.05, cfg.fieldWid - 0.05);

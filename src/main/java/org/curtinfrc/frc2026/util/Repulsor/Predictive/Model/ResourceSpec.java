@@ -19,11 +19,38 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Predictive.Model;
 
+/**
+ * Provides resource spec functionality for the Repulsor typed model layer for field objects and
+ * prediction inputs. Use this type from robot code, field profiles, or tests when integrating the
+ * corresponding Repulsor subsystem. Coordinates are field-relative unless a method documents
+ * robot-relative motion.
+ */
 public class ResourceSpec {
+  /**
+   * Configuration value for radius m. Distances use meters in WPILib field coordinates and should
+   * be treated as tunable when sourced from profiles.
+   */
   public final double radiusM;
+
+  /**
+   * Configuration value for unit value. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final double unitValue;
+
+  /**
+   * Configuration value for sigma m. The valid range and tuning source are defined by the owning
+   * subsystem or field profile.
+   */
   public final double sigmaM;
 
+  /**
+   * Returns the resource spec value maintained by this Repulsor component.
+   *
+   * @param radiusM value used by this operation.
+   * @param unitValue value used by this operation.
+   * @param sigmaM value used by this operation.
+   */
   public ResourceSpec(double radiusM, double unitValue, double sigmaM) {
     this.radiusM = Math.max(0.01, radiusM);
     this.unitValue = unitValue;

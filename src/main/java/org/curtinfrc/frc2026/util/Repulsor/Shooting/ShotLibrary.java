@@ -22,6 +22,11 @@ package org.curtinfrc.frc2026.util.Repulsor.Shooting;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.List;
 
+/**
+ * Provides shot library functionality for the Repulsor projectile and shot-planning layer. Use this
+ * type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+ * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public final class ShotLibrary {
   private final Translation2d targetFieldPosition;
   private final double targetHeightMeters;
@@ -32,6 +37,18 @@ public final class ShotLibrary {
   private final List<ShotLibraryEntry> entries;
   private final boolean complete;
 
+  /**
+   * Returns the shot library value maintained by this Repulsor component.
+   *
+   * @param targetFieldPosition value used by this operation.
+   * @param targetHeightMeters distance or field-coordinate value in meters.
+   * @param shooterReleaseHeightMeters distance or field-coordinate value in meters.
+   * @param robotHalfLengthMeters distance or field-coordinate value in meters.
+   * @param robotHalfWidthMeters distance or field-coordinate value in meters.
+   * @param constraints value used by this operation.
+   * @param entries value used by this operation.
+   * @param complete value used by this operation.
+   */
   public ShotLibrary(
       Translation2d targetFieldPosition,
       double targetHeightMeters,
@@ -51,34 +68,74 @@ public final class ShotLibrary {
     this.complete = complete;
   }
 
+  /**
+   * Returns the target field position value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Translation2d targetFieldPosition() {
     return targetFieldPosition;
   }
 
+  /**
+   * Returns the target height meters value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public double targetHeightMeters() {
     return targetHeightMeters;
   }
 
+  /**
+   * Returns the shooter release height meters value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public double shooterReleaseHeightMeters() {
     return shooterReleaseHeightMeters;
   }
 
+  /**
+   * Returns the robot half length meters value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public double robotHalfLengthMeters() {
     return robotHalfLengthMeters;
   }
 
+  /**
+   * Returns the robot half width meters value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public double robotHalfWidthMeters() {
     return robotHalfWidthMeters;
   }
 
+  /**
+   * Returns the constraints value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public Constraints constraints() {
     return constraints;
   }
 
+  /**
+   * Returns the entries value maintained by this Repulsor component.
+   *
+   * @return list of shot library entry values produced by this operation.
+   */
   public List<ShotLibraryEntry> entries() {
     return entries;
   }
 
+  /**
+   * Returns the complete value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public boolean complete() {
     return complete;
   }

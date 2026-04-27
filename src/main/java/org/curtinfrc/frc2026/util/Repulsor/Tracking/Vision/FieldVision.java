@@ -33,6 +33,11 @@ import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameObject;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.PrimitiveObject;
 
+/**
+ * Provides field vision functionality for the Repulsor vision integration and simulation layer. Use
+ * this type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+ * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public class FieldVision {
   private static final int MAX_OBJECTS_PER_TICK = 256;
 
@@ -45,10 +50,20 @@ public class FieldVision {
       this.type = type;
     }
 
+    /**
+     * Returns the get position value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     public Pose3d getPosition() {
       return position;
     }
 
+    /**
+     * Returns the get type value maintained by this Repulsor component.
+     *
+     * @return value produced by this operation.
+     */
     public String getType() {
       return type;
     }
@@ -61,6 +76,12 @@ public class FieldVision {
 
   private final HashMap<String, FieldVisionData> objects = new HashMap<>(256);
 
+  /**
+   * Returns the field vision value maintained by this Repulsor component.
+   *
+   * @param owner value used by this operation.
+   * @param name value used by this operation.
+   */
   public FieldVision(FieldTrackerCore owner, String name) {
     if (owner == null) throw new IllegalArgumentException("owner cannot be null");
     if (name == null || name.isEmpty())
@@ -71,14 +92,31 @@ public class FieldVision {
     this.table = NetworkTableInstance.getDefault().getTable("FieldVision/" + name);
   }
 
+  /**
+   * Returns the get name value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public String getName() {
     return name;
   }
 
+  /**
+   * Returns the get host value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public String getHost() {
     return host;
   }
 
+  /**
+   * Updates update state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   *
+   * @param currentPose value used by this operation.
+   */
   public void update(Pose2d currentPose) {
     if (currentPose == null) return;
 

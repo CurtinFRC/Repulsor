@@ -36,113 +36,324 @@ import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
 
+/**
+ * Provides predictive field state runtime functionality for the Repulsor predictive field-state and
+ * collection-planning layer. Use this type from robot code, field profiles, or tests when
+ * integrating the corresponding Repulsor subsystem. Coordinates are field-relative unless a method
+ * documents robot-relative motion.
+ */
 public class PredictiveFieldStateRuntime {
   private final PredictiveFieldStateOps ops = new PredictiveFieldStateOps();
 
+  /**
+   * Configuration value for collect age decay. The valid range and tuning source are defined by the
+   * owning subsystem or field profile.
+   */
   static final double COLLECT_AGE_DECAY = 0.75;
+
+  /**
+   * Configuration value for resource sigma abs max. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   static final double RESOURCE_SIGMA_ABS_MAX = 0.45;
+
+  /**
+   * Configuration value for resource sigma rel max. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   static final double RESOURCE_SIGMA_REL_MAX = 1.25;
+
+  /**
+   * Configuration value for resource sigma min. The valid range and tuning source are defined by
+   * the owning subsystem or field profile.
+   */
   static final double RESOURCE_SIGMA_MIN = 0.06;
+
+  /**
+   * Configuration value for resource hard max age s. The valid range and tuning source are defined
+   * by the owning subsystem or field profile.
+   */
   static final double RESOURCE_HARD_MAX_AGE_S = 0.95;
 
+  /**
+   * Returns the error value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   static boolean error() {
     return PredictiveFieldStateOps.error();
   }
 
+  /**
+   * Returns the probe collect value maintained by this Repulsor component.
+   *
+   * @param p value used by this operation.
+   * @return collect probe result for probe collect.
+   */
   public CollectProbe probeCollect(Translation2d p) {
     return ops.probeCollect(p);
   }
 
+  /**
+   * Returns the probe collect value maintained by this Repulsor component.
+   *
+   * @param p value used by this operation.
+   * @param countR value used by this operation.
+   * @return collect probe result for probe collect.
+   */
   public CollectProbe probeCollect(Translation2d p, double countR) {
     return ops.probeCollect(p, countR);
   }
 
+  /**
+   * Returns the footprint has collect resource value maintained by this Repulsor component.
+   *
+   * @param center value used by this operation.
+   * @param cellM value used by this operation.
+   * @return value produced by this operation.
+   */
   public boolean footprintHasCollectResource(Translation2d center, double cellM) {
     return ops.footprintHasCollectResource(center, cellM);
   }
 
+  /**
+   * Returns the footprint has fuel value maintained by this Repulsor component.
+   *
+   * @param center value used by this operation.
+   * @param cellM value used by this operation.
+   * @return value produced by this operation.
+   */
   public boolean footprintHasFuel(Translation2d center, double cellM) {
     return ops.footprintHasFuel(center, cellM);
   }
 
+  /**
+   * Runs mark collect depleted in the Repulsor runtime.
+   *
+   * @param p value used by this operation.
+   * @param cellM value used by this operation.
+   * @param strength value used by this operation.
+   */
   public void markCollectDepleted(Translation2d p, double cellM, double strength) {
     ops.markCollectDepleted(p, cellM, strength);
   }
 
+  /**
+   * Updates register resource spec state or telemetry as part of the Repulsor runtime loop. This
+   * may mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param type value used by this operation.
+   * @param spec value used by this operation.
+   */
   public void registerResourceSpec(String type, ResourceSpec spec) {
     ops.registerResourceSpec(type, spec);
   }
 
+  /**
+   * Updates register other type weight state or telemetry as part of the Repulsor runtime loop.
+   * This may mutate local state, NetworkTables output, planner caches, or command-side runtime
+   * state depending on the owning type.
+   *
+   * @param type value used by this operation.
+   * @param weight value used by this operation.
+   */
   public void registerOtherTypeWeight(String type, double weight) {
     ops.registerOtherTypeWeight(type, weight);
   }
 
+  /**
+   * Updates set collect resource types state or telemetry as part of the Repulsor runtime loop.
+   * This may mutate local state, NetworkTables output, planner caches, or command-side runtime
+   * state depending on the owning type.
+   *
+   * @param types value used by this operation.
+   */
   public void setCollectResourceTypes(Set<String> types) {
     ops.setCollectResourceTypes(types);
   }
 
+  /**
+   * Returns the get collect resource types value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   Set<String> getCollectResourceTypes() {
     return ops.getCollectResourceTypes();
   }
 
+  /**
+   * Runs add collect resource type in the Repulsor runtime.
+   *
+   * @param type value used by this operation.
+   */
   public void addCollectResourceType(String type) {
     ops.addCollectResourceType(type);
   }
 
+  /**
+   * Runs remove collect resource type in the Repulsor runtime.
+   *
+   * @param type value used by this operation.
+   */
   void removeCollectResourceType(String type) {
     ops.removeCollectResourceType(type);
   }
 
+  /**
+   * Returns the is collect resource type value maintained by this Repulsor component.
+   *
+   * @param type value used by this operation.
+   * @return value produced by this operation.
+   */
   public boolean isCollectResourceType(String type) {
     return ops.isCollectResourceType(type);
   }
 
+  /**
+   * Updates set collect resource position filter state or telemetry as part of the Repulsor runtime
+   * loop. This may mutate local state, NetworkTables output, planner caches, or command-side
+   * runtime state depending on the owning type.
+   *
+   * @param filter value used by this operation.
+   */
   public void setCollectResourcePositionFilter(Predicate<Translation2d> filter) {
     ops.setCollectResourcePositionFilter(filter);
   }
 
+  /**
+   * Updates set dynamic objects state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param objs value used by this operation.
+   */
   public void setDynamicObjects(List<DynamicObject> objs) {
     ops.setDynamicObjects(objs);
   }
 
+  /**
+   * Updates set world state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param elements value used by this operation.
+   * @param ours value used by this operation.
+   */
   public void setWorld(List<GameElement> elements, Alliance ours) {
     ops.setWorld(elements, ours);
   }
 
+  /**
+   * Updates update ally state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param id value used by this operation.
+   * @param pos value used by this operation.
+   * @param velHint value used by this operation.
+   * @param speedCap value used by this operation.
+   */
   public void updateAlly(int id, Translation2d pos, Translation2d velHint, Double speedCap) {
     ops.updateAlly(id, pos, velHint, speedCap);
   }
 
+  /**
+   * Updates update enemy state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param id value used by this operation.
+   * @param pos value used by this operation.
+   * @param velHint value used by this operation.
+   * @param speedCap value used by this operation.
+   */
   public void updateEnemy(int id, Translation2d pos, Translation2d velHint, Double speedCap) {
     ops.updateEnemy(id, pos, velHint, speedCap);
   }
 
+  /**
+   * Updates clear stale state or telemetry as part of the Repulsor runtime loop. This may mutate
+   * local state, NetworkTables output, planner caches, or command-side runtime state depending on
+   * the owning type.
+   *
+   * @param maxAgeS value used by this operation.
+   */
   public void clearStale(double maxAgeS) {
     ops.clearStale(maxAgeS);
   }
 
+  /**
+   * Returns the rank value maintained by this Repulsor component.
+   *
+   * @param ourPos value used by this operation.
+   * @param ourSpeedCap value used by this operation.
+   * @param cat value used by this operation.
+   * @param limit value used by this operation.
+   * @return value produced by this operation.
+   */
   public List<Candidate> rank(
       Translation2d ourPos, double ourSpeedCap, CategorySpec cat, int limit) {
     return ops.rank(ourPos, ourSpeedCap, cat, limit);
   }
 
+  /**
+   * Returns the rank setpoints value maintained by this Repulsor component.
+   *
+   * @param ourPos value used by this operation.
+   * @param ourSpeedCap value used by this operation.
+   * @param cat value used by this operation.
+   * @param limit value used by this operation.
+   * @return list of repulsor setpoint values produced by this operation.
+   */
   public List<RepulsorSetpoint> rankSetpoints(
       Translation2d ourPos, double ourSpeedCap, CategorySpec cat, int limit) {
     return ops.rankSetpoints(ourPos, ourSpeedCap, cat, limit);
   }
 
+  /**
+   * Returns the resource observation count value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
   public int resourceObservationCount() {
     return ops.resourceObservationCount();
   }
 
+  /**
+   * Returns the snap to collect centroid value maintained by this Repulsor component.
+   *
+   * @param seed value used by this operation.
+   * @param r value used by this operation.
+   * @param minMass value used by this operation.
+   * @return value produced by this operation.
+   */
   public Translation2d snapToCollectCentroid(Translation2d seed, double r, double minMass) {
     return ops.snapToCollectCentroid(seed, r, minMass);
   }
 
+  /**
+   * Computes the nearest collect resource value for the current Repulsor planning state.
+   *
+   * @param p value used by this operation.
+   * @param maxDist value used by this operation.
+   * @return value produced by this operation.
+   */
   public Translation2d nearestCollectResource(Translation2d p, double maxDist) {
     return ops.nearestCollectResource(p, maxDist);
   }
 
+  /**
+   * Returns the rank collect nearest value maintained by this Repulsor component.
+   *
+   * @param ourPos value used by this operation.
+   * @param ourSpeedCap value used by this operation.
+   * @param points value used by this operation.
+   * @param cellM value used by this operation.
+   * @param goalUnits value used by this operation.
+   * @param limit value used by this operation.
+   * @return point candidate result for rank collect nearest.
+   */
   public PointCandidate rankCollectNearest(
       Translation2d ourPos,
       double ourSpeedCap,
@@ -153,6 +364,18 @@ public class PredictiveFieldStateRuntime {
     return ops.rankCollectNearest(ourPos, ourSpeedCap, points, cellM, goalUnits, limit);
   }
 
+  /**
+   * Returns the rank collect hierarchical value maintained by this Repulsor component.
+   *
+   * @param ourPos value used by this operation.
+   * @param ourSpeedCap value used by this operation.
+   * @param points value used by this operation.
+   * @param cellM value used by this operation.
+   * @param goalUnits value used by this operation.
+   * @param coarseTopK value used by this operation.
+   * @param refineGrid value used by this operation.
+   * @return point candidate result for rank collect hierarchical.
+   */
   public PointCandidate rankCollectHierarchical(
       Translation2d ourPos,
       double ourSpeedCap,
@@ -165,15 +388,44 @@ public class PredictiveFieldStateRuntime {
         ourPos, ourSpeedCap, points, cellM, goalUnits, coarseTopK, refineGrid);
   }
 
+  /**
+   * Returns the best collect hotspot value maintained by this Repulsor component.
+   *
+   * @param points value used by this operation.
+   * @param cellM value used by this operation.
+   * @return value produced by this operation.
+   */
   public Translation2d bestCollectHotspot(Translation2d[] points, double cellM) {
     return ops.bestCollectHotspot(points, cellM);
   }
 
+  /**
+   * Returns the rank collect points value maintained by this Repulsor component.
+   *
+   * @param ourPos value used by this operation.
+   * @param ourSpeedCap value used by this operation.
+   * @param points value used by this operation.
+   * @param goalUnits value used by this operation.
+   * @param limit value used by this operation.
+   * @return point candidate result for rank collect points.
+   */
   public PointCandidate rankCollectPoints(
       Translation2d ourPos, double ourSpeedCap, Translation2d[] points, int goalUnits, int limit) {
     return ops.rankCollectPoints(ourPos, ourSpeedCap, points, goalUnits, limit);
   }
 
+  /**
+   * Computes the select shuttle recovery point local value for the current Repulsor planning state.
+   * Call this from periodic planning or tests when a fresh decision is required; inputs should
+   * already be expressed in the coordinate frame expected by the parameter names.
+   *
+   * @param robotPoseBlue value used by this operation.
+   * @param ourSpeedCap value used by this operation.
+   * @param goalUnits value used by this operation.
+   * @param flipRedToBlue value used by this operation.
+   * @param dynamicObjects value used by this operation.
+   * @return shuttle recovery point dto result for select shuttle recovery point local.
+   */
   public ShuttleRecoveryPointDTO selectShuttleRecoveryPointLocal(
       Pose2d robotPoseBlue,
       double ourSpeedCap,
@@ -184,6 +436,18 @@ public class PredictiveFieldStateRuntime {
         robotPoseBlue, ourSpeedCap, goalUnits, flipRedToBlue, dynamicObjects);
   }
 
+  /**
+   * Computes the select shuttle recovery point offloaded value for the current Repulsor planning
+   * state. Call this from periodic planning or tests when a fresh decision is required; inputs
+   * should already be expressed in the coordinate frame expected by the parameter names.
+   *
+   * @param robotPoseBlue value used by this operation.
+   * @param ourSpeedCap value used by this operation.
+   * @param goalUnits value used by this operation.
+   * @param flipRedToBlue value used by this operation.
+   * @param dynamicObjects value used by this operation.
+   * @return shuttle recovery point dto result for select shuttle recovery point offloaded.
+   */
   public ShuttleRecoveryPointDTO selectShuttleRecoveryPointOffloaded(
       Pose2d robotPoseBlue,
       double ourSpeedCap,

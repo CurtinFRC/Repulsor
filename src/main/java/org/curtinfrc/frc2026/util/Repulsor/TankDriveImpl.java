@@ -25,6 +25,11 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.Timer;
 
+/**
+ * Provides tank drive impl functionality for the Repulsor core Repulsor coordination layer. Use
+ * this type from robot code, field profiles, or tests when integrating the corresponding Repulsor
+ * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
+ */
 public abstract class TankDriveImpl extends DriveRepulsor {
   private double lastLeftMS = 0.0;
   private double lastRightMS = 0.0;
@@ -32,6 +37,12 @@ public abstract class TankDriveImpl extends DriveRepulsor {
   private double lastLeftVolts = 0.0;
   private double lastRightVolts = 0.0;
 
+  /**
+   * Runs run velocity in the Repulsor runtime.
+   *
+   * @param speeds velocity input, normally field-relative unless the caller documents
+   *     robot-relative motion.
+   */
   @Override
   public void runVelocity(ChassisSpeeds speeds) {
     double dt = Math.max(1e-3, Timer.getFPGATimestamp() - lastCmdTime);

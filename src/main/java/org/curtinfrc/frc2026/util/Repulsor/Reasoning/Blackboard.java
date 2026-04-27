@@ -24,9 +24,21 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * Provides blackboard functionality for the Repulsor rule-based strategy and signal reasoning
+ * layer. Use this type from robot code, field profiles, or tests when integrating the corresponding
+ * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+ * motion.
+ */
 public final class Blackboard implements Signals {
   private final Map<SignalKey<?>, Object> map = new HashMap<>();
 
+  /**
+   * Runs put in the Repulsor runtime.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param value value used by this operation.
+   */
   @Override
   public <T> void put(SignalKey<T> key, T value) {
     Objects.requireNonNull(key);
@@ -46,6 +58,12 @@ public final class Blackboard implements Signals {
     map.put(key, value);
   }
 
+  /**
+   * Returns the latest value maintained by this Repulsor component.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   @Override
   public <T> Optional<T> get(SignalKey<T> key) {
     Objects.requireNonNull(key);
@@ -54,16 +72,34 @@ public final class Blackboard implements Signals {
     return Optional.of(key.type().cast(v));
   }
 
+  /**
+   * Returns the get or value maintained by this Repulsor component.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param fallback value used by this operation.
+   * @return value produced by this operation.
+   */
   @Override
   public <T> T getOr(SignalKey<T> key, T fallback) {
     return get(key).orElse(fallback);
   }
 
+  /**
+   * Returns the has value maintained by this Repulsor component.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @return value produced by this operation.
+   */
   @Override
   public boolean has(SignalKey<?> key) {
     return map.containsKey(key);
   }
 
+  /**
+   * Updates clear state or telemetry as part of the Repulsor runtime loop. This may mutate local
+   * state, NetworkTables output, planner caches, or command-side runtime state depending on the
+   * owning type.
+   */
   @Override
   public void clear() {
     map.clear();

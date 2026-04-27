@@ -29,11 +29,28 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.Profiler.Profiler;
 
+/**
+ * Provides drag shot planner obstacles functionality for the Repulsor projectile and shot-planning
+ * layer. Use this type from robot code, field profiles, or tests when integrating the corresponding
+ * Repulsor subsystem. Coordinates are field-relative unless a method documents robot-relative
+ * motion.
+ */
 final class DragShotPlannerObstacles {
   private static volatile List<Obstacle> STATIC_OBSTACLES;
 
   private DragShotPlannerObstacles() {}
 
+  /**
+   * Returns the is shooter pose valid value maintained by this Repulsor component.
+   *
+   * @param shooterPos value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param robotHalfLengthMeters distance or field-coordinate value in meters.
+   * @param robotHalfWidthMeters distance or field-coordinate value in meters.
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   * @param checkBounds value used by this operation.
+   * @return value produced by this operation.
+   */
   static boolean isShooterPoseValid(
       Translation2d shooterPos,
       Translation2d targetFieldPosition,
@@ -55,6 +72,17 @@ final class DragShotPlannerObstacles {
     }
   }
 
+  /**
+   * Returns the is shooter pose valid internal value maintained by this Repulsor component.
+   *
+   * @param shooterPos value used by this operation.
+   * @param targetFieldPosition value used by this operation.
+   * @param robotHalfLengthMeters distance or field-coordinate value in meters.
+   * @param robotHalfWidthMeters distance or field-coordinate value in meters.
+   * @param dynamicObstacles obstacle set used for safety checks, costs, or replanning.
+   * @param checkBounds value used by this operation.
+   * @return value produced by this operation.
+   */
   static boolean isShooterPoseValidInternal(
       Translation2d shooterPos,
       Translation2d targetFieldPosition,
