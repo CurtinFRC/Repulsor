@@ -350,6 +350,24 @@ task(realOffloadDragShotTest, type: Test) {
         }
     }
 }
+
+task(optimizeReactiveBypass, type: JavaExec) {
+    group = "repulsor"
+    description = "Run the offline ReactiveBypass config optimizer. Use -PoptimizerApply=true to overwrite src/main/deploy/ReactiveBypassConfig.yaml."
+    dependsOn("testClasses")
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = "org.curtinfrc.frc2026.util.Repulsor.ReactiveBypass.Runtime.ReactiveBypassOptimizer"
+
+    def configPath = file("src/main/deploy/ReactiveBypassConfig.yaml")
+    def outputDir = layout.buildDirectory.dir("reactive-bypass-optimizer").get().asFile
+    systemProperty "repulsor.deploy.dir", configPath.parentFile.absolutePath
+
+    args "--config", configPath.absolutePath
+    args "--output-dir", outputDir.absolutePath
+    args "--iterations", (project.findProperty("optimizerIterations") ?: "320").toString()
+    args "--seed", (project.findProperty("optimizerSeed") ?: "4788").toString()
+    args "--apply", (project.findProperty("optimizerApply") ?: "false").toString()
+}
 tasks.named("test", Test) {
     configureOffloadSmokeInputs(it)
 }
@@ -360,7 +378,8 @@ tasks.named("localOffloadSmokeTest", Test) {
 def requestedTasks = gradle.startParameter.taskNames
 def dedicatedOffloadTestTasks = [
     "localOffloadSmokeTest",
-    "realOffloadDragShotTest"
+    "realOffloadDragShotTest",
+    "optimizeReactiveBypass"
 ]
 def dedicatedOffloadOnlyRequested =
         !requestedTasks.isEmpty() &&
