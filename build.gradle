@@ -364,10 +364,21 @@ task(optimizeReactiveBypass, type: JavaExec) {
 
     args "--config", configPath.absolutePath
     args "--output-dir", outputDir.absolutePath
+
     args "--iterations", (project.findProperty("optimizerIterations") ?: "320").toString()
-    args "--seed", (project.findProperty("optimizerSeed") ?: "4788").toString()
+    args "--random-scenarios", (project.findProperty("optimizerRandomScenarios") ?: "80").toString()
+    args "--validation-scenarios", (project.findProperty("optimizerValidationScenarios") ?: "300").toString()
+    args "--threads", (project.findProperty("optimizerThreads") ?: "0").toString()
+    args "--progress", (project.findProperty("optimizerProgress") ?: "true").toString()
+    args "--report-scenarios", (project.findProperty("optimizerReportScenarios") ?: "true").toString()
+
+    if (project.hasProperty("optimizerSeed")) {
+        args "--seed", project.findProperty("optimizerSeed").toString()
+    }
+
     args "--apply", (project.findProperty("optimizerApply") ?: "false").toString()
 }
+
 tasks.named("test", Test) {
     configureOffloadSmokeInputs(it)
 }
