@@ -22,6 +22,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.HashMap;
 import org.curtinfrc.frc2026.util.Repulsor.Constants;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal.CollectEval;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal.IntentAggCont;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal.Track;
@@ -395,8 +396,9 @@ public final class PredictiveCollectScoringRuntime {
    */
   public static double wallDistance(PredictiveFieldStateOps ops, Translation2d p) {
     if (p == null) return 0.0;
-    double dx = Math.min(p.getX(), Constants.FIELD_LENGTH - p.getX());
-    double dy = Math.min(p.getY(), Constants.FIELD_WIDTH - p.getY());
+    FieldGeometry geometry = ops != null ? ops.getFieldGeometry() : Constants.FIELD_GEOMETRY;
+    double dx = Math.min(p.getX(), geometry.lengthMeters() - p.getX());
+    double dy = Math.min(p.getY(), geometry.widthMeters() - p.getY());
     return Math.min(dx, dy);
   }
 
@@ -409,6 +411,7 @@ public final class PredictiveCollectScoringRuntime {
    */
   public static boolean isInvalidFuelBand(PredictiveFieldStateOps ops, Translation2d p) {
     if (p == null) return false;
+    if (ops != null) return ops.isExcludedCollectResourceRegion(p);
     double x = p.getX();
     return PredictiveFieldStateOps.X_LEFT_BAND.within(x)
         || PredictiveFieldStateOps.X_RIGHT_BAND.within(x);
@@ -425,9 +428,7 @@ public final class PredictiveCollectScoringRuntime {
   public static boolean defaultCollectResourcePositionFilter(
       PredictiveFieldStateOps ops, Translation2d p) {
     if (p == null) return false;
-    return p.getX() >= 0.0
-        && p.getX() <= Constants.FIELD_LENGTH
-        && p.getY() >= 0.0
-        && p.getY() <= Constants.FIELD_WIDTH;
+    FieldGeometry geometry = ops != null ? ops.getFieldGeometry() : Constants.FIELD_GEOMETRY;
+    return geometry.contains(p);
   }
 }

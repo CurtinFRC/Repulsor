@@ -151,7 +151,7 @@ public final class PredictiveCollectNearestSearchStep {
           if (fuelNear < minHardUnits || cNear < 1) continue;
 
           Translation2d fuelTouch =
-              ops.enforceHardStopOnFuel(dyn, p0, rCore, rSnap, rCentroid, 0.10);
+              ops.enforceHardStopOnCollectResource(dyn, p0, rCore, rSnap, rCentroid, 0.10);
           if (fuelTouch == null || inShootBand.test(fuelTouch)) continue;
 
           double fuelOn = dyn.valueInSquare(fuelTouch, onHalf);
@@ -222,7 +222,7 @@ public final class PredictiveCollectNearestSearchStep {
 
       if (!localHasCore) {
         Translation2d anchor =
-            ops.enforceHardStopOnFuel(dyn, center, rCore, rSnap, rCentroid, 0.10);
+            ops.enforceHardStopOnCollectResource(dyn, center, rCore, rSnap, rCentroid, 0.10);
         if (anchor != null && !inShootBand.test(anchor)) {
           double micro = Math.max(0.03, 0.75 * rCore);
           Translation2d bestMicroP = null;
@@ -237,7 +237,7 @@ public final class PredictiveCollectNearestSearchStep {
               if (inShootBand.test(p0)) continue;
 
               Translation2d fuelTouch =
-                  ops.enforceHardStopOnFuel(dyn, p0, rCore, rSnap, rCentroid, 0.08);
+                  ops.enforceHardStopOnCollectResource(dyn, p0, rCore, rSnap, rCentroid, 0.08);
               if (fuelTouch == null || inShootBand.test(fuelTouch)) continue;
 
               int cCore = dyn.countResourcesWithin(fuelTouch, rCore);

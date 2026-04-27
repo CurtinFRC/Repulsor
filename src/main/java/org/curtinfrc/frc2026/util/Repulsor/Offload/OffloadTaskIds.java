@@ -31,11 +31,25 @@ public final class OffloadTaskIds {
       "repulsor.predictive.selectShuttleRecoveryPoint.v1";
 
   /**
+   * Generic name for predictive resource recovery selection. It currently aliases the legacy
+   * shuttle task ID so existing generated wrappers and robot deployments remain wire-compatible.
+   */
+  public static final String PREDICTIVE_SELECT_RESOURCE_RECOVERY_POINT =
+      PREDICTIVE_SELECT_SHUTTLE_RECOVERY_POINT;
+
+  /**
    * Configuration value for field tracker next shuttle recovery goal blue. The valid range and
    * tuning source are defined by the owning subsystem or field profile.
    */
   public static final String FIELD_TRACKER_NEXT_SHUTTLE_RECOVERY_GOAL_BLUE =
       "repulsor.fieldtracker.nextShuttleRecoveryGoalBlue.v1";
+
+  /**
+   * Generic name for field-tracker resource recovery. It aliases the legacy shuttle task ID until
+   * the generated offload protocol has a profile DTO for generic resource recovery.
+   */
+  public static final String FIELD_TRACKER_NEXT_RESOURCE_RECOVERY_GOAL_BLUE =
+      FIELD_TRACKER_NEXT_SHUTTLE_RECOVERY_GOAL_BLUE;
 
   /**
    * Configuration value for field planner calculate. The valid range and tuning source are defined

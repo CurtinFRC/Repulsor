@@ -424,7 +424,7 @@ public final class PredictiveCollectNearestResolutionStep {
 
       Translation2d anchoredTouch =
           ops.currentCollectTouch != null
-              ? ops.enforceHardStopOnFuel(
+              ? ops.enforceHardStopOnCollectResource(
                   dyn, ops.currentCollectTouch, rCore, rSnap, rCentroid, 0.10)
               : null;
 
@@ -592,7 +592,8 @@ public final class PredictiveCollectNearestResolutionStep {
 
     if (finalOnUnits < minHardUnits || finalOnCount < 1 || finalEv < minEv) {
       Translation2d anchoredTouch =
-          ops.enforceHardStopOnFuel(dyn, ops.currentCollectTouch, rCore, rSnap, rCentroid, 0.10);
+          ops.enforceHardStopOnCollectResource(
+              dyn, ops.currentCollectTouch, rCore, rSnap, rCentroid, 0.10);
       if (anchoredTouch != null && !inShootBand.test(anchoredTouch)) {
         ops.currentCollectTouch = anchoredTouch;
         ops.currentCollectHeading =

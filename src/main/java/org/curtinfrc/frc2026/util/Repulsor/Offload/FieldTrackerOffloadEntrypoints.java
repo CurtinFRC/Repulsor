@@ -2,6 +2,7 @@ package org.curtinfrc.frc2026.util.Repulsor.Offload;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import java.util.List;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceRecoveryProfile;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerLocalAccess;
 
 @SuppressWarnings("unused")
@@ -37,5 +38,28 @@ public final class FieldTrackerOffloadEntrypoints {
       List<ShuttleRecoveryDynamicObjectDTO> dynamicObjects) {
     return FieldTrackerLocalAccess.nextAllianceShuttleRecoveryGoalBlueLocal(
         robotPoseBlue, ourSpeedCap, goalUnits, flipRedToBlue, dynamicObjects);
+  }
+
+  /**
+   * Local generic resource-recovery entrypoint. This is not annotated for generated offload until
+   * {@link ResourceRecoveryProfile} has an offload DTO representation.
+   *
+   * @param robotPoseBlue robot pose expressed in blue-origin field coordinates
+   * @param ourSpeedCap robot speed cap in meters per second
+   * @param goalUnits desired recovered resource units
+   * @param flipRedToBlue whether observations should be mirrored into blue coordinates
+   * @param dynamicObjects transferred resource observations
+   * @param profile recovery profile for the active game
+   * @return field-relative blue-origin recovery pose
+   */
+  public static Pose2d nextResourceRecoveryGoalBlue(
+      Pose2d robotPoseBlue,
+      double ourSpeedCap,
+      int goalUnits,
+      boolean flipRedToBlue,
+      List<ShuttleRecoveryDynamicObjectDTO> dynamicObjects,
+      ResourceRecoveryProfile profile) {
+    return FieldTrackerLocalAccess.nextAllianceResourceRecoveryGoalBlueLocal(
+        robotPoseBlue, ourSpeedCap, goalUnits, flipRedToBlue, dynamicObjects, profile);
   }
 }

@@ -95,6 +95,12 @@ public final class SpatialDyn {
    */
   final double cellM;
 
+  /** Maximum resource-observation age accepted by this spatial snapshot, in seconds. */
+  final double resourceHardMaxAgeS;
+
+  /** Exponential age-decay coefficient applied when converting observations to evidence. */
+  final double resourceAgeDecay;
+
   /**
    * Configuration value for res cells. The valid range and tuning source are defined by the owning
    * subsystem or field profile.
@@ -123,7 +129,45 @@ public final class SpatialDyn {
       HashMap<String, Double> otherWeightsIn,
       Set<String> collectTypesIn,
       Predicate<Translation2d> collectFilterIn) {
+    this(
+        dyn,
+        specsIn,
+        otherWeightsIn,
+        collectTypesIn,
+        collectFilterIn,
+        PredictiveFieldStateRuntime.RESOURCE_HARD_MAX_AGE_S,
+        PredictiveFieldStateRuntime.COLLECT_AGE_DECAY);
+  }
+
+  /**
+   * Creates a spatial dynamic-object index using profile-driven collection freshness and evidence
+   * decay.
+   *
+   * @param dyn dynamic objects observed on the field
+   * @param specsIn resource specs keyed by object type
+   * @param otherWeightsIn non-resource density weights keyed by object type
+   * @param collectTypesIn object types that should be treated as collectable resources
+   * @param collectFilterIn position filter for collectable resources
+   * @param resourceHardMaxAgeS maximum accepted resource age in seconds
+   * @param resourceAgeDecay exponential age-decay coefficient for resource evidence
+   */
+  SpatialDyn(
+      List<DynamicObject> dyn,
+      HashMap<String, ResourceSpec> specsIn,
+      HashMap<String, Double> otherWeightsIn,
+      Set<String> collectTypesIn,
+      Predicate<Translation2d> collectFilterIn,
+      double resourceHardMaxAgeS,
+      double resourceAgeDecay) {
     this.all = dyn != null ? dyn : List.of();
+    this.resourceHardMaxAgeS =
+        Double.isFinite(resourceHardMaxAgeS) && resourceHardMaxAgeS > 0.0
+            ? resourceHardMaxAgeS
+            : PredictiveFieldStateRuntime.RESOURCE_HARD_MAX_AGE_S;
+    this.resourceAgeDecay =
+        Double.isFinite(resourceAgeDecay) && resourceAgeDecay >= 0.0
+            ? resourceAgeDecay
+            : PredictiveFieldStateRuntime.COLLECT_AGE_DECAY;
     this.specs = new HashMap<>();
     if (specsIn != null) {
       for (var e : specsIn.entrySet()) {
@@ -145,9 +189,7 @@ public final class SpatialDyn {
         this.collectTypes.add(type.toLowerCase());
       }
     }
-    if (this.collectTypes.isEmpty()) {
-      this.collectTypes.add("fuel");
-    }
+    if (this.collectTypes.isEmpty()) this.collectTypes.add("resource");
     this.collectFilter = collectFilterIn != null ? collectFilterIn : (p -> true);
 
     this.cellM = 0.50;
@@ -159,8 +201,7 @@ public final class SpatialDyn {
 
     for (DynamicObject o : this.all) {
       if (o == null || o.pos == null) continue;
-      if (!PredictiveFieldStateRuntime.error()
-          && o.ageS > PredictiveFieldStateRuntime.RESOURCE_HARD_MAX_AGE_S) continue;
+      if (!PredictiveFieldStateRuntime.error() && o.ageS > this.resourceHardMaxAgeS) continue;
 
       String ty = o.type != null ? o.type.toLowerCase() : "unknown";
       boolean isCollect = this.collectTypes.contains(ty);
@@ -240,10 +281,27 @@ public final class SpatialDyn {
       double ageW =
           PredictiveFieldStateRuntime.error()
               ? 1.0
-              : Math.exp(-PredictiveFieldStateRuntime.COLLECT_AGE_DECAY * Math.max(0.0, o.ageS));
+              : Math.exp(-resourceAgeDecay * Math.max(0.0, o.ageS));
       sum += Math.max(0.0, s.unitValue) * ageW;
     }
     return Math.max(0.0, sum);
+  }
+
+  /**
+   * Computes the age-weighted evidence contribution for a resource object in this snapshot.
+   *
+   * @param object dynamic object already classified as a collectable resource
+   * @return non-negative normalized resource evidence
+   */
+  public double resourceEvidence(DynamicObject object) {
+    if (object == null || object.type == null) return 0.0;
+    ResourceSpec spec = specs.get(object.type.toLowerCase());
+    if (spec == null) return 0.0;
+    double ageW =
+        PredictiveFieldStateRuntime.error()
+            ? 1.0
+            : Math.exp(-resourceAgeDecay * Math.max(0.0, object.ageS));
+    return Math.max(0.0, spec.unitValue) * ageW;
   }
 
   /**
@@ -272,7 +330,7 @@ public final class SpatialDyn {
         double ageW =
             PredictiveFieldStateRuntime.error()
                 ? 1.0
-                : Math.exp(-PredictiveFieldStateRuntime.COLLECT_AGE_DECAY * Math.max(0.0, o.ageS));
+                : Math.exp(-resourceAgeDecay * Math.max(0.0, o.ageS));
         sum += Math.max(0.0, s.unitValue) * ageW;
       }
     }
@@ -304,10 +362,7 @@ public final class SpatialDyn {
         double d2 = dx * dx + dy * dy;
 
         double age = Math.max(0.0, o.ageS);
-        double ageW =
-            PredictiveFieldStateRuntime.error()
-                ? 1.0
-                : Math.exp(-PredictiveFieldStateRuntime.COLLECT_AGE_DECAY * age);
+        double ageW = PredictiveFieldStateRuntime.error() ? 1.0 : Math.exp(-resourceAgeDecay * age);
 
         double sigmaBase =
             Math.max(
@@ -365,7 +420,7 @@ public final class SpatialDyn {
         double ageW =
             PredictiveFieldStateRuntime.error()
                 ? 1.0
-                : Math.exp(-PredictiveFieldStateRuntime.COLLECT_AGE_DECAY * Math.max(0.0, o.ageS));
+                : Math.exp(-resourceAgeDecay * Math.max(0.0, o.ageS));
         sum += Math.max(0.0, s.unitValue) * ageW;
       }
     }
@@ -403,10 +458,7 @@ public final class SpatialDyn {
         if (d2 > rr2) continue;
 
         double age = Math.max(0.0, o.ageS);
-        double ageW =
-            PredictiveFieldStateRuntime.error()
-                ? 1.0
-                : Math.exp(-PredictiveFieldStateRuntime.COLLECT_AGE_DECAY * age);
+        double ageW = PredictiveFieldStateRuntime.error() ? 1.0 : Math.exp(-resourceAgeDecay * age);
 
         double sigmaBase =
             Math.max(

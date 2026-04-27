@@ -22,7 +22,6 @@ import edu.wpi.first.math.geometry.Translation2d;
 import java.util.ArrayList;
 import java.util.HashMap;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
-import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
 
 /**
  * Provides predictive collect candidate builder functionality for the Repulsor predictive
@@ -31,7 +30,6 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
  * unless a method documents robot-relative motion.
  */
 public final class PredictiveCollectCandidateBuilder {
-  private static final double COLLECT_AGE_DECAY = 0.75;
   private static final double COLLECT_SPREAD_SCORE_R = 0.85;
   private static final double COLLECT_SPREAD_MIN = 0.30;
   private static final double COLLECT_SPREAD_MAX = 0.65;
@@ -113,25 +111,15 @@ public final class PredictiveCollectCandidateBuilder {
     for (Translation2d c : clusters) if (c != null) out.add(c);
     for (Translation2d p : peaks) if (p != null) out.add(p);
 
-    if (dyn != null
-        && dyn.resources != null
-        && !dyn.resources.isEmpty()
-        && dyn.specs != null
-        && !dyn.specs.isEmpty()) {
+    if (dyn != null && dyn.resources != null && !dyn.resources.isEmpty()) {
       Translation2d[] bestRes = new Translation2d[Math.max(1, COLLECT_RESOURCE_SEEDS_MAX)];
       double[] bestW = new double[bestRes.length];
       for (int i = 0; i < bestW.length; i++) bestW[i] = -1e18;
 
       for (DynamicObject o : dyn.resources) {
         if (o == null || o.pos == null || o.type == null) continue;
-        ResourceSpec s = dyn.specs.get(o.type.toLowerCase());
-        if (s == null) continue;
-
-        double ageW =
-            PredictiveFieldStateRuntime.error()
-                ? 1.0
-                : Math.exp(-COLLECT_AGE_DECAY * Math.max(0.0, o.ageS));
-        double w = Math.max(0.0, s.unitValue) * ageW;
+        double w = dyn.resourceEvidence(o);
+        if (w <= 1e-9) continue;
 
         int worstI = 0;
         double worst = bestW[0];
@@ -321,7 +309,7 @@ public final class PredictiveCollectCandidateBuilder {
    * @return value produced by this operation.
    */
   public static Translation2d[] buildResourceClustersMulti(SpatialDyn dyn, int maxClusters) {
-    if (dyn == null || dyn.resources.isEmpty() || dyn.specs.isEmpty()) return new Translation2d[0];
+    if (dyn == null || dyn.resources.isEmpty()) return new Translation2d[0];
 
     double coarseBin = Math.max(0.25, Math.min(0.35, 0.30));
     double inv = 1.0 / Math.max(1e-6, coarseBin);
@@ -331,8 +319,8 @@ public final class PredictiveCollectCandidateBuilder {
 
     for (DynamicObject o : dyn.resources) {
       if (o == null || o.pos == null || o.type == null) continue;
-      ResourceSpec s = dyn.specs.get(o.type.toLowerCase());
-      if (s == null) continue;
+      double w = dyn.resourceEvidence(o);
+      if (w <= 1e-9) continue;
 
       int cx = (int) Math.floor(o.pos.getX() * inv);
       int cy = (int) Math.floor(o.pos.getY() * inv);
@@ -343,12 +331,6 @@ public final class PredictiveCollectCandidateBuilder {
         a = new org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal.ClusterAcc();
         coarse.put(k, a);
       }
-
-      double ageW =
-          PredictiveFieldStateRuntime.error()
-              ? 1.0
-              : Math.exp(-COLLECT_AGE_DECAY * Math.max(0.0, o.ageS));
-      double w = Math.max(0.0, s.unitValue) * ageW;
 
       a.sx += o.pos.getX() * w;
       a.sy += o.pos.getY() * w;
@@ -414,19 +396,13 @@ public final class PredictiveCollectCandidateBuilder {
 
       for (DynamicObject o : dyn.resources) {
         if (o == null || o.pos == null || o.type == null) continue;
-        ResourceSpec s = dyn.specs.get(o.type.toLowerCase());
-        if (s == null) continue;
+        double w = dyn.resourceEvidence(o);
+        if (w <= 1e-9) continue;
 
         double dx = o.pos.getX() - c.getX();
         double dy = o.pos.getY() - c.getY();
         double d2 = dx * dx + dy * dy;
         if (d2 > rr2) continue;
-
-        double ageW =
-            PredictiveFieldStateRuntime.error()
-                ? 1.0
-                : Math.exp(-COLLECT_AGE_DECAY * Math.max(0.0, o.ageS));
-        double w = Math.max(0.0, s.unitValue) * ageW;
 
         sx += o.pos.getX() * w;
         sy += o.pos.getY() * w;

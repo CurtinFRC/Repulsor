@@ -23,14 +23,17 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Predicate;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal.IntentAgg;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal.Track;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.Candidate;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveClock;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateOps;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.SpatialDyn;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
+import org.curtinfrc.frc2026.util.Repulsor.Strategy.ResourceRegionSummary;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
 
 /**
@@ -390,5 +393,88 @@ public final class PredictiveFieldStateTrackingRuntime {
     SpatialDyn d = ops.cachedDyn();
     if (d == null) return null;
     return d.nearestResourceTo(p, Math.max(0.01, maxDist));
+  }
+
+  /**
+   * Summarizes collectable resource evidence inside a field region for strategy evaluation.
+   *
+   * @param ops predictive state operations containing resource specs and traffic tracks
+   * @param id stable region identifier
+   * @param regionFilter field-relative predicate selecting resources in the region
+   * @param robotPos current robot position in field-relative meters
+   * @param maxDistanceMeters maximum actionable robot-to-resource distance
+   * @return normalized resource and risk summary for the requested region
+   */
+  public static ResourceRegionSummary summarizeResourceRegion(
+      PredictiveFieldStateOps ops,
+      String id,
+      Predicate<Translation2d> regionFilter,
+      Translation2d robotPos,
+      double maxDistanceMeters) {
+    if (ops == null || robotPos == null) return ResourceRegionSummary.empty(id);
+    SpatialDyn dyn = ops.cachedDyn();
+    if (dyn == null || dyn.resources.isEmpty()) return ResourceRegionSummary.empty(id);
+
+    Predicate<Translation2d> accepts = regionFilter != null ? regionFilter : point -> true;
+    double maxDist =
+        Double.isFinite(maxDistanceMeters) && maxDistanceMeters > 0.0
+            ? maxDistanceMeters
+            : ops.getFieldGeometry().diagonalMeters();
+    double maxDist2 = maxDist * maxDist;
+
+    double units = 0.0;
+    double value = 0.0;
+    Translation2d nearest = null;
+    double nearestDist2 = Double.POSITIVE_INFINITY;
+
+    for (DynamicObject object : dyn.resources) {
+      if (object == null || object.pos == null || object.type == null) continue;
+      if (!accepts.test(object.pos)) continue;
+
+      double dx = object.pos.getX() - robotPos.getX();
+      double dy = object.pos.getY() - robotPos.getY();
+      double d2 = dx * dx + dy * dy;
+      if (d2 > maxDist2) continue;
+
+      double objectValue = dyn.resourceEvidence(object);
+      if (objectValue <= 1e-9) continue;
+      units += objectValue;
+      value += objectValue;
+
+      if (d2 < nearestDist2) {
+        nearestDist2 = d2;
+        nearest = object.pos;
+      }
+    }
+
+    if (nearest == null || units <= 1e-9 || value <= 1e-9) {
+      return ResourceRegionSummary.empty(id);
+    }
+
+    double nearestDistance = Math.sqrt(Math.max(0.0, nearestDist2));
+    double travelEta =
+        ops.estimateTravelTime(
+            robotPos,
+            nearest,
+            ops.lastOurCapForCollect > 0.0
+                ? ops.lastOurCapForCollect
+                : PredictiveFieldStateOps.DEFAULT_OUR_SPEED);
+    double enemyPressure = ops.radialPressure(ops.enemyMap, nearest, travelEta, 0.0, 0);
+    double allyCongestion = ops.radialCongestion(ops.allyMap, nearest, travelEta, 0.0, 0);
+    double nearbyTraffic =
+        PredictiveFieldStateOps.radialDensity(
+                ops.enemyMap, nearest, PredictiveFieldStateOps.COLLECT_ACTIVITY_SIGMA)
+            + 0.65
+                * PredictiveFieldStateOps.radialDensity(
+                    ops.allyMap, nearest, PredictiveFieldStateOps.COLLECT_ACTIVITY_SIGMA);
+    double trafficRisk = Math.min(3.0, enemyPressure + allyCongestion + nearbyTraffic);
+    double obstacleRisk =
+        Math.min(
+            3.0,
+            dyn.localAvoidPenalty(nearest, PredictiveFieldStateOps.COLLECT_LOCAL_AVOID_R)
+                + ops.depletedPenaltySoft(nearest));
+
+    return new ResourceRegionSummary(
+        id, units, value, nearest, nearestDistance, trafficRisk, obstacleRisk);
   }
 }

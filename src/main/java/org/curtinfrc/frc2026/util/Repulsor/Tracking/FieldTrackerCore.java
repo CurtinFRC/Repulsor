@@ -26,7 +26,6 @@ import edu.wpi.first.wpilibj.DriverStation;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -131,8 +130,9 @@ public class FieldTrackerCore {
   public FieldTrackerCore(FieldLayoutProvider provider) {
     if (provider == null) throw new IllegalArgumentException("provider cannot be null");
 
-    this.field_map = provider.build(this);
     this.predictor = new PredictiveFieldStateRuntime();
+    predictor.setFieldGeometry(provider.geometry());
+    this.field_map = provider.build(this);
     this.collectCache = new ObjectiveCache();
     this.collectPlanner =
         new FieldTrackerCollectPlanner(
@@ -256,6 +256,7 @@ public class FieldTrackerCore {
    */
   public void rebuild(FieldLayoutProvider provider) {
     if (provider == null) throw new IllegalArgumentException("provider cannot be null");
+    predictor.setFieldGeometry(provider.geometry());
     this.field_map = provider.build(this);
     rebuildObjectiveCaches();
     provider.configureTracker(this);
@@ -432,51 +433,9 @@ public class FieldTrackerCore {
     if (robotPoseBlue == null || region == null) {
       return ResourceRegionSummary.empty(id);
     }
-
-    Translation2d robot = robotPoseBlue.getTranslation();
-    List<DynamicObject> dynamics = snapshotDynamics();
-    if (dynamics.isEmpty()) {
-      return ResourceRegionSummary.empty(id);
-    }
-
-    double units = 0.0;
-    double value = 0.0;
-    Translation2d nearest = null;
-    double nearestDist = Double.POSITIVE_INFINITY;
-    double trafficRisk = 0.0;
-    HashMap<String, Integer> resourceSeen = new HashMap<>();
-
-    for (DynamicObject object : dynamics) {
-      if (object == null || object.pos == null || !region.test(object.pos)) {
-        continue;
-      }
-      String type = canonicalizeType(object.type);
-      if (isCollectResourceType(type)) {
-        units += 1.0;
-        value +=
-            collectResourceSpecs.getOrDefault(type, new ResourceSpec(0.075, 1.0, 0.95)).unitValue;
-        resourceSeen.merge(type, 1, Integer::sum);
-        double d = robot.getDistance(object.pos);
-        if (d < nearestDist) {
-          nearestDist = d;
-          nearest = object.pos;
-        }
-      } else {
-        trafficRisk += trafficRisk(robot, object.pos, object.vel);
-      }
-    }
-
-    double obstacleRisk = Math.min(3.0, 0.08 * resourceSeen.size());
-    return new ResourceRegionSummary(
-        id, units, value, nearest, nearestDist, Math.min(6.0, trafficRisk), obstacleRisk);
-  }
-
-  private static double trafficRisk(
-      Translation2d robot, Translation2d object, Translation2d velocity) {
-    double distance = robot == null || object == null ? 4.0 : robot.getDistance(object);
-    double proximity = 1.0 / Math.max(0.35, distance);
-    double speed = velocity == null ? 0.0 : Math.hypot(velocity.getX(), velocity.getY());
-    return Math.min(2.0, proximity * (1.0 + 0.25 * speed));
+    predictor.setDynamicObjects(snapshotDynamics());
+    return predictor.summarizeResourceRegion(
+        id, region, robotPoseBlue.getTranslation(), predictor.getFieldGeometry().diagonalMeters());
   }
 
   private List<ShuttleRecoveryDynamicObjectDTO> snapshotRecoveryDynamics() {

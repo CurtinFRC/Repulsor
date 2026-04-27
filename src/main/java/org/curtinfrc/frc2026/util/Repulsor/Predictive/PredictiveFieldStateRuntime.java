@@ -23,6 +23,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
 import org.curtinfrc.frc2026.util.Repulsor.Offload.PredictiveFieldStateOffloadEntrypoints_Offloaded;
 import org.curtinfrc.frc2026.util.Repulsor.Offload.ShuttleRecoveryDynamicObjectDTO;
@@ -31,8 +32,11 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.Candidate;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.CollectProbe;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PointCandidate;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceCollectionProfile;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceRecoveryProfile;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
+import org.curtinfrc.frc2026.util.Repulsor.Strategy.ResourceRegionSummary;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
 
@@ -148,6 +152,33 @@ public class PredictiveFieldStateRuntime {
    */
   public void registerResourceSpec(String type, ResourceSpec spec) {
     ops.registerResourceSpec(type, spec);
+  }
+
+  /**
+   * Installs the game/profile-specific predictive collection configuration.
+   *
+   * @param profile resource collection profile for the active field
+   */
+  public void configureCollectionProfile(ResourceCollectionProfile profile) {
+    ops.configureCollectionProfile(profile);
+  }
+
+  /**
+   * Replaces the predictive field geometry used by bounds checks and wall costs.
+   *
+   * @param geometry field dimensions in meters
+   */
+  public void setFieldGeometry(FieldGeometry geometry) {
+    ops.setFieldGeometry(geometry);
+  }
+
+  /**
+   * Returns the predictive field geometry currently used by collection logic.
+   *
+   * @return active field geometry
+   */
+  public FieldGeometry getFieldGeometry() {
+    return ops.getFieldGeometry();
   }
 
   /**
@@ -344,6 +375,37 @@ public class PredictiveFieldStateRuntime {
   }
 
   /**
+   * Summarizes collectable resources inside a caller-defined field region for reusable strategy
+   * evaluation.
+   *
+   * @param id stable telemetry identifier for the region
+   * @param regionFilter field-relative predicate selecting resources in the region
+   * @param robotPos current robot position in field-relative meters
+   * @param maxDistanceMeters maximum robot-to-resource distance considered actionable
+   * @return normalized resource and risk summary for the region
+   */
+  public ResourceRegionSummary summarizeResourceRegion(
+      String id,
+      Predicate<Translation2d> regionFilter,
+      Translation2d robotPos,
+      double maxDistanceMeters) {
+    return ops.summarizeResourceRegion(id, regionFilter, robotPos, maxDistanceMeters);
+  }
+
+  /**
+   * Summarizes a region using the configured field diagonal as the maximum actionable distance.
+   *
+   * @param id stable telemetry identifier for the region
+   * @param regionFilter field-relative predicate selecting resources in the region
+   * @param robotPos current robot position in field-relative meters
+   * @return normalized resource and risk summary for the region
+   */
+  public ResourceRegionSummary summarizeResourceRegion(
+      String id, Predicate<Translation2d> regionFilter, Translation2d robotPos) {
+    return ops.summarizeResourceRegion(id, regionFilter, robotPos);
+  }
+
+  /**
    * Returns the rank collect nearest value maintained by this Repulsor component.
    *
    * @param ourPos value used by this operation.
@@ -437,6 +499,28 @@ public class PredictiveFieldStateRuntime {
   }
 
   /**
+   * Selects a recovery point for a generic transferred resource profile.
+   *
+   * @param robotPoseBlue robot pose expressed in blue-origin field coordinates
+   * @param ourSpeedCap robot speed cap in meters per second
+   * @param goalUnits desired recovered resource units
+   * @param flipRedToBlue whether dynamic objects should be mirrored into blue coordinates
+   * @param dynamicObjects transferred resource observations
+   * @param profile recovery profile for the active game
+   * @return selected recovery point, or a not-found DTO
+   */
+  public ShuttleRecoveryPointDTO selectResourceRecoveryPointLocal(
+      Pose2d robotPoseBlue,
+      double ourSpeedCap,
+      int goalUnits,
+      boolean flipRedToBlue,
+      List<ShuttleRecoveryDynamicObjectDTO> dynamicObjects,
+      ResourceRecoveryProfile profile) {
+    return PredictiveFieldStateLocalAccess.selectResourceRecoveryPointLocal(
+        robotPoseBlue, ourSpeedCap, goalUnits, flipRedToBlue, dynamicObjects, profile);
+  }
+
+  /**
    * Computes the select shuttle recovery point offloaded value for the current Repulsor planning
    * state. Call this from periodic planning or tests when a fresh decision is required; inputs
    * should already be expressed in the coordinate frame expected by the parameter names.
@@ -456,5 +540,29 @@ public class PredictiveFieldStateRuntime {
       List<ShuttleRecoveryDynamicObjectDTO> dynamicObjects) {
     return PredictiveFieldStateOffloadEntrypoints_Offloaded.selectShuttleRecoveryPoint_offload(
         robotPoseBlue, ourSpeedCap, goalUnits, flipRedToBlue, dynamicObjects);
+  }
+
+  /**
+   * Selects a generic resource recovery point. The current offload boundary only serializes the
+   * legacy shuttle DTO shape, so non-default profiles execute locally until a generated generic
+   * offload endpoint is added.
+   *
+   * @param robotPoseBlue robot pose expressed in blue-origin field coordinates
+   * @param ourSpeedCap robot speed cap in meters per second
+   * @param goalUnits desired recovered resource units
+   * @param flipRedToBlue whether dynamic objects should be mirrored into blue coordinates
+   * @param dynamicObjects transferred resource observations
+   * @param profile recovery profile for the active game
+   * @return selected recovery point, or a not-found DTO
+   */
+  public ShuttleRecoveryPointDTO selectResourceRecoveryPoint(
+      Pose2d robotPoseBlue,
+      double ourSpeedCap,
+      int goalUnits,
+      boolean flipRedToBlue,
+      List<ShuttleRecoveryDynamicObjectDTO> dynamicObjects,
+      ResourceRecoveryProfile profile) {
+    return selectResourceRecoveryPointLocal(
+        robotPoseBlue, ourSpeedCap, goalUnits, flipRedToBlue, dynamicObjects, profile);
   }
 }

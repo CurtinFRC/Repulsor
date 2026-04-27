@@ -78,7 +78,7 @@ public final class PredictiveCollectFootprintRuntime {
                 .get()
                 .supportPointRobotFrame(new Translation2d(1.0, 0.0))
                 .rotateBy(heading));
-    return ops.enforceHardStopOnFuel(dyn, front, rCore, rSnap, rCentroid, 0.10);
+    return ops.enforceHardStopOnCollectResource(dyn, front, rCore, rSnap, rCentroid, 0.10);
   }
 
   /**

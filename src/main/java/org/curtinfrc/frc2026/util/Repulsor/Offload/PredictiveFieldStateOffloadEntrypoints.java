@@ -2,6 +2,7 @@ package org.curtinfrc.frc2026.util.Repulsor.Offload;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import java.util.List;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceRecoveryProfile;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateLocalAccess;
 
 @SuppressWarnings("unused")
@@ -39,5 +40,29 @@ public final class PredictiveFieldStateOffloadEntrypoints {
       List<ShuttleRecoveryDynamicObjectDTO> dynamicObjects) {
     return PredictiveFieldStateLocalAccess.selectShuttleRecoveryPointLocal(
         robotPoseBlue, ourSpeedCap, goalUnits, flipRedToBlue, dynamicObjects);
+  }
+
+  /**
+   * Local generic recovery entrypoint for callers that do not want to encode shuttle/fuel language.
+   * This is intentionally not annotated for generated offload until {@link ResourceRecoveryProfile}
+   * is represented as an offload-safe DTO.
+   *
+   * @param robotPoseBlue robot pose expressed in blue-origin field coordinates
+   * @param ourSpeedCap robot speed cap in meters per second
+   * @param goalUnits desired recovered resource units
+   * @param flipRedToBlue whether dynamic objects should be mirrored into blue coordinates
+   * @param dynamicObjects transferred resource observations
+   * @param profile recovery profile for the active game
+   * @return selected recovery point, or a not-found DTO
+   */
+  public static ShuttleRecoveryPointDTO selectResourceRecoveryPoint(
+      Pose2d robotPoseBlue,
+      double ourSpeedCap,
+      int goalUnits,
+      boolean flipRedToBlue,
+      List<ShuttleRecoveryDynamicObjectDTO> dynamicObjects,
+      ResourceRecoveryProfile profile) {
+    return PredictiveFieldStateLocalAccess.selectResourceRecoveryPointLocal(
+        robotPoseBlue, ourSpeedCap, goalUnits, flipRedToBlue, dynamicObjects, profile);
   }
 }

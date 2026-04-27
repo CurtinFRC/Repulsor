@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import org.curtinfrc.frc2026.util.Repulsor.Constants;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
 import org.curtinfrc.frc2026.util.Repulsor.IntakeFootprint;
 import org.curtinfrc.frc2026.util.Repulsor.Interval;
@@ -43,9 +44,11 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.Candidate;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.CollectProbe;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PointCandidate;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceCollectionProfile;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Runtime.*;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
+import org.curtinfrc.frc2026.util.Repulsor.Strategy.ResourceRegionSummary;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
 
@@ -827,7 +830,9 @@ public final class PredictiveFieldStateOps {
             resourceSpecs,
             otherTypeWeights,
             collectResourceTypes,
-            collectResourcePositionFilter);
+            collectResourcePositionFilter,
+            collectionProfile.observationHardMaxAgeSeconds(),
+            collectionProfile.observationAgeDecay());
     lastDynRef = ref;
     lastDyn = nd;
     lastDynSpecsVersion = sv;
@@ -869,6 +874,10 @@ public final class PredictiveFieldStateOps {
   public final HashMap<String, ResourceSpec> resourceSpecs = new HashMap<>();
   public final HashMap<String, Double> otherTypeWeights = new HashMap<>();
 
+  /** Profile-driven collection/freshness configuration used by the predictive spatial snapshot. */
+  public volatile ResourceCollectionProfile collectionProfile =
+      ResourceCollectionProfile.fuel2026(Constants.FIELD_GEOMETRY);
+
   /**
    * Configuration value for collect resource types. The valid range and tuning source are defined
    * by the owning subsystem or field profile.
@@ -881,7 +890,7 @@ public final class PredictiveFieldStateOps {
    * defined by the owning subsystem or field profile.
    */
   public volatile Predicate<Translation2d> collectResourcePositionFilter =
-      PredictiveFieldStateOps::defaultCollectResourcePositionFilter;
+      collectionProfile::accepts;
 
   /**
    * Configuration value for penalty tracker. The valid range and tuning source are defined by the
@@ -991,6 +1000,35 @@ public final class PredictiveFieldStateOps {
    */
   public void registerResourceSpec(String type, ResourceSpec spec) {
     PredictiveCollectConfigRuntime.registerResourceSpec(this, type, spec);
+  }
+
+  /**
+   * Installs a profile-driven collection model for the predictive resource state. This updates the
+   * default collectable type, registers its {@link ResourceSpec}, replaces the default position
+   * filter with the profile bounds/exclusion filter, and invalidates cached spatial state.
+   *
+   * @param profile collection profile for the active game or field variant
+   */
+  public void configureCollectionProfile(ResourceCollectionProfile profile) {
+    PredictiveCollectConfigRuntime.configureCollectionProfile(this, profile);
+  }
+
+  /**
+   * Replaces only the field geometry used by predictive filters and wall-cost helpers.
+   *
+   * @param geometry field dimensions in WPILib field-relative meters
+   */
+  public void setFieldGeometry(FieldGeometry geometry) {
+    PredictiveCollectConfigRuntime.setFieldGeometry(this, geometry);
+  }
+
+  /**
+   * Returns the field geometry currently used by predictive collection filters.
+   *
+   * @return active predictive field geometry
+   */
+  public FieldGeometry getFieldGeometry() {
+    return collectionProfile.fieldGeometry();
   }
 
   /**
@@ -1209,6 +1247,40 @@ public final class PredictiveFieldStateOps {
   }
 
   /**
+   * Summarizes collectable resources inside a profile-defined or caller-supplied region. Strategy
+   * evaluators use this to compare scoring-side, center-field, contested, and fallback regions
+   * without knowing the current game piece type.
+   *
+   * @param id stable telemetry identifier for the summarized region
+   * @param regionFilter field-relative predicate selecting resources in the region; {@code null}
+   *     accepts every collectable resource
+   * @param robotPos current robot position in field-relative meters for distance and risk estimates
+   * @param maxDistanceMeters maximum robot-to-resource distance considered actionable
+   * @return normalized resource amount, nearest point, and traffic/obstacle risk for the region
+   */
+  public ResourceRegionSummary summarizeResourceRegion(
+      String id,
+      Predicate<Translation2d> regionFilter,
+      Translation2d robotPos,
+      double maxDistanceMeters) {
+    return PredictiveFieldStateTrackingRuntime.summarizeResourceRegion(
+        this, id, regionFilter, robotPos, maxDistanceMeters);
+  }
+
+  /**
+   * Summarizes a region using the full field diagonal as the actionable distance bound.
+   *
+   * @param id stable telemetry identifier for the summarized region
+   * @param regionFilter field-relative predicate selecting resources in the region
+   * @param robotPos current robot position in field-relative meters
+   * @return normalized resource amount, nearest point, and traffic/obstacle risk for the region
+   */
+  public ResourceRegionSummary summarizeResourceRegion(
+      String id, Predicate<Translation2d> regionFilter, Translation2d robotPos) {
+    return summarizeResourceRegion(id, regionFilter, robotPos, getFieldGeometry().diagonalMeters());
+  }
+
+  /**
    * Returns the peak finder value maintained by this Repulsor component.
    *
    * @param gridPoints value used by this operation.
@@ -1409,10 +1481,11 @@ public final class PredictiveFieldStateOps {
     final double robotHalf = 0.5 * Math.max(OFFLOAD_SAFE_ROBOT_X_M, OFFLOAD_SAFE_ROBOT_Y_M);
     final double robotWallMargin = robotHalf + 0.03;
     final double wallClearMin = robotWallMargin + 0.05;
+    final FieldGeometry geometry = getFieldGeometry();
     final java.util.function.ToDoubleFunction<Translation2d> wallPenalty =
         (pt) -> {
           if (pt == null) return 0.0;
-          double d = wallDistance(pt);
+          double d = wallDistanceForCollection(pt);
           if (d >= wallClearMin) return 0.0;
           double t = (wallClearMin - d) / Math.max(1e-6, wallClearMin);
           return 1.4 * t * t;
@@ -1424,9 +1497,9 @@ public final class PredictiveFieldStateOps {
           double x = pt.getX();
           double y = pt.getY();
           return x < robotWallMargin
-              || x > (Constants.FIELD_LENGTH - robotWallMargin)
+              || x > (geometry.lengthMeters() - robotWallMargin)
               || y < robotWallMargin
-              || y > (Constants.FIELD_WIDTH - robotWallMargin);
+              || y > (geometry.widthMeters() - robotWallMargin);
         };
 
     lastOurPosForCollect = ourPos;
@@ -2119,6 +2192,31 @@ public final class PredictiveFieldStateOps {
    * @param minMass value used by this operation.
    * @return value produced by this operation.
    */
+  public Translation2d enforceHardStopOnCollectResource(
+      SpatialDyn dyn,
+      Translation2d p,
+      double rCore,
+      double rSnap,
+      double rCentroid,
+      double minMass) {
+    return PredictiveCollectPlacementRuntime.enforceHardStopOnCollectResource(
+        this, dyn, p, rCore, rSnap, rCentroid, minMass);
+  }
+
+  /**
+   * Compatibility wrapper for 2026 fuel-specific callers.
+   *
+   * @param dyn spatial dynamic-object snapshot
+   * @param p candidate collect point in field-relative meters
+   * @param rCore core resource-capture radius in meters
+   * @param rSnap snap-search radius in meters
+   * @param rCentroid centroid smoothing radius in meters
+   * @param minMass minimum evidence mass needed for centroiding
+   * @return adjusted collect point on a live resource, or {@code null} when no resource is present
+   * @deprecated prefer {@link #enforceHardStopOnCollectResource(SpatialDyn, Translation2d, double,
+   *     double, double, double)}
+   */
+  @Deprecated(forRemoval = false)
   public Translation2d enforceHardStopOnFuel(
       SpatialDyn dyn,
       Translation2d p,
@@ -2126,8 +2224,7 @@ public final class PredictiveFieldStateOps {
       double rSnap,
       double rCentroid,
       double minMass) {
-    return PredictiveCollectPlacementRuntime.enforceHardStopOnFuel(
-        this, dyn, p, rCore, rSnap, rCentroid, minMass);
+    return enforceHardStopOnCollectResource(dyn, p, rCore, rSnap, rCentroid, minMass);
   }
 
   /**
@@ -2316,6 +2413,16 @@ public final class PredictiveFieldStateOps {
   }
 
   /**
+   * Computes distance to the nearest field wall using the configured predictive field geometry.
+   *
+   * @param p field-relative point in meters
+   * @return nearest wall distance in meters, or zero for a null point
+   */
+  public double wallDistanceForCollection(Translation2d p) {
+    return PredictiveCollectScoringRuntime.wallDistance(this, p);
+  }
+
+  /**
    * Returns the is invalid fuel band value maintained by this Repulsor component.
    *
    * @param p value used by this operation.
@@ -2323,6 +2430,20 @@ public final class PredictiveFieldStateOps {
    */
   static boolean isInvalidFuelBand(Translation2d p) {
     return PredictiveCollectScoringRuntime.isInvalidFuelBand(null, p);
+  }
+
+  /**
+   * Reports whether a point is excluded by the active collection profile.
+   *
+   * @param p field-relative point in meters
+   * @return true when the point is inside one of the profile's excluded regions
+   */
+  public boolean isExcludedCollectResourceRegion(Translation2d p) {
+    if (p == null) return false;
+    for (Predicate<Translation2d> region : collectionProfile.excludedRegions()) {
+      if (region != null && region.test(p)) return true;
+    }
+    return false;
   }
 
   /**

@@ -144,7 +144,7 @@ public final class PredictiveCollectPlacementRuntime {
    * @param minMass value used by this operation.
    * @return value produced by this operation.
    */
-  public static Translation2d enforceHardStopOnFuel(
+  public static Translation2d enforceHardStopOnCollectResource(
       PredictiveFieldStateOps ops,
       SpatialDyn dyn,
       Translation2d p,
@@ -178,6 +178,32 @@ public final class PredictiveCollectPlacementRuntime {
     if (c != null) q = c;
 
     return dyn.nearestResourceTo(q, Math.max(0.01, rCore)) != null ? q : nearest2;
+  }
+
+  /**
+   * Compatibility wrapper for 2026 fuel-specific callers.
+   *
+   * @param ops predictive state operations containing caches and tuning
+   * @param dyn spatial dynamic-object snapshot
+   * @param p candidate collect point in field-relative meters
+   * @param rCore core resource-capture radius in meters
+   * @param rSnap snap-search radius in meters
+   * @param rCentroid centroid smoothing radius in meters
+   * @param minMass minimum evidence mass needed for centroiding
+   * @return adjusted collect point on a live resource, or {@code null} when no resource is present
+   * @deprecated prefer {@link #enforceHardStopOnCollectResource(PredictiveFieldStateOps,
+   *     SpatialDyn, Translation2d, double, double, double, double)}
+   */
+  @Deprecated(forRemoval = false)
+  public static Translation2d enforceHardStopOnFuel(
+      PredictiveFieldStateOps ops,
+      SpatialDyn dyn,
+      Translation2d p,
+      double rCore,
+      double rSnap,
+      double rCentroid,
+      double minMass) {
+    return enforceHardStopOnCollectResource(ops, dyn, p, rCore, rSnap, rCentroid, minMass);
   }
 
   /**

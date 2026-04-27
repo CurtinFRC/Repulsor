@@ -24,7 +24,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
+import org.curtinfrc.frc2026.util.Repulsor.Constants;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceCollectionProfile;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateOps;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
@@ -54,6 +57,46 @@ public final class PredictiveCollectConfigRuntime {
     ops.resourceSpecs.put(type.toLowerCase(), spec);
     ops.specsVersion++;
     ops.invalidateDynCache();
+  }
+
+  /**
+   * Applies a complete game/resource collection profile to the predictive state.
+   *
+   * @param ops predictive state operations to mutate
+   * @param profile collection profile for the active game
+   */
+  public static void configureCollectionProfile(
+      PredictiveFieldStateOps ops, ResourceCollectionProfile profile) {
+    if (ops == null) return;
+    ResourceCollectionProfile next =
+        profile != null ? profile : ResourceCollectionProfile.fuel2026(Constants.FIELD_GEOMETRY);
+    ops.collectionProfile = next;
+    ops.resourceSpecs.put(next.defaultResourceType(), next.defaultResourceSpec());
+    ops.collectResourceTypes.clear();
+    ops.collectResourceTypes.add(next.defaultResourceType());
+    ops.collectResourcePositionFilter = next::accepts;
+    ops.specsVersion++;
+    ops.invalidateDynCache();
+  }
+
+  /**
+   * Updates predictive field dimensions without changing the configured resource type or spec.
+   *
+   * @param ops predictive state operations to mutate
+   * @param geometry new field geometry in meters
+   */
+  public static void setFieldGeometry(PredictiveFieldStateOps ops, FieldGeometry geometry) {
+    if (ops == null || geometry == null) return;
+    ResourceCollectionProfile cur = ops.collectionProfile;
+    configureCollectionProfile(
+        ops,
+        new ResourceCollectionProfile(
+            cur.defaultResourceType(),
+            cur.defaultResourceSpec(),
+            cur.observationHardMaxAgeSeconds(),
+            cur.observationAgeDecay(),
+            geometry,
+            cur.excludedRegions()));
   }
 
   /**
@@ -90,7 +133,7 @@ public final class PredictiveCollectConfigRuntime {
       }
     }
     if (ops.collectResourceTypes.isEmpty()) {
-      ops.collectResourceTypes.add(PredictiveFieldStateOps.DEFAULT_COLLECT_RESOURCE_TYPE);
+      ops.collectResourceTypes.add(ops.collectionProfile.defaultResourceType());
     }
     ops.specsVersion++;
     ops.invalidateDynCache();
@@ -130,7 +173,7 @@ public final class PredictiveCollectConfigRuntime {
     if (type == null || type.isEmpty()) return;
     if (ops.collectResourceTypes.remove(type.toLowerCase())) {
       if (ops.collectResourceTypes.isEmpty()) {
-        ops.collectResourceTypes.add(PredictiveFieldStateOps.DEFAULT_COLLECT_RESOURCE_TYPE);
+        ops.collectResourceTypes.add(ops.collectionProfile.defaultResourceType());
       }
       ops.specsVersion++;
       ops.invalidateDynCache();
@@ -159,8 +202,7 @@ public final class PredictiveCollectConfigRuntime {
    */
   public static void setCollectResourcePositionFilter(
       PredictiveFieldStateOps ops, Predicate<Translation2d> filter) {
-    ops.collectResourcePositionFilter =
-        filter != null ? filter : PredictiveFieldStateOps::defaultCollectResourcePositionFilter;
+    ops.collectResourcePositionFilter = filter != null ? filter : ops.collectionProfile::accepts;
     ops.specsVersion++;
     ops.invalidateDynCache();
   }
