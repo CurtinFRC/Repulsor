@@ -99,6 +99,12 @@ public final class FieldPlannerOffloadLocalAccess {
     return planner;
   }
 
+  static void resetPlannerForTesting() {
+    synchronized (LOCK) {
+      planner = null;
+    }
+  }
+
   private static CategorySpec parseCategory(String categoryName) {
     if (categoryName == null || categoryName.isBlank()) {
       return CategorySpec.kScore;

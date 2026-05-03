@@ -7,8 +7,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import java.util.ArrayList;
 import java.util.List;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.RectangleObstacle;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.Rebuilt2026;
 import org.junit.jupiter.api.Test;
 
 class CoarseGlobalPlannerTest {
@@ -109,7 +111,43 @@ class CoarseGlobalPlannerTest {
     }
   }
 
+  @Test
+  void defaultLikeConfigRoutesRepresentativeRebuilt2026CorridorCases() {
+    Rebuilt2026 field = new Rebuilt2026();
+    ArrayList<Obstacle> obstacles = new ArrayList<>();
+    obstacles.addAll(field.fieldObstacles());
+    obstacles.addAll(field.walls());
+
+    CoarseGlobalPlanner planner =
+        new CoarseGlobalPlanner(new CoarseGlobalPlannerConfig(0.55, 1.4, 1200, 0.050));
+    List<Scenario> scenarios =
+        List.of(
+            new Scenario(new Translation2d(1.4, 1.0), new Pose2d(7.6, 1.0, Rotation2d.kZero)),
+            new Scenario(
+                new Translation2d(15.0, field.geometry().widthMeters() - 1.0),
+                new Pose2d(9.0, field.geometry().widthMeters() - 1.0, Rotation2d.kZero)));
+
+    for (Scenario scenario : scenarios) {
+      var waypoint =
+          planner.nextWaypoint(
+              scenario.start(),
+              scenario.goal(),
+              obstacles,
+              0.18,
+              0.18,
+              field.geometry().lengthMeters(),
+              field.geometry().widthMeters());
+
+      assertTrue(waypoint.isPresent(), "should route representative Rebuilt2026 case");
+      assertFalse(planner.lastStats().timedOut());
+      assertFalse(planner.lastStats().exhaustedNodeBudget());
+      assertTrue(planner.lastStats().expandedNodes() <= 1200);
+    }
+  }
+
   private static CoarseGlobalPlanner deterministicPlanner() {
     return new CoarseGlobalPlanner(new CoarseGlobalPlannerConfig(0.35, 0.8, 5000, 1.0));
   }
+
+  private record Scenario(Translation2d start, Pose2d goal) {}
 }

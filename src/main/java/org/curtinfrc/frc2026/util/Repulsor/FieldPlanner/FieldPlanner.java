@@ -633,6 +633,8 @@ public class FieldPlanner {
 
       if (pathBlocked && !suppressFallback) {
         Alliance preferred = preferredAllianceForFallback();
+        boolean globalFallbackActive = false;
+        Optional<Pose2d> globalFallbackWaypoint = Optional.empty();
 
         var cands =
             FieldTrackerCore.getInstance().getPredictedSetpoints(preferred, curTrans, 3.5, cat, 8);
@@ -691,15 +693,12 @@ public class FieldPlanner {
             calculationGoalTranslation = waypoint.get().getTranslation();
             lastChosenSetpoint = Optional.empty();
             pathBlocked = false;
-            CoarseGlobalPlannerStats stats = globalPlanner.lastStats();
-            Logger.recordOutput("Repulsor/GlobalFallback/Active", true);
-            Logger.recordOutput("Repulsor/GlobalFallback/Waypoint", waypoint.get());
-            Logger.recordOutput("Repulsor/GlobalFallback/ExpandedNodes", stats.expandedNodes());
-            Logger.recordOutput("Repulsor/GlobalFallback/GeneratedNodes", stats.generatedNodes());
-            Logger.recordOutput("Repulsor/GlobalFallback/PathNodes", stats.pathNodes());
-            Logger.recordOutput("Repulsor/GlobalFallback/ElapsedMs", stats.elapsedNanos() / 1.0e6);
+            globalFallbackActive = true;
+            globalFallbackWaypoint = waypoint;
           }
         }
+
+        recordGlobalFallbackTelemetry(globalFallbackActive, globalFallbackWaypoint);
 
         if (pathBlocked) {
           return new RepulsorSample(curTrans, 0, 0, Radians.of(pose.getRotation().getRadians()));
@@ -839,6 +838,19 @@ public class FieldPlanner {
         step.getX() / driveTuning.dtSeconds(),
         step.getY() / driveTuning.dtSeconds(),
         Radians.of(turn.yaw.getRadians()));
+  }
+
+  private void recordGlobalFallbackTelemetry(boolean active, Optional<Pose2d> waypoint) {
+    CoarseGlobalPlannerStats stats = globalPlanner.lastStats();
+    Logger.recordOutput("Repulsor/GlobalFallback/Active", active);
+    Logger.recordOutput("Repulsor/GlobalFallback/Found", stats.found());
+    Logger.recordOutput("Repulsor/GlobalFallback/TimedOut", stats.timedOut());
+    Logger.recordOutput("Repulsor/GlobalFallback/ExhaustedNodeBudget", stats.exhaustedNodeBudget());
+    Logger.recordOutput("Repulsor/GlobalFallback/ExpandedNodes", stats.expandedNodes());
+    Logger.recordOutput("Repulsor/GlobalFallback/GeneratedNodes", stats.generatedNodes());
+    Logger.recordOutput("Repulsor/GlobalFallback/PathNodes", stats.pathNodes());
+    Logger.recordOutput("Repulsor/GlobalFallback/ElapsedMs", stats.elapsedNanos() / 1.0e6);
+    Logger.recordOutput("Repulsor/GlobalFallback/Waypoint", waypoint.orElse(Pose2d.kZero));
   }
 
   /**

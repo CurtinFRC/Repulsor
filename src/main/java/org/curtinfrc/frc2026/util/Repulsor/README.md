@@ -178,6 +178,51 @@ Default keys include:
 
 Default command channels include pose override, pose reset, and goal setpoint command endpoints under `/Repulsor/DriverStation`.
 
+## FieldPlanner Architecture And Fallback
+
+`FieldPlanner` is intentionally layered:
+
+1. `FieldPlannerGoalManager` resolves the requested goal into the active field goal, including staged gates and attractor waypoints.
+2. `ExtraPathing` checks whether the robot rectangle has a clear corridor to the active goal.
+3. If clear, the force model combines goal attraction, wall repulsion, field obstacles, and dynamic obstacles into a local step.
+4. If blocked, predicted setpoint reroutes are tried first so game-aware alternatives win over geometric-only choices.
+5. If still blocked, `CoarseGlobalPlanner` runs a bounded coarse A* search and returns a temporary waypoint for that single calculation.
+6. `ReactiveBypass` can still adjust the local target when the force field is valid but short-horizon geometry says a rejoin/bypass is safer.
+
+The global fallback does **not** replace the requested goal or permanently mutate the active goal. It only changes the calculation target for the current `calculate(...)` call, then normal planner state remains owned by `FieldPlannerGoalManager`.
+
+### Global Fallback Tuning
+
+These JVM properties tune the coarse fallback planner:
+
+- `repulsor.fieldplanner.globalFallback.enabled` defaults to `true`.
+- `repulsor.fieldplanner.globalFallback.cellMeters` defaults to `0.55`.
+- `repulsor.fieldplanner.globalFallback.lookaheadMeters` defaults to `1.4`.
+- `repulsor.fieldplanner.globalFallback.maxExpandedNodes` defaults to `1200`.
+- `repulsor.fieldplanner.globalFallback.maxRuntimeSeconds` defaults to `0.010`.
+
+Smaller cells make paths more precise but increase node count and loop time. Larger lookahead values smooth the next target but can cut too close to obstacles if the cell size is coarse. The node and runtime limits are guardrails for robot-loop safety; if either trips, the planner stops instead of spending unbounded time searching.
+
+Representative Rebuilt 2026 corridor cases are covered by tests using default-like cell, lookahead, and node budgets. Re-tune these values if the field profile changes obstacle density or corridor width.
+
+### Global Fallback Telemetry
+
+Planner fallback telemetry is grouped under `Repulsor/GlobalFallback`:
+
+- `Active`: current sample is using a temporary global waypoint.
+- `Found`: the last coarse search found a path.
+- `TimedOut`: the runtime guardrail stopped search.
+- `ExhaustedNodeBudget`: the expanded-node guardrail stopped search.
+- `ExpandedNodes`, `GeneratedNodes`, `PathNodes`: search size and path complexity.
+- `ElapsedMs`: elapsed coarse planner time.
+- `Waypoint`: temporary waypoint selected for the current sample, or zero pose when inactive.
+
+Use these together when tuning. A healthy robot loop should show occasional `Active=true` during blocked paths, low `ElapsedMs`, and no persistent timeout or node-budget exhaustion.
+
+### Offload Boundary
+
+`FieldPlanner.calculate(...)` may run through the offload entrypoint when enabled. The offload path receives the requested/active goal, dynamic obstacles, category, alliance preference, and shooter height, then returns both the sample and the resulting active goal/error state. Regression tests cover parity for clear paths, dynamic obstacles, and global-fallback temporary waypoint cases.
+
 ## Integration Notes
 
 Typical wiring pattern:

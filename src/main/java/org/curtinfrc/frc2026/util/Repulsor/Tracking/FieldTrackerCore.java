@@ -136,10 +136,7 @@ public class FieldTrackerCore {
     this.collectCache = new ObjectiveCache();
     this.collectPlanner =
         new FieldTrackerCollectPlanner(
-            predictor,
-            () -> collectCache.points,
-            this::snapshotDynamics,
-            this::isCollectResourceType);
+            predictor, collectCache::points, this::snapshotDynamics, this::isCollectResourceType);
 
     rebuildObjectiveCaches();
     provider.configureTracker(this);

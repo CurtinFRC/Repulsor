@@ -62,8 +62,7 @@ final class FieldTrackerObjectiveCache {
       ObjectiveCache cache, CategorySpec cat, GameElement[] fieldMap) {
     GameElement[] fm = fieldMap;
     if (fm == null || fm.length == 0) {
-      cache.points = new Translation2d[0];
-      cache.lastHash = 0;
+      cache.clear();
       return;
     }
     ArrayList<Translation2d> pts = new ArrayList<>(256);
@@ -81,7 +80,6 @@ final class FieldTrackerObjectiveCache {
       h = mixHash(h, x, y);
     }
     Translation2d[] arr = pts.toArray(new Translation2d[0]);
-    cache.points = arr;
-    cache.lastHash = h;
+    cache.update(arr, h);
   }
 }

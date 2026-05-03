@@ -27,15 +27,23 @@ import edu.wpi.first.math.geometry.Translation2d;
  * documents robot-relative motion.
  */
 public final class ObjectiveCache {
-  /**
-   * Configuration value for points. The valid range and tuning source are defined by the owning
-   * subsystem or field profile.
-   */
-  public volatile Translation2d[] points = new Translation2d[0];
+  private volatile Translation2d[] points = new Translation2d[0];
+  private volatile int lastHash = 0;
 
-  /**
-   * Configuration value for last hash. The valid range and tuning source are defined by the owning
-   * subsystem or field profile.
-   */
-  public volatile int lastHash = 0;
+  public Translation2d[] points() {
+    return points.clone();
+  }
+
+  public int lastHash() {
+    return lastHash;
+  }
+
+  public void update(Translation2d[] points, int lastHash) {
+    this.points = points == null ? new Translation2d[0] : points.clone();
+    this.lastHash = lastHash;
+  }
+
+  public void clear() {
+    update(new Translation2d[0], 0);
+  }
 }
