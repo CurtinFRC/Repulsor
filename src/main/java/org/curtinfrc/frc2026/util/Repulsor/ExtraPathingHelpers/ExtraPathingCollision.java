@@ -19,8 +19,10 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.ExtraPathingHelpers;
 
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.List;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 
 /**
@@ -65,6 +67,20 @@ public final class ExtraPathingCollision {
       double robotWidthMeters,
       List<? extends Obstacle> obstacles) {
     Translation2d[] rect = rectCorners(center, robotLengthMeters, robotWidthMeters);
+    for (Obstacle ob : obstacles) {
+      if (ob != null && ob.intersectsRectangle(rect)) return true;
+    }
+    return false;
+  }
+
+  public static boolean robotIntersects(
+      Translation2d center,
+      Rotation2d heading,
+      double robotLengthMeters,
+      double robotWidthMeters,
+      List<? extends Obstacle> obstacles) {
+    Translation2d[] rect =
+        FieldPlanner.robotRect(center, heading, robotLengthMeters, robotWidthMeters);
     for (Obstacle ob : obstacles) {
       if (ob != null && ob.intersectsRectangle(rect)) return true;
     }

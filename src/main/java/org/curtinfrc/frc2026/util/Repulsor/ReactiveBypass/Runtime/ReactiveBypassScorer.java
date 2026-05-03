@@ -110,33 +110,34 @@ final class ReactiveBypassScorer {
         cfg.wallPenaltyGain
             * ReactiveBypassWaypointPlanner.wallPenalty(cfg, waypoint.getTranslation());
 
-    double occLeg =
-        cfg.occCostGain
-            * (ReactiveBypassProbing.legOcc(
-                    cfg,
-                    pose.getTranslation(),
-                    waypoint.getTranslation(),
-                    robotX,
-                    robotY,
-                    intersectsDynamicOnly)
-                + ReactiveBypassProbing.legOcc(
-                    cfg,
-                    waypoint.getTranslation(),
-                    goal.getTranslation(),
-                    robotX,
-                    robotY,
-                    intersectsDynamicOnly));
+    double rawLegOcc1 =
+        ReactiveBypassProbing.legOcc(
+            cfg,
+            pose.getTranslation(),
+            waypoint.getTranslation(),
+            robotX,
+            robotY,
+            intersectsDynamicOnly);
+    double rawLegOcc2 =
+        ReactiveBypassProbing.legOcc(
+            cfg,
+            waypoint.getTranslation(),
+            goal.getTranslation(),
+            robotX,
+            robotY,
+            intersectsDynamicOnly);
+    double occLeg = cfg.occCostGain * (rawLegOcc1 + rawLegOcc2);
 
-    double localOcc =
-        cfg.occCostGain
-            * 0.5
-            * ReactiveBypassProbing.localOccAt(
-                cfg,
-                waypoint.getTranslation(),
-                headingTowardGoal,
-                robotX,
-                robotY,
-                intersectsDynamicOnly);
+    double rawLocalOcc =
+        ReactiveBypassProbing.localOccAt(
+            cfg,
+            waypoint.getTranslation(),
+            headingTowardGoal,
+            robotX,
+            robotY,
+            intersectsDynamicOnly);
+    double localOcc = cfg.occCostGain * 0.5 * rawLocalOcc;
+    boolean sampledClear = rawLegOcc1 <= 0.0 && rawLegOcc2 <= 0.0 && rawLocalOcc <= 0.0;
 
     int side = ReactiveBypassMath.sideOf(pose, headingTowardGoal, waypoint.getTranslation());
     double sw = sideSwitchPenalty(cfg, preferredSide, timeSinceSideSwitchS, side, stuckNow);
@@ -166,7 +167,7 @@ final class ReactiveBypassScorer {
     }
 
     double total =
-        (ok1 && ok2 ? len : 1e9)
+        (ok1 && ok2 && sampledClear ? len : 1e9)
             + ang
             + curv
             + wall
@@ -179,8 +180,8 @@ final class ReactiveBypassScorer {
 
     return new ReactiveBypassScore(
         waypoint,
-        ok1,
-        ok2,
+        ok1 && sampledClear,
+        ok2 && sampledClear,
         len,
         ang,
         curv,

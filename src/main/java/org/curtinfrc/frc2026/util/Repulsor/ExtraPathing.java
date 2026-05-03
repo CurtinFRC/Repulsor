@@ -19,6 +19,7 @@
 
 package org.curtinfrc.frc2026.util.Repulsor;
 
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.List;
 import org.curtinfrc.frc2026.util.Repulsor.ExtraPathingHelpers.ExtraPathingBounceListener;
@@ -61,6 +62,16 @@ public class ExtraPathing {
       List<? extends Obstacle> obstacles) {
     return ExtraPathingCollision.robotIntersects(
         center, robotLengthMeters, robotWidthMeters, obstacles);
+  }
+
+  public static boolean robotIntersects(
+      Translation2d center,
+      Rotation2d heading,
+      double robotLengthMeters,
+      double robotWidthMeters,
+      List<? extends Obstacle> obstacles) {
+    return ExtraPathingCollision.robotIntersects(
+        center, heading, robotLengthMeters, robotWidthMeters, obstacles);
   }
 
   /**

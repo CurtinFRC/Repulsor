@@ -21,9 +21,11 @@ package org.curtinfrc.frc2026.util.Repulsor.ReactiveBypass.Runtime;
 
 import static org.curtinfrc.frc2026.util.Repulsor.ReactiveBypass.Runtime.ReactiveBypassEvaluation.addMinedHardCases;
 import static org.curtinfrc.frc2026.util.Repulsor.ReactiveBypass.Runtime.ReactiveBypassEvaluation.evaluateScenarioRows;
+import static org.curtinfrc.frc2026.util.Repulsor.ReactiveBypass.Runtime.ReactiveBypassEvaluation.printScenarioTypeSummary;
 import static org.curtinfrc.frc2026.util.Repulsor.ReactiveBypass.Runtime.ReactiveBypassEvaluation.printWorstScenarios;
 import static org.curtinfrc.frc2026.util.Repulsor.ReactiveBypass.Runtime.ReactiveBypassEvaluation.simulate;
 import static org.curtinfrc.frc2026.util.Repulsor.ReactiveBypass.Runtime.ReactiveBypassEvaluation.writeScenarioReport;
+import static org.curtinfrc.frc2026.util.Repulsor.ReactiveBypass.Runtime.ReactiveBypassEvaluation.writeScenarioTrace;
 import static org.curtinfrc.frc2026.util.Repulsor.ReactiveBypass.Runtime.ReactiveBypassScenarioFactory.buildCurriculumScenarios;
 import static org.curtinfrc.frc2026.util.Repulsor.ReactiveBypass.Runtime.ReactiveBypassScenarioFactory.buildHardRandomScenarios;
 import static org.curtinfrc.frc2026.util.Repulsor.ReactiveBypass.Runtime.ReactiveBypassScenarioFactory.buildRandomScenarios;
@@ -59,21 +61,32 @@ public final class ReactiveBypassOptimizer {
   private static final int LATE_HARD_RANDOM_SCENARIOS = 40;
   private static final int MINED_CASES_PER_GENERATION = 12;
   private static final int SCENARIO_REPORT_WORST_PRINT_COUNT = 5;
+  private static final int SCENARIO_TYPE_REPORT_COUNT = 5;
+  private static final int CHECKPOINT_RERANK_POOL_MAX = 24;
+  private static final int PLATEAU_GENERATIONS_BEFORE_EXPLORATION = 3;
+  private static final double PLATEAU_SIGMA_MULTIPLIER = 1.45;
+  private static final double PLATEAU_RANDOM_CANDIDATE_FRACTION = 0.25;
+  private static final double SCORE_PROGRESS_EPSILON = 1.0;
 
   private static final double CANDIDATE_CUTOFF_MULTIPLIER = 1.08;
   private static final double CANDIDATE_CUTOFF_MARGIN = 35_000.0;
 
   static final ScoreProfile EARLY_PROFILE =
-      new ScoreProfile("early", 100_000.0, 160_000.0, 12_000.0, 80.0, 40.0, 6.0, 20.0, 140.0);
+      new ScoreProfile(
+          "early", 100_000.0, 160_000.0, 12_000.0, 80.0, 40.0, 6.0, 20.0, 140.0, 260_000.0);
   static final ScoreProfile NORMAL_PROFILE =
-      new ScoreProfile("normal", 110_000.0, 220_000.0, 18_000.0, 80.0, 40.0, 6.0, 20.0, 140.0);
+      new ScoreProfile(
+          "normal", 110_000.0, 220_000.0, 18_000.0, 80.0, 40.0, 6.0, 20.0, 140.0, 340_000.0);
   static final ScoreProfile LATE_PROFILE =
-      new ScoreProfile("late", 130_000.0, 300_000.0, 28_000.0, 100.0, 45.0, 6.0, 20.0, 150.0);
+      new ScoreProfile(
+          "late", 130_000.0, 300_000.0, 28_000.0, 100.0, 45.0, 6.0, 20.0, 150.0, 440_000.0);
   static final ScoreProfile SAFETY_PROFILE =
-      new ScoreProfile("safety", 150_000.0, 400_000.0, 40_000.0, 120.0, 50.0, 5.0, 18.0, 170.0);
+      new ScoreProfile(
+          "safety", 150_000.0, 400_000.0, 40_000.0, 120.0, 50.0, 5.0, 18.0, 170.0, 600_000.0);
 
   static final List<Tunable> TUNABLES =
       List.of(
+          d("inflationMeters", 0.08, 0.35),
           d("triggerAheadMeters", 0.60, 2.50),
           d("triggerWidthMeters", 0.30, 1.25),
           i("corridorSamples", 3, 21),
@@ -136,6 +149,8 @@ public final class ReactiveBypassOptimizer {
 
   private ReactiveBypassOptimizer() {}
 
+  private record RankedResult(Result training, Result checkpoint) {}
+
   public static void main(String[] args) throws Exception {
     Options options = Options.parse(args);
     Path outputDir = options.outputDir();
@@ -155,7 +170,20 @@ public final class ReactiveBypassOptimizer {
         buildRandomScenarios(random, options.randomScenarios(), "train");
     List<Scenario> hardRandomScenarios =
         buildHardRandomScenarios(random, LATE_HARD_RANDOM_SCENARIOS, "hard");
+    List<Scenario> checkpointScenarios =
+        options.checkpointScenarios() > 0
+            ? buildValidationScenarios(
+                options.seed() ^ 0xC0FFEE1234L, options.checkpointScenarios())
+            : List.of();
     List<Scenario> minedHardCases = new ArrayList<>();
+
+    if (!options.traceScenarios().isEmpty()) {
+      writeRequestedTraces(outputDir, base, fixedScenarios, options.traceScenarios());
+      if (options.traceOnly()) {
+        System.out.println("trace-only requested; optimizer not run");
+        return;
+      }
+    }
 
     int generations = Math.max(5, Math.min(30, options.iterations() / 16));
     int population = Math.max(8, options.iterations() / generations);
@@ -180,15 +208,18 @@ public final class ReactiveBypassOptimizer {
     System.out.println("initial curriculum scenarios=" + initialTrainingScenarios.size());
     System.out.println(
         "validation scenarios=" + (fixedScenarios.size() + options.validationScenarios()));
+    System.out.println("checkpoint scenarios=" + checkpointScenarios.size());
     System.out.printf(
         Locale.US,
-        "iterations=%d generations=%d population=%d threads=%d progress=%s reportScenarios=%s%n",
+        "iterations=%d generations=%d population=%d threads=%d progress=%s reportScenarios=%s polishPasses=%d safetyPolishPasses=%d%n",
         options.iterations(),
         generations,
         population,
         threads,
         options.progress(),
-        options.reportScenarios());
+        options.reportScenarios(),
+        options.polishPasses(),
+        options.safetyPolishPasses());
 
     List<Result> history = new ArrayList<>();
     Result baseline = optimizer.evaluate(optimizer.currentVector(), "baseline", 0);
@@ -211,6 +242,12 @@ public final class ReactiveBypassOptimizer {
     double[] mean = optimizer.currentVector();
     double[] sigma = optimizer.initialSigma();
     int evaluations = 0;
+    Result bestCheckpoint =
+        checkpointScenarios.isEmpty()
+            ? null
+            : simulate(best.config(), checkpointScenarios, SAFETY_PROFILE)
+                .withLabel("checkpoint-baseline", 0);
+    int checkpointPlateauGenerations = 0;
 
     ExecutorService evalPool = Executors.newFixedThreadPool(threads);
 
@@ -239,25 +276,45 @@ public final class ReactiveBypassOptimizer {
                 incumbent.score() * CANDIDATE_CUTOFF_MULTIPLIER,
                 incumbent.score() + CANDIDATE_CUTOFF_MARGIN);
 
+        boolean plateauExploration =
+            checkpointPlateauGenerations >= PLATEAU_GENERATIONS_BEFORE_EXPLORATION;
+        if (plateauExploration) {
+          optimizer.widenSigma(sigma, PLATEAU_SIGMA_MULTIPLIER);
+        }
+
         candidates.add(
             new Candidate(
                 Arrays.copyOf(mean, mean.length), "mean", generation, Double.POSITIVE_INFINITY));
 
+        int randomCandidateBudget =
+            plateauExploration
+                ? Math.max(1, (int) Math.round(population * PLATEAU_RANDOM_CANDIDATE_FRACTION))
+                : 0;
+
         while (candidates.size() < population && evaluations < options.iterations()) {
-          double[] sample = optimizer.sample(mean, sigma);
-          candidates.add(new Candidate(sample, "sample", generation, generationCutoff));
+          boolean injectRandom = randomCandidateBudget > 0;
+          double[] sample = injectRandom ? optimizer.randomVector() : optimizer.sample(mean, sigma);
+          candidates.add(
+              new Candidate(
+                  sample,
+                  injectRandom ? "plateau-random" : "sample",
+                  generation,
+                  generationCutoff));
+          if (injectRandom) randomCandidateBudget--;
           evaluations++;
         }
 
         if (options.progress()) {
           System.out.printf(
               Locale.US,
-              "gen=%02d curriculum=%s scenarios=%d mined=%d cutoff=%.1f%n",
+              "gen=%02d curriculum=%s scenarios=%d mined=%d cutoff=%.1f plateau=%d exploration=%s%n",
               generation,
               profile.name(),
               activeScenarios.size(),
               minedHardCases.size(),
-              generationCutoff);
+              generationCutoff,
+              checkpointPlateauGenerations,
+              plateauExploration);
         }
 
         List<Result> generationResults =
@@ -268,26 +325,28 @@ public final class ReactiveBypassOptimizer {
                 options.progress(),
                 String.format(Locale.US, "gen %02d", generation));
 
-        generationResults.sort(
-            Comparator.comparingDouble(Result::score)
-                .thenComparingInt(Result::failedScenarios)
-                .thenComparingInt(Result::collisionScenarios)
-                .thenComparingInt(Result::collisionSteps)
-                .thenComparingInt(Result::generation)
-                .thenComparing(Result::label));
-
-        Result generationBest = generationResults.get(0);
-
-        best = generationBest.score() < incumbent.score() ? generationBest : incumbent;
-
-        history.addAll(generationResults);
+        generationResults.sort(ReactiveBypassOptimizer::compareResults);
 
         int eliteCount =
             Math.min(generationResults.size(), Math.max(1, generationResults.size() / 5));
-        optimizer.updateDistribution(generationResults.subList(0, eliteCount), mean, sigma);
+        Result generationBest = generationResults.get(0);
+        List<RankedResult> rankedResults =
+            rankResultsWithCheckpoint(
+                incumbent,
+                generationResults,
+                checkpointScenarios,
+                generation,
+                eliteCount,
+                options.progress());
+        RankedResult selected = rankedResults.get(0);
+        best = selected.training();
+
+        history.addAll(generationResults);
+
+        optimizer.updateDistribution(eliteTrainingResults(rankedResults, eliteCount), mean, sigma);
 
         List<ScenarioReportRow> reportRows =
-            evaluateScenarioRows(generationBest.config(), activeScenarios, profile);
+            evaluateScenarioRows(best.config(), activeScenarios, profile);
         reportRows.sort(Comparator.comparingDouble(ScenarioReportRow::severity).reversed());
 
         if (generation >= 9) {
@@ -311,6 +370,39 @@ public final class ReactiveBypassOptimizer {
             average(sigma));
 
         printWorstScenarios(reportRows, SCENARIO_REPORT_WORST_PRINT_COUNT);
+        printScenarioTypeSummary(reportRows, SCENARIO_TYPE_REPORT_COUNT);
+
+        if (!checkpointScenarios.isEmpty()) {
+          Result checkpoint =
+              simulate(best.config(), checkpointScenarios, SAFETY_PROFILE)
+                  .withLabel("checkpoint", generation);
+          int checkpointCmp =
+              bestCheckpoint == null ? -1 : compareSafetyProgress(checkpoint, bestCheckpoint);
+          boolean checkpointImproved = checkpointCmp < 0;
+          boolean checkpointSafetyFlat = bestCheckpoint != null && checkpointCmp == 0;
+
+          if (checkpointImproved) {
+            bestCheckpoint = checkpoint;
+            checkpointPlateauGenerations = 0;
+          } else if (checkpointSafetyFlat) {
+            checkpointPlateauGenerations++;
+          } else {
+            checkpointPlateauGenerations++;
+          }
+
+          System.out.printf(
+              Locale.US,
+              "checkpoint gen=%02d score=%.3f success=%d/%d failed=%d collisionScenarios=%d collisionSteps=%d improved=%s plateau=%d%n",
+              generation,
+              checkpoint.score(),
+              checkpoint.successes(),
+              checkpointScenarios.size(),
+              checkpoint.failedScenarios(),
+              checkpoint.collisionScenarios(),
+              checkpoint.collisionSteps(),
+              checkpointImproved,
+              checkpointPlateauGenerations);
+        }
       }
     } finally {
       evalPool.shutdown();
@@ -326,20 +418,72 @@ public final class ReactiveBypassOptimizer {
             generations);
     optimizer.setScenariosAndProfile(finalTrainingScenarios, SAFETY_PROFILE);
 
-    best = optimizer.evaluateConfig(best.config(), "pre-safety-polish", 198);
+    if (options.progress()) {
+      System.out.printf(
+          Locale.US,
+          "final safety evaluation scenarios=%d mined=%d%n",
+          finalTrainingScenarios.size(),
+          minedHardCases.size());
+    }
+
+    best =
+        simulate(
+                best.config(),
+                finalTrainingScenarios,
+                SAFETY_PROFILE,
+                Double.POSITIVE_INFINITY,
+                new ProgressReporter(
+                    options.progress(), "final safety eval", finalTrainingScenarios.size()))
+            .withLabel("pre-safety-polish", 198);
     history.add(best);
-    best = optimizer.polish(best, mean, sigma, history);
-    best = optimizer.safetyPolish(best, sigma, history);
+
+    ExecutorService finalPool = Executors.newFixedThreadPool(threads);
+    try {
+      if (options.skipPolish()) {
+        if (options.progress()) {
+          System.out.println("final polish skipped by --skip-polish");
+        }
+      } else {
+        best =
+            runParallelPolish(
+                optimizer,
+                best,
+                sigma,
+                history,
+                finalPool,
+                options.progress(),
+                Math.max(0, options.polishPasses()));
+        best =
+            runParallelSafetyPolish(
+                optimizer,
+                best,
+                sigma,
+                history,
+                finalPool,
+                options.progress(),
+                Math.max(0, options.safetyPolishPasses()));
+      }
+    } finally {
+      finalPool.shutdown();
+      finalPool.awaitTermination(10, TimeUnit.SECONDS);
+    }
 
     List<Scenario> validationScenarios =
         buildValidationScenarios(options.seed() ^ 0x5DEECE66DL, options.validationScenarios());
 
     long validationStart = System.nanoTime();
     Result validation =
-        simulate(best.config(), validationScenarios, SAFETY_PROFILE).withLabel("validation", 999);
+        simulate(
+                best.config(),
+                validationScenarios,
+                SAFETY_PROFILE,
+                Double.POSITIVE_INFINITY,
+                new ProgressReporter(options.progress(), "validation", validationScenarios.size()))
+            .withLabel("validation", 999);
     if (options.progress()) {
       System.out.println(
-          "validation completed in " + formatDuration(elapsedSeconds(validationStart)));
+          "validation completed in "
+              + ProgressReporter.formatDuration(ProgressReporter.elapsedSeconds(validationStart)));
     }
 
     Path resultsPath = outputDir.resolve("results.csv");
@@ -355,11 +499,21 @@ public final class ReactiveBypassOptimizer {
       Path scenarioReportPath = outputDir.resolve("scenario-report.csv");
       writeScenarioReport(
           scenarioReportPath,
-          evaluateScenarioRows(best.config(), validationScenarios, SAFETY_PROFILE));
+          evaluateScenarioRows(
+              best.config(),
+              validationScenarios,
+              SAFETY_PROFILE,
+              new ProgressReporter(
+                  options.progress(), "validation report", validationScenarios.size())));
       Path trainingScenarioReportPath = outputDir.resolve("training-scenario-report.csv");
       writeScenarioReport(
           trainingScenarioReportPath,
-          evaluateScenarioRows(best.config(), finalTrainingScenarios, SAFETY_PROFILE));
+          evaluateScenarioRows(
+              best.config(),
+              finalTrainingScenarios,
+              SAFETY_PROFILE,
+              new ProgressReporter(
+                  options.progress(), "training report", finalTrainingScenarios.size())));
       System.out.println("wrote " + scenarioReportPath.toAbsolutePath());
       System.out.println("wrote " + trainingScenarioReportPath.toAbsolutePath());
     }
@@ -394,18 +548,318 @@ public final class ReactiveBypassOptimizer {
     System.out.println("wrote " + resultsPath.toAbsolutePath());
     System.out.println("wrote " + validationPath.toAbsolutePath());
 
-    if (options.apply()) {
+    boolean validationSafeToApply =
+        validation.failedScenarios() <= options.applyMaxValidationFailures()
+            && validation.collisionScenarios() <= options.applyMaxValidationCollisionScenarios()
+            && validation.collisionSteps() <= options.applyMaxValidationCollisionSteps();
+
+    if (options.apply() && validationSafeToApply) {
       writeYaml(options.configPath(), best.config());
       System.out.println("updated " + options.configPath().toAbsolutePath());
+    } else if (options.apply()) {
+      System.out.printf(
+          Locale.US,
+          "deploy YAML NOT updated: validation failed safety gate (failed=%d/%d max=%d, collisionScenarios=%d max=%d, collisionSteps=%d max=%d). Candidate remains at %s%n",
+          validation.failedScenarios(),
+          validationScenarios.size(),
+          options.applyMaxValidationFailures(),
+          validation.collisionScenarios(),
+          options.applyMaxValidationCollisionScenarios(),
+          validation.collisionSteps(),
+          options.applyMaxValidationCollisionSteps(),
+          bestPath.toAbsolutePath());
     } else {
       System.out.println("deploy YAML left unchanged; rerun with -PoptimizerApply=true to apply");
     }
+  }
+
+  private static void writeRequestedTraces(
+      Path outputDir, ReactiveBypassConfig config, List<Scenario> scenarios, List<String> names)
+      throws IOException {
+    for (String name : names) {
+      Scenario match = null;
+      for (Scenario scenario : scenarios) {
+        if (scenario.name().equals(name)) {
+          match = scenario;
+          break;
+        }
+      }
+
+      if (match == null) {
+        System.out.println("trace scenario not found: " + name);
+        continue;
+      }
+
+      Path tracePath = outputDir.resolve("trace-" + safeFileName(name) + ".csv");
+      EpisodeMetrics metrics = writeScenarioTrace(tracePath, config, match);
+      System.out.printf(
+          Locale.US,
+          "trace %s -> %s success=%s collisions=%d minClearance=%.3f remaining=%.3f%n",
+          name,
+          tracePath.toAbsolutePath(),
+          metrics.success(),
+          metrics.collisionSteps(),
+          metrics.minClearanceMeters(),
+          metrics.remainingMeters());
+    }
+  }
+
+  private static String safeFileName(String value) {
+    return value.replaceAll("[^A-Za-z0-9._-]", "_");
   }
 
   private static ScoreProfile profileForGeneration(int generation) {
     if (generation <= 8) return EARLY_PROFILE;
     if (generation <= 20) return NORMAL_PROFILE;
     return LATE_PROFILE;
+  }
+
+  private static Result runParallelPolish(
+      ReactiveBypassOptimizerState optimizer,
+      Result best,
+      double[] sigma,
+      List<Result> history,
+      ExecutorService evalPool,
+      boolean progress,
+      int passes)
+      throws Exception {
+    Result current = best;
+
+    if (passes <= 0) {
+      if (progress) {
+        System.out.println("polish skipped");
+      }
+      return current.withLabel("polish-best", 199);
+    }
+
+    for (int pass = 0; pass < passes; pass++) {
+      List<Candidate> candidates =
+          optimizer.localSearchCandidates(
+              current, sigma, 0.55, "polish", 100 + pass, Double.POSITIVE_INFINITY);
+      List<Result> results =
+          evaluateCandidatesParallel(
+              optimizer, candidates, evalPool, progress, String.format("polish %d", pass + 1));
+      results.sort(ReactiveBypassOptimizer::compareResults);
+      history.addAll(results);
+
+      Result next = results.get(0);
+      if (compareResults(next, current) < 0) {
+        current = next;
+      }
+
+      if (progress) {
+        System.out.printf(
+            Locale.US,
+            "polish pass=%d best=%.3f success=%d failed=%d collisionScenarios=%d collisionSteps=%d%n",
+            pass + 1,
+            current.score(),
+            current.successes(),
+            current.failedScenarios(),
+            current.collisionScenarios(),
+            current.collisionSteps());
+      }
+    }
+
+    return current.withLabel("polish-best", 199);
+  }
+
+  private static Result runParallelSafetyPolish(
+      ReactiveBypassOptimizerState optimizer,
+      Result best,
+      double[] sigma,
+      List<Result> history,
+      ExecutorService evalPool,
+      boolean progress,
+      int passes)
+      throws Exception {
+    Result current = best.withLabel("safety-polish-start", 200);
+
+    if (passes <= 0) {
+      if (progress) {
+        System.out.println("safety polish skipped");
+      }
+      return current.withLabel("safety-polish-best", 299);
+    }
+
+    for (int pass = 0; pass < passes; pass++) {
+      List<Candidate> candidates =
+          optimizer.localSearchCandidates(
+              current,
+              sigma,
+              0.45 / (pass + 1.0),
+              "safety-polish",
+              200 + pass,
+              Double.POSITIVE_INFINITY);
+      List<Result> results =
+          evaluateCandidatesParallel(
+              optimizer,
+              candidates,
+              evalPool,
+              progress,
+              String.format("safety polish %d", pass + 1));
+      results.sort(ReactiveBypassOptimizer::compareResults);
+      history.addAll(results);
+
+      Result next = results.get(0);
+      if (compareResults(next, current) >= 0) {
+        if (progress) {
+          System.out.printf(
+              Locale.US,
+              "safety polish pass=%d no improvement best=%.3f success=%d failed=%d collisionScenarios=%d collisionSteps=%d%n",
+              pass + 1,
+              current.score(),
+              current.successes(),
+              current.failedScenarios(),
+              current.collisionScenarios(),
+              current.collisionSteps());
+        }
+        break;
+      }
+
+      current = next;
+      if (progress) {
+        System.out.printf(
+            Locale.US,
+            "safety polish pass=%d best=%.3f success=%d failed=%d collisionScenarios=%d collisionSteps=%d%n",
+            pass + 1,
+            current.score(),
+            current.successes(),
+            current.failedScenarios(),
+            current.collisionScenarios(),
+            current.collisionSteps());
+      }
+    }
+
+    return current.withLabel("safety-polish-best", 299);
+  }
+
+  private static List<RankedResult> rankResultsWithCheckpoint(
+      Result incumbent,
+      List<Result> generationResults,
+      List<Scenario> checkpointScenarios,
+      int generation,
+      int eliteCount,
+      boolean progress) {
+    int checkpointPool =
+        Math.min(CHECKPOINT_RERANK_POOL_MAX, Math.max(8, Math.max(1, eliteCount / 2)));
+    int poolSize =
+        Math.min(
+            generationResults.size(),
+            checkpointScenarios.isEmpty() ? Math.max(1, eliteCount) : checkpointPool);
+
+    List<RankedResult> rankedResults = new ArrayList<>(poolSize + 1);
+
+    if (checkpointScenarios.isEmpty()) {
+      rankedResults.add(new RankedResult(incumbent, null));
+      for (int i = 0; i < poolSize; i++) {
+        rankedResults.add(new RankedResult(generationResults.get(i), null));
+      }
+      rankedResults.sort(ReactiveBypassOptimizer::compareRankedResults);
+      return rankedResults;
+    }
+
+    ProgressReporter checkpointProgress =
+        new ProgressReporter(
+            progress,
+            String.format(Locale.US, "checkpoint rerank gen %02d", generation),
+            poolSize + 1);
+
+    rankedResults.add(
+        new RankedResult(
+            incumbent,
+            simulate(incumbent.config(), checkpointScenarios, SAFETY_PROFILE)
+                .withLabel("checkpoint-incumbent", generation)));
+    checkpointProgress.step();
+
+    for (int i = 0; i < poolSize; i++) {
+      Result candidate = generationResults.get(i);
+      Result checkpoint =
+          simulate(candidate.config(), checkpointScenarios, SAFETY_PROFILE)
+              .withLabel("checkpoint-rerank", generation);
+      rankedResults.add(new RankedResult(candidate, checkpoint));
+      checkpointProgress.step();
+    }
+
+    rankedResults.sort(ReactiveBypassOptimizer::compareRankedResults);
+    return rankedResults;
+  }
+
+  private static List<Result> eliteTrainingResults(
+      List<RankedResult> rankedResults, int eliteCount) {
+    List<Result> elites = new ArrayList<>(Math.min(eliteCount, rankedResults.size()));
+    for (int i = 0; i < eliteCount && i < rankedResults.size(); i++) {
+      elites.add(rankedResults.get(i).training());
+    }
+    return elites;
+  }
+
+  private static int compareResults(Result a, Result b) {
+    int cmp = compareTrainingSafety(a, b);
+    if (cmp != 0) return cmp;
+
+    return compareScoreTie(a, b);
+  }
+
+  private static int compareRankedResults(RankedResult a, RankedResult b) {
+    int cmp = compareTrainingCollisionFailure(a.training(), b.training());
+    if (cmp != 0) return cmp;
+
+    if (a.checkpoint() != null && b.checkpoint() != null) {
+      cmp = compareTrainingCollisionFailure(a.checkpoint(), b.checkpoint());
+      if (cmp != 0) return cmp;
+
+      cmp = Integer.compare(b.checkpoint().successes(), a.checkpoint().successes());
+      if (cmp != 0) return cmp;
+    }
+
+    cmp = Integer.compare(b.training().successes(), a.training().successes());
+    if (cmp != 0) return cmp;
+
+    return compareScoreTie(a.training(), b.training());
+  }
+
+  private static int compareTrainingSafety(Result a, Result b) {
+    int cmp = compareTrainingCollisionFailure(a, b);
+    if (cmp != 0) return cmp;
+
+    return Integer.compare(b.successes(), a.successes());
+  }
+
+  private static int compareTrainingCollisionFailure(Result a, Result b) {
+    int cmp = Integer.compare(a.collisionScenarios(), b.collisionScenarios());
+    if (cmp != 0) return cmp;
+
+    cmp = Integer.compare(a.collisionSteps(), b.collisionSteps());
+    if (cmp != 0) return cmp;
+
+    cmp = Integer.compare(a.failedScenarios(), b.failedScenarios());
+    if (cmp != 0) return cmp;
+
+    return 0;
+  }
+
+  private static int compareScoreTie(Result a, Result b) {
+    double scoreDelta = a.score() - b.score();
+    int cmp = Math.abs(scoreDelta) <= SCORE_PROGRESS_EPSILON ? 0 : scoreDelta < 0.0 ? -1 : 1;
+    if (cmp != 0) return cmp;
+
+    cmp = Integer.compare(a.generation(), b.generation());
+    if (cmp != 0) return cmp;
+
+    return a.label().compareTo(b.label());
+  }
+
+  private static int compareSafetyProgress(Result a, Result b) {
+    int cmp = Integer.compare(a.collisionScenarios(), b.collisionScenarios());
+    if (cmp != 0) return cmp;
+
+    cmp = Integer.compare(a.collisionSteps(), b.collisionSteps());
+    if (cmp != 0) return cmp;
+
+    cmp = Integer.compare(a.failedScenarios(), b.failedScenarios());
+    if (cmp != 0) return cmp;
+
+    return Integer.compare(b.successes(), a.successes());
   }
 
   private static List<Result> evaluateCandidatesParallel(
@@ -417,7 +871,7 @@ public final class ReactiveBypassOptimizer {
       throws Exception {
     CompletionService<Result> completion = new ExecutorCompletionService<>(evalPool);
     List<Result> results = new ArrayList<>(candidates.size());
-    long startNanos = System.nanoTime();
+    ProgressReporter progressReporter = new ProgressReporter(progress, label, candidates.size());
 
     for (Candidate candidate : candidates) {
       completion.submit(
@@ -438,70 +892,15 @@ public final class ReactiveBypassOptimizer {
       results.add(result);
 
       if (progress) {
-        printProgress(label, completed, candidates.size(), startNanos);
+        progressReporter.update(completed);
       }
     }
 
     if (progress) {
-      System.out.println();
+      progressReporter.finish();
     }
 
     return results;
-  }
-
-  private static void printProgress(String label, int completed, int total, long startNanos) {
-    int width = 34;
-    double frac = total <= 0 ? 1.0 : (double) completed / total;
-    int filled = (int) Math.round(frac * width);
-
-    StringBuilder bar = new StringBuilder();
-    bar.append('[');
-    for (int i = 0; i < width; i++) {
-      bar.append(i < filled ? '=' : '-');
-    }
-    bar.append(']');
-
-    double elapsedSeconds = elapsedSeconds(startNanos);
-    double rate = elapsedSeconds <= 1e-9 ? 0.0 : completed / elapsedSeconds;
-    double remainingSeconds = rate <= 1e-9 ? 0.0 : (total - completed) / rate;
-
-    String line =
-        String.format(
-            Locale.US,
-            "\r%s %s %3.0f%% %d/%d elapsed=%s eta=%s rate=%.2f eval/s",
-            label,
-            bar,
-            frac * 100.0,
-            completed,
-            total,
-            formatDuration(elapsedSeconds),
-            formatDuration(remainingSeconds),
-            rate);
-
-    System.out.print(line);
-    System.out.flush();
-  }
-
-  private static double elapsedSeconds(long startNanos) {
-    return (System.nanoTime() - startNanos) / 1_000_000_000.0;
-  }
-
-  private static String formatDuration(double seconds) {
-    if (seconds < 60.0) {
-      return String.format(Locale.US, "%.1fs", seconds);
-    }
-
-    int totalSeconds = (int) Math.round(seconds);
-    int minutes = totalSeconds / 60;
-    int remainingSeconds = totalSeconds % 60;
-
-    if (minutes < 60) {
-      return String.format(Locale.US, "%dm%02ds", minutes, remainingSeconds);
-    }
-
-    int hours = minutes / 60;
-    int remainingMinutes = minutes % 60;
-    return String.format(Locale.US, "%dh%02dm%02ds", hours, remainingMinutes, remainingSeconds);
   }
 
   private static void writeResults(Path path, List<Result> results) throws IOException {
@@ -608,6 +1007,7 @@ public final class ReactiveBypassOptimizer {
   }
 
   static void repair(ReactiveBypassConfig cfg) {
+    cfg.inflationMeters = clamp(cfg.inflationMeters, 0.0, 0.45);
     cfg.occLow = Math.min(cfg.occLow, cfg.occHigh * 0.75);
     cfg.occHigh = Math.max(cfg.occHigh, cfg.occLow + 0.03);
     cfg.minLateralMeters = Math.min(cfg.minLateralMeters, cfg.lateralMaxMeters);

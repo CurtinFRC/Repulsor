@@ -19,6 +19,7 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.ReactiveBypass.Runtime;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -88,6 +89,27 @@ final class ReactiveBypassOptimizerState {
     return out;
   }
 
+  double[] randomVector() {
+    double[] out = new double[ReactiveBypassOptimizer.TUNABLES.size()];
+    for (int i = 0; i < out.length; i++) {
+      Tunable tunable = ReactiveBypassOptimizer.TUNABLES.get(i);
+      out[i] = tunable.min() + random.nextDouble() * (tunable.max() - tunable.min());
+      if (tunable.integer()) out[i] = Math.round(out[i]);
+    }
+    repairVector(out);
+    return out;
+  }
+
+  void widenSigma(double[] sigma, double multiplier) {
+    for (int i = 0; i < sigma.length; i++) {
+      Tunable tunable = ReactiveBypassOptimizer.TUNABLES.get(i);
+      double floor = tunable.integer() ? 1.0 : (tunable.max() - tunable.min()) * 0.035;
+      sigma[i] =
+          ReactiveBypassOptimizer.clamp(
+              Math.max(sigma[i], floor) * multiplier, floor, tunable.max() - tunable.min());
+    }
+  }
+
   Result evaluate(double[] vector, String label, int generation) {
     return evaluate(vector, label, generation, Double.POSITIVE_INFINITY);
   }
@@ -101,6 +123,37 @@ final class ReactiveBypassOptimizerState {
   Result evaluateConfig(ReactiveBypassConfig cfg, String label, int generation) {
     Result result = ReactiveBypassEvaluation.simulate(cfg, scenarios, scoreProfile);
     return result.withLabel(label, generation);
+  }
+
+  List<Candidate> localSearchCandidates(
+      Result current,
+      double[] sigma,
+      double scale,
+      String label,
+      int generation,
+      double cutoffScore) {
+    double[] vector = vectorFromConfig(current.config());
+    List<Candidate> candidates = new ArrayList<>(vector.length * 2);
+
+    for (int i = 0; i < vector.length; i++) {
+      double step =
+          Math.max(
+              sigma[i] * scale, ReactiveBypassOptimizer.TUNABLES.get(i).integer() ? 1.0 : 1e-4);
+
+      for (double sign : new double[] {-1.0, 1.0}) {
+        double[] trial = Arrays.copyOf(vector, vector.length);
+        trial[i] =
+            ReactiveBypassOptimizer.clamp(
+                trial[i] + sign * step,
+                ReactiveBypassOptimizer.TUNABLES.get(i).min(),
+                ReactiveBypassOptimizer.TUNABLES.get(i).max());
+        if (ReactiveBypassOptimizer.TUNABLES.get(i).integer()) trial[i] = Math.round(trial[i]);
+        repairVector(trial);
+        candidates.add(new Candidate(trial, label, generation, cutoffScore));
+      }
+    }
+
+    return candidates;
   }
 
   ReactiveBypassConfig toConfig(double[] vector) {
@@ -141,79 +194,6 @@ final class ReactiveBypassOptimizerState {
       if (tunable.integer()) mean[i] = Math.round(mean[i]);
     }
     repairVector(mean);
-  }
-
-  Result polish(Result best, double[] mean, double[] sigma, List<Result> history) {
-    Result current = best;
-    double[] vector = vectorFromConfig(best.config());
-    for (int pass = 0; pass < 2; pass++) {
-      for (int i = 0; i < vector.length; i++) {
-        double step =
-            Math.max(
-                sigma[i] * 0.55, ReactiveBypassOptimizer.TUNABLES.get(i).integer() ? 1.0 : 1e-4);
-        for (double sign : new double[] {-1.0, 1.0}) {
-          double[] trial = Arrays.copyOf(vector, vector.length);
-          trial[i] =
-              ReactiveBypassOptimizer.clamp(
-                  trial[i] + sign * step,
-                  ReactiveBypassOptimizer.TUNABLES.get(i).min(),
-                  ReactiveBypassOptimizer.TUNABLES.get(i).max());
-          if (ReactiveBypassOptimizer.TUNABLES.get(i).integer()) trial[i] = Math.round(trial[i]);
-          repairVector(trial);
-          Result result = evaluate(trial, "polish", 100 + pass);
-          history.add(result);
-          if (result.score() < current.score()) {
-            current = result;
-            vector = vectorFromConfig(result.config());
-          }
-        }
-      }
-    }
-    return current;
-  }
-
-  Result safetyPolish(Result best, double[] sigma, List<Result> history) {
-    ScoreProfile previousProfile = scoreProfile;
-    scoreProfile = ReactiveBypassOptimizer.SAFETY_PROFILE;
-
-    Result current = best.withLabel("safety-polish-start", 200);
-    double[] vector = vectorFromConfig(best.config());
-
-    for (int pass = 0; pass < 3; pass++) {
-      boolean improved = false;
-      for (int i = 0; i < vector.length; i++) {
-        double step =
-            Math.max(
-                sigma[i] * (0.45 / (pass + 1.0)),
-                ReactiveBypassOptimizer.TUNABLES.get(i).integer() ? 1.0 : 1e-4);
-        for (double sign : new double[] {-1.0, 1.0}) {
-          double[] trial = Arrays.copyOf(vector, vector.length);
-          trial[i] =
-              ReactiveBypassOptimizer.clamp(
-                  trial[i] + sign * step,
-                  ReactiveBypassOptimizer.TUNABLES.get(i).min(),
-                  ReactiveBypassOptimizer.TUNABLES.get(i).max());
-          if (ReactiveBypassOptimizer.TUNABLES.get(i).integer()) trial[i] = Math.round(trial[i]);
-          repairVector(trial);
-
-          Result result = evaluate(trial, "safety-polish", 200 + pass);
-          history.add(result);
-
-          if (ReactiveBypassEvaluation.safetyBetter(result, current)) {
-            current = result;
-            vector = vectorFromConfig(result.config());
-            improved = true;
-          }
-        }
-      }
-
-      if (!improved) {
-        break;
-      }
-    }
-
-    scoreProfile = previousProfile;
-    return current.withLabel("safety-polish-best", 299);
   }
 
   private double[] vectorFromConfig(ReactiveBypassConfig cfg) {

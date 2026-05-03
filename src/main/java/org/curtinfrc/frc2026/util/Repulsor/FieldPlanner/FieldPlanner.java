@@ -665,6 +665,20 @@ public class FieldPlanner {
     var obstacleForceToGoal =
         getObstacleForce(curTrans, goalManager.getGoalTranslation(), effectiveDynamicsFinal)
             .plus(getWallForce(curTrans, goalManager.getGoalTranslation()));
+    boolean clearPathToGoalForForce =
+        !suppressIsClearPath
+            && memo.toGoalDyn(
+                curTrans,
+                goalManager.getGoalTranslation(),
+                effectiveDynamicsFinal,
+                robot_x,
+                robot_y);
+    obstacleForceToGoal =
+        removeBackwardObstacleForceWhenClear(
+            obstacleForceToGoal,
+            curTrans,
+            goalManager.getGoalTranslation(),
+            clearPathToGoalForForce);
     var netForceToGoal =
         getGoalForce(curTrans, goalManager.getGoalTranslation()).plus(obstacleForceToGoal);
     Rotation2d headingToGoal = netForceToGoal.getAngle();
@@ -694,6 +708,21 @@ public class FieldPlanner {
     var obstacleForce =
         getObstacleForce(curTrans, effectiveGoal.getTranslation(), effectiveDynamicsFinal)
             .plus(getWallForce(curTrans, effectiveGoal.getTranslation()));
+    boolean clearPathToEffectiveGoal =
+        !suppressIsClearPath
+            && (!maybeBypass.isPresent()
+                ? clearPathToGoalForForce
+                : isClearPath(
+                    "Repulsor/ClearEffectiveGoal",
+                    curTrans,
+                    effectiveGoal.getTranslation(),
+                    effectiveDynamicsFinal,
+                    robot_x,
+                    robot_y,
+                    false));
+    obstacleForce =
+        removeBackwardObstacleForceWhenClear(
+            obstacleForce, curTrans, effectiveGoal.getTranslation(), clearPathToEffectiveGoal);
     var netForce = getGoalForce(curTrans, effectiveGoal.getTranslation()).plus(obstacleForce);
     var dist = curTrans.getDistance(effectiveGoal.getTranslation());
 
@@ -868,6 +897,22 @@ public class FieldPlanner {
     } catch (Throwable ignored) {
       return null;
     }
+  }
+
+  private static Force removeBackwardObstacleForceWhenClear(
+      Force obstacleForce, Translation2d current, Translation2d target, boolean clearPath) {
+    if (!clearPath || obstacleForce.getNorm() < 1e-9) return obstacleForce;
+
+    Translation2d toTarget = target.minus(current);
+    double distance = toTarget.getNorm();
+    if (distance < 1e-9) return obstacleForce;
+
+    double ux = toTarget.getX() / distance;
+    double uy = toTarget.getY() / distance;
+    double along = obstacleForce.getX() * ux + obstacleForce.getY() * uy;
+    if (along >= 0.0) return obstacleForce;
+
+    return new Force(obstacleForce.getX() - along * ux, obstacleForce.getY() - along * uy);
   }
 
   private static boolean isClearPath(

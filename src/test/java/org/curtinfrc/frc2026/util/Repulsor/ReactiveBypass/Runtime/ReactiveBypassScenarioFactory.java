@@ -35,7 +35,10 @@ final class ReactiveBypassScenarioFactory {
   private static final int EARLY_FIXED_SCENARIO_WEIGHT = 3;
   private static final int MID_FIXED_SCENARIO_WEIGHT = 3;
   private static final int LATE_FIXED_SCENARIO_WEIGHT = 4;
-  private static final int EARLY_RANDOM_SCENARIOS = 60;
+  private static final int EARLY_RANDOM_SCENARIOS = 30;
+  private static final int MAX_RANDOM_SCENARIO_ATTEMPTS = 80;
+  private static final double ROUTE_SAMPLE_STEP_METERS = 0.20;
+  private static final double ROBOT_CLEARANCE_RADIUS = Math.hypot(ROBOT_X, ROBOT_Y) * 0.5 + 0.04;
 
   private ReactiveBypassScenarioFactory() {}
 
@@ -55,6 +58,27 @@ final class ReactiveBypassScenarioFactory {
       scenarios.addAll(fixedScenarios);
     }
 
+    if (generation <= 4) {
+      addScenarioPressure(scenarios, fixedScenarios, "core-corridor-wide", 8);
+      addScenarioPressure(scenarios, fixedScenarios, "core-corridor-medium", 5);
+      addScenarioPressure(scenarios, fixedScenarios, "core-corridor-offset", 4);
+      addScenarioPressure(scenarios, fixedScenarios, "core-narrow-corridor", 2);
+    } else if (generation <= 8) {
+      addScenarioPressure(scenarios, fixedScenarios, "core-corridor-wide", 4);
+      addScenarioPressure(scenarios, fixedScenarios, "core-corridor-medium", 6);
+      addScenarioPressure(scenarios, fixedScenarios, "core-corridor-offset", 5);
+      addScenarioPressure(scenarios, fixedScenarios, "core-narrow-corridor", 5);
+    } else if (generation <= 20) {
+      addScenarioPressure(scenarios, fixedScenarios, "core-corridor-wide", 2);
+      addScenarioPressure(scenarios, fixedScenarios, "core-corridor-medium", 4);
+      addScenarioPressure(scenarios, fixedScenarios, "core-corridor-offset", 4);
+      addScenarioPressure(scenarios, fixedScenarios, "core-narrow-corridor", 7);
+    } else {
+      addScenarioPressure(scenarios, fixedScenarios, "core-corridor-medium", 3);
+      addScenarioPressure(scenarios, fixedScenarios, "core-corridor-offset", 4);
+      addScenarioPressure(scenarios, fixedScenarios, "core-narrow-corridor", 8);
+    }
+
     int randomLimit =
         generation <= 8
             ? Math.min(EARLY_RANDOM_SCENARIOS, randomTrainingScenarios.size())
@@ -67,6 +91,19 @@ final class ReactiveBypassScenarioFactory {
 
     scenarios.addAll(minedHardCases);
     return scenarios;
+  }
+
+  private static void addScenarioPressure(
+      List<Scenario> target, List<Scenario> fixedScenarios, String name, int weight) {
+    if (weight <= 0) return;
+
+    for (Scenario scenario : fixedScenarios) {
+      if (!scenario.name().equals(name)) continue;
+      for (int i = 0; i < weight; i++) {
+        target.add(scenario);
+      }
+      return;
+    }
   }
 
   static List<Scenario> buildScenarios() {
@@ -157,10 +194,28 @@ final class ReactiveBypassScenarioFactory {
             List.of(new ObstacleSpec(9.7, 3.6, 0.45, 1.4)),
             7.5),
         new Scenario(
+            "core-corridor-wide",
+            new Pose2d(2.0, 4.0, Rotation2d.kZero),
+            new Pose2d(14.0, 4.0, Rotation2d.kZero),
+            List.of(new ObstacleSpec(7.4, 2.75, 0.42, 1.2), new ObstacleSpec(7.4, 5.25, 0.42, 1.2)),
+            8.5),
+        new Scenario(
+            "core-corridor-medium",
+            new Pose2d(2.0, 4.0, Rotation2d.kZero),
+            new Pose2d(14.0, 4.0, Rotation2d.kZero),
+            List.of(new ObstacleSpec(7.4, 2.95, 0.48, 1.3), new ObstacleSpec(7.4, 5.05, 0.48, 1.3)),
+            8.8),
+        new Scenario(
+            "core-corridor-offset",
+            new Pose2d(2.0, 3.75, Rotation2d.kZero),
+            new Pose2d(14.0, 4.25, Rotation2d.kZero),
+            List.of(new ObstacleSpec(7.2, 2.98, 0.46, 1.3), new ObstacleSpec(7.7, 5.02, 0.46, 1.3)),
+            9.0),
+        new Scenario(
             "core-narrow-corridor",
             new Pose2d(2.0, 4.0, Rotation2d.kZero),
             new Pose2d(14.0, 4.0, Rotation2d.kZero),
-            List.of(new ObstacleSpec(7.4, 3.30, 0.55, 1.4), new ObstacleSpec(7.4, 4.70, 0.55, 1.4)),
+            List.of(new ObstacleSpec(7.4, 3.00, 0.52, 1.4), new ObstacleSpec(7.4, 5.00, 0.52, 1.4)),
             9.0),
         new Scenario(
             "core-side-switch-trap",
@@ -207,8 +262,7 @@ final class ReactiveBypassScenarioFactory {
   static List<Scenario> buildHardRandomScenarios(Random random, int count, String prefix) {
     List<Scenario> scenarios = new ArrayList<>();
     for (int i = 0; i < count; i++) {
-      ScenarioKind kind = pickHardScenarioKind(random);
-      scenarios.add(buildRandomScenario(random, kind, prefix + "-" + i));
+      scenarios.add(buildValidRandomScenario(random, prefix + "-" + i, true));
     }
     return scenarios;
   }
@@ -234,11 +288,26 @@ final class ReactiveBypassScenarioFactory {
     List<Scenario> scenarios = new ArrayList<>();
 
     for (int i = 0; i < count; i++) {
-      ScenarioKind kind = pickScenarioKind(random);
-      scenarios.add(buildRandomScenario(random, kind, prefix + "-" + i));
+      scenarios.add(buildValidRandomScenario(random, prefix + "-" + i, false));
     }
 
     return scenarios;
+  }
+
+  private static Scenario buildValidRandomScenario(Random random, String name, boolean hard) {
+    Scenario last = null;
+    for (int attempt = 0; attempt < MAX_RANDOM_SCENARIO_ATTEMPTS; attempt++) {
+      ScenarioKind kind = hard ? pickHardScenarioKind(random) : pickScenarioKind(random);
+      Scenario scenario = buildRandomScenario(random, kind, name);
+      last = scenario;
+      if (isScenarioValid(scenario)) return scenario;
+    }
+
+    Scenario fallback = randomFallbackScenario(random, name);
+    if (isScenarioValid(fallback)) return fallback;
+
+    Scenario safeFallback = safeFallbackScenario(name);
+    return isScenarioValid(safeFallback) ? safeFallback : last;
   }
 
   private static ScenarioKind pickScenarioKind(Random random) {
@@ -482,7 +551,7 @@ final class ReactiveBypassScenarioFactory {
             y + rand(random, -0.25, 0.25));
 
     double along = rand(random, 0.42, 0.65);
-    double side = rand(random, 0.62, 0.86);
+    double side = rand(random, 1.05, 1.35);
 
     Translation2d obsA = normalOffset(start, goal, along, -side);
     Translation2d obsB = normalOffset(start, goal, along, side);
@@ -492,8 +561,8 @@ final class ReactiveBypassScenarioFactory {
         start,
         goal,
         List.of(
-            obstacleAt(obsA, rand(random, 0.48, 0.68), rand(random, 1.2, 1.9)),
-            obstacleAt(obsB, rand(random, 0.48, 0.68), rand(random, 1.2, 1.9))),
+            obstacleAt(obsA, rand(random, 0.38, 0.50), rand(random, 1.1, 1.7)),
+            obstacleAt(obsB, rand(random, 0.38, 0.50), rand(random, 1.1, 1.7))),
         3.5);
   }
 
@@ -581,6 +650,119 @@ final class ReactiveBypassScenarioFactory {
         goal,
         List.of(obstacleAt(obs, rand(random, 0.32, 0.52), rand(random, 1.0, 1.6))),
         2.2);
+  }
+
+  private static Scenario randomFallbackScenario(Random random, String name) {
+    boolean leftToRight = chance(random, 0.5);
+    double y = rand(random, 1.5, FIELD_WID_METERS - 1.5);
+    Translation2d start =
+        new Translation2d(leftToRight ? rand(random, 1.2, 2.3) : rand(random, 14.0, 15.2), y);
+    Translation2d goal =
+        new Translation2d(
+            leftToRight ? rand(random, 13.5, 15.0) : rand(random, 1.4, 2.8),
+            y + rand(random, -0.25, 0.25));
+    Translation2d blocker =
+        normalOffset(start, goal, rand(random, 0.45, 0.60), rand(random, 1.15, 1.55));
+
+    return scenarioFromPoints(
+        name + "-fallback-passable",
+        start,
+        goal,
+        List.of(obstacleAt(blocker, rand(random, 0.32, 0.45), rand(random, 0.9, 1.3))),
+        2.4);
+  }
+
+  private static Scenario safeFallbackScenario(String name) {
+    return scenarioFromPoints(
+        name + "-safe-fallback",
+        new Translation2d(1.6, 4.0),
+        new Translation2d(14.2, 4.0),
+        List.of(new ObstacleSpec(7.2, 5.45, 0.36, 1.0)),
+        2.4);
+  }
+
+  private static boolean isScenarioValid(Scenario scenario) {
+    Translation2d start = scenario.start().getTranslation();
+    Translation2d goal = scenario.goal().getTranslation();
+
+    if (!pointClearForRobot(start, scenario.obstacles())) return false;
+    if (!pointClearForRobot(goal, scenario.obstacles())) return false;
+
+    return hasClearSampledRoute(start, goal, scenario.obstacles());
+  }
+
+  private static boolean hasClearSampledRoute(
+      Translation2d start, Translation2d goal, List<ObstacleSpec> obstacles) {
+    if (routeClear(List.of(start, goal), obstacles)) return true;
+
+    Translation2d delta = goal.minus(start);
+    double len = Math.max(1e-9, delta.getNorm());
+    double nx = -delta.getY() / len;
+    double ny = delta.getX() / len;
+
+    for (double offset : new double[] {1.0, 1.4, 1.8, 2.3, -1.0, -1.4, -1.8, -2.3}) {
+      Translation2d mid =
+          clampPointToField(
+              new Translation2d(
+                  (start.getX() + goal.getX()) * 0.5 + nx * offset,
+                  (start.getY() + goal.getY()) * 0.5 + ny * offset));
+      if (routeClear(List.of(start, mid, goal), obstacles)) return true;
+
+      Translation2d first =
+          clampPointToField(
+              new Translation2d(
+                  start.getX() + delta.getX() * 0.33 + nx * offset,
+                  start.getY() + delta.getY() * 0.33 + ny * offset));
+      Translation2d second =
+          clampPointToField(
+              new Translation2d(
+                  start.getX() + delta.getX() * 0.66 + nx * offset,
+                  start.getY() + delta.getY() * 0.66 + ny * offset));
+      if (routeClear(List.of(start, first, second, goal), obstacles)) return true;
+    }
+
+    return routeClear(
+            List.of(start, new Translation2d(FIELD_LEN_METERS * 0.5, 1.0), goal), obstacles)
+        || routeClear(
+            List.of(start, new Translation2d(FIELD_LEN_METERS * 0.5, FIELD_WID_METERS - 1.0), goal),
+            obstacles);
+  }
+
+  private static boolean routeClear(List<Translation2d> points, List<ObstacleSpec> obstacles) {
+    for (int i = 1; i < points.size(); i++) {
+      if (!segmentClear(points.get(i - 1), points.get(i), obstacles)) return false;
+    }
+    return true;
+  }
+
+  private static boolean segmentClear(
+      Translation2d start, Translation2d goal, List<ObstacleSpec> obstacles) {
+    double distance = start.getDistance(goal);
+    int samples = Math.max(2, (int) Math.ceil(distance / ROUTE_SAMPLE_STEP_METERS));
+    for (int i = 0; i <= samples; i++) {
+      double t = (double) i / samples;
+      Translation2d point = lerp(start, goal, t);
+      if (!pointClearForRobot(point, obstacles)) return false;
+    }
+    return true;
+  }
+
+  private static boolean pointClearForRobot(Translation2d point, List<ObstacleSpec> obstacles) {
+    if (point.getX() < ROBOT_X * 0.5 || point.getX() > FIELD_LEN_METERS - ROBOT_X * 0.5) {
+      return false;
+    }
+    if (point.getY() < ROBOT_Y * 0.5 || point.getY() > FIELD_WID_METERS - ROBOT_Y * 0.5) {
+      return false;
+    }
+
+    for (ObstacleSpec obstacle : obstacles) {
+      double minDistance = obstacle.radius() + ROBOT_CLEARANCE_RADIUS;
+      if (point.getDistance(new Translation2d(obstacle.x(), obstacle.y())) < minDistance) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   private static double rand(Random random, double min, double max) {

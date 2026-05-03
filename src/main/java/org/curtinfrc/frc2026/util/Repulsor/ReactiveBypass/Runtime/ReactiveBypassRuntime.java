@@ -198,17 +198,38 @@ public class ReactiveBypassRuntime {
             ReactiveBypassMath.clamp(
                 cfg.forwardMeters * cfg.escapeForward, cfg.forwardMeters, cfg.forwardMaxMeters);
         state.latchedSubgoal =
-            ReactiveBypassWaypointPlanner.makeWaypoint(
-                cfg, pose, headingTowardGoal, side, lat, fwd);
+            chooseSafeEscapeWaypoint(
+                pose,
+                goal,
+                headingTowardGoal,
+                side,
+                lat,
+                fwd,
+                robotX,
+                robotY,
+                dynamicObstacles,
+                intersectsDynamicOnly);
+        if (state.latchedSubgoal == null) {
+          state.lastChosenCost = null;
+          state.consecutiveBypassFailures++;
+          return Optional.empty();
+        }
         state.lastChosenCost = null;
         state.timeSinceLatchS = Math.max(state.timeSinceLatchS, cfg.escapeHoldS);
         state.consecutiveBypassFailures++;
       } else {
-        state.latchedSubgoal =
+        Pose2d slewed =
             ReactiveBypassWaypointPlanner.slewSubgoal(
                 cfg, state.latchedSubgoal, state.latchedSubgoal, pose, dtSeconds);
-        return Optional.of(
-            ReactiveBypassWaypointPlanner.alignedPose(state.latchedSubgoal, headingTowardGoal));
+        if (subgoalStillSafe(
+            slewed, pose, headingTowardGoal, robotX, robotY, intersectsDynamicOnly)) {
+          state.latchedSubgoal = slewed;
+          return Optional.of(
+              ReactiveBypassWaypointPlanner.alignedPose(state.latchedSubgoal, headingTowardGoal));
+        }
+        state.latchedSubgoal = null;
+        state.lastChosenCost = null;
+        state.consecutiveBypassFailures++;
       }
     }
 
@@ -356,8 +377,20 @@ public class ReactiveBypassRuntime {
                 cfg.forwardMeters,
                 cfg.forwardMaxMeters);
         state.latchedSubgoal =
-            ReactiveBypassWaypointPlanner.makeWaypoint(
-                cfg, pose, headingTowardGoal, side, lat, fwd);
+            chooseSafeEscapeWaypoint(
+                pose,
+                goal,
+                headingTowardGoal,
+                side,
+                lat,
+                fwd,
+                robotX,
+                robotY,
+                dynamicObstacles,
+                intersectsDynamicOnly);
+        if (state.latchedSubgoal == null) {
+          return Optional.empty();
+        }
         state.latchedAtPosition = pose.getTranslation();
         state.timeSinceLatchS = 0.0;
         state.lastChosenCost = null;
@@ -372,11 +405,17 @@ public class ReactiveBypassRuntime {
           (state.lastChosenCost - best.totalCost) / Math.max(1e-6, state.lastChosenCost);
       if (improve < cfg.relatchImproveFrac && state.latchedSubgoal != null) {
         state.timeSinceEvalS = 0.0;
-        state.latchedSubgoal =
+        Pose2d slewed =
             ReactiveBypassWaypointPlanner.slewSubgoal(
                 cfg, state.latchedSubgoal, state.latchedSubgoal, pose, dtSeconds);
-        return Optional.of(
-            ReactiveBypassWaypointPlanner.alignedPose(state.latchedSubgoal, headingTowardGoal));
+        if (subgoalStillSafe(
+            slewed, pose, headingTowardGoal, robotX, robotY, intersectsDynamicOnly)) {
+          state.latchedSubgoal = slewed;
+          return Optional.of(
+              ReactiveBypassWaypointPlanner.alignedPose(state.latchedSubgoal, headingTowardGoal));
+        }
+        state.latchedSubgoal = null;
+        state.lastChosenCost = null;
       }
     }
 
@@ -399,6 +438,80 @@ public class ReactiveBypassRuntime {
         ReactiveBypassWaypointPlanner.alignedPose(state.latchedSubgoal, headingTowardGoal));
   }
 
+  private boolean subgoalStillSafe(
+      Pose2d subgoal,
+      Pose2d pose,
+      Rotation2d headingTowardGoal,
+      double robotX,
+      double robotY,
+      Function<Translation2d[], Boolean> intersectsDynamicOnly) {
+    if (subgoal == null) return false;
+    if (ReactiveBypassProbing.localOccAt(
+            cfg, subgoal.getTranslation(), headingTowardGoal, robotX, robotY, intersectsDynamicOnly)
+        > 0.0) {
+      return false;
+    }
+    return ReactiveBypassProbing.legOcc(
+            cfg,
+            pose.getTranslation(),
+            subgoal.getTranslation(),
+            robotX,
+            robotY,
+            intersectsDynamicOnly)
+        <= 0.0;
+  }
+
+  private Pose2d chooseSafeEscapeWaypoint(
+      Pose2d pose,
+      Pose2d goal,
+      Rotation2d headingTowardGoal,
+      int preferredSide,
+      double lateral,
+      double forward,
+      double robotX,
+      double robotY,
+      List<? extends Obstacle> dynamicObstacles,
+      Function<Translation2d[], Boolean> intersectsDynamicOnly) {
+    int firstSide = preferredSide == 0 ? 1 : preferredSide;
+    int[] sides = new int[] {firstSide, -firstSide};
+    double[] latScales = new double[] {1.0, 1.25, 1.5};
+    double[] fwdScales = new double[] {1.0, 0.8, 1.2};
+
+    ReactiveBypassScore best = null;
+    for (int side : sides) {
+      for (double latScale : latScales) {
+        double lat =
+            ReactiveBypassMath.clamp(
+                lateral * latScale, cfg.minLateralMeters, cfg.lateralMaxMeters);
+        for (double fwdScale : fwdScales) {
+          double fwd =
+              ReactiveBypassMath.clamp(forward * fwdScale, cfg.forwardMeters, cfg.forwardMaxMeters);
+          Pose2d candidate =
+              ReactiveBypassWaypointPlanner.makeWaypoint(
+                  cfg, pose, headingTowardGoal, side, lat, fwd);
+          ReactiveBypassScore score =
+              ReactiveBypassScorer.scoreCandidate(
+                  cfg,
+                  state.preferredSide,
+                  state.timeSinceSideSwitchS,
+                  true,
+                  pose,
+                  candidate,
+                  goal,
+                  headingTowardGoal,
+                  robotX,
+                  robotY,
+                  dynamicObstacles,
+                  intersectsDynamicOnly);
+          if (!(score.okLeg1 && score.okLeg2)) continue;
+          if (best == null || score.totalCost < best.totalCost) best = score;
+        }
+      }
+    }
+
+    return best == null ? null : best.wp;
+  }
+
   /**
    * Returns the is pinned mode value maintained by this Repulsor component.
    *
@@ -406,6 +519,22 @@ public class ReactiveBypassRuntime {
    */
   public boolean isPinnedMode() {
     return state.pinnedMode;
+  }
+
+  Pose2d debugLatchedSubgoal() {
+    return state.latchedSubgoal;
+  }
+
+  double debugLastOcc() {
+    return state.lastOcc;
+  }
+
+  int debugPreferredSide() {
+    return state.preferredSide;
+  }
+
+  int debugConsecutiveBypassFailures() {
+    return state.consecutiveBypassFailures;
   }
 
   private Pose2d buildPinnedPushPose(
