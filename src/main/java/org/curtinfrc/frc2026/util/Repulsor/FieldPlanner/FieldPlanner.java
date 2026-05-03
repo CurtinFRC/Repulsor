@@ -338,6 +338,10 @@ public class FieldPlanner {
     return goalManager.getGoalPose();
   }
 
+  public CoarseGlobalPlannerStats getGlobalFallbackStats() {
+    return globalPlanner.lastStats();
+  }
+
   /**
    * Returns the get requested goal pose value maintained by this Repulsor component.
    *
@@ -579,6 +583,8 @@ public class FieldPlanner {
 
     boolean slowDown = goalManager.updateStagedGoal(curTrans, dynamicObstacles);
     distToGoal = curTrans.getDistance(goalManager.getGoalTranslation());
+    Pose2d calculationGoal = goalManager.getGoalPose();
+    Translation2d calculationGoalTranslation = calculationGoal.getTranslation();
 
     ClearMemo memo = new ClearMemo();
 
@@ -657,6 +663,8 @@ public class FieldPlanner {
 
           if (clear) {
             setActiveGoal(altGoal);
+            calculationGoal = altGoal;
+            calculationGoalTranslation = altGoal.getTranslation();
             lastChosenSetpoint = Optional.of(sp);
             pathBlocked = false;
             break;
@@ -679,11 +687,17 @@ public class FieldPlanner {
                   fieldLengthMeters,
                   fieldWidthMeters);
           if (waypoint.isPresent()) {
-            setActiveGoal(waypoint.get());
+            calculationGoal = waypoint.get();
+            calculationGoalTranslation = waypoint.get().getTranslation();
             lastChosenSetpoint = Optional.empty();
             pathBlocked = false;
+            CoarseGlobalPlannerStats stats = globalPlanner.lastStats();
             Logger.recordOutput("Repulsor/GlobalFallback/Active", true);
             Logger.recordOutput("Repulsor/GlobalFallback/Waypoint", waypoint.get());
+            Logger.recordOutput("Repulsor/GlobalFallback/ExpandedNodes", stats.expandedNodes());
+            Logger.recordOutput("Repulsor/GlobalFallback/GeneratedNodes", stats.generatedNodes());
+            Logger.recordOutput("Repulsor/GlobalFallback/PathNodes", stats.pathNodes());
+            Logger.recordOutput("Repulsor/GlobalFallback/ElapsedMs", stats.elapsedNanos() / 1.0e6);
           }
         }
 
@@ -694,48 +708,52 @@ public class FieldPlanner {
     }
 
     final List<? extends Obstacle> effectiveDynamicsFinal = effectiveDynamics;
+    final Pose2d calculationGoalFinal = calculationGoal;
+    final Translation2d calculationGoalTranslationFinal = calculationGoalTranslation;
 
-    updateArrows(effectiveDynamicsFinal);
+    forceModel.updateArrows(calculationGoalTranslationFinal, effectiveDynamicsFinal);
 
-    var err = curTrans.minus(goalManager.getGoalTranslation());
+    var err = curTrans.minus(calculationGoalTranslationFinal);
     currentErr = Optional.of(Meters.of(err.getNorm()));
 
     if (err.getNorm() < 0.04) {
       return new RepulsorSample(
-          curTrans, 0, 0, Radians.of(goalManager.getGoalPose().getRotation().getRadians()));
+          curTrans, 0, 0, Radians.of(calculationGoalFinal.getRotation().getRadians()));
     }
 
     if (fallback.isPresent() && fallback.get().within(err)) {
-      var speeds = fallback.get().calculate(curTrans, goalManager.getGoalTranslation());
+      var speeds = fallback.get().calculate(curTrans, calculationGoalTranslationFinal);
       return new RepulsorSample(
-          goalManager.getGoalTranslation(), speeds, Radians.of(pose.getRotation().getRadians()));
+          calculationGoalTranslationFinal, speeds, Radians.of(pose.getRotation().getRadians()));
     }
 
     var obstacleForceToGoal =
-        getObstacleForce(curTrans, goalManager.getGoalTranslation(), effectiveDynamicsFinal)
-            .plus(getWallForce(curTrans, goalManager.getGoalTranslation()));
+        getObstacleForce(curTrans, calculationGoalTranslationFinal, effectiveDynamicsFinal)
+            .plus(getWallForce(curTrans, calculationGoalTranslationFinal));
     boolean clearPathToGoalForForce =
         !suppressIsClearPath
-            && memo.toGoalDyn(
+            && isClearPath(
+                "Repulsor/Force/ClearCalculationGoal",
                 curTrans,
-                goalManager.getGoalTranslation(),
+                calculationGoalTranslationFinal,
                 effectiveDynamicsFinal,
                 robot_x,
-                robot_y);
+                robot_y,
+                false);
     obstacleForceToGoal =
         removeBackwardObstacleForceWhenClear(
             obstacleForceToGoal,
             curTrans,
-            goalManager.getGoalTranslation(),
+            calculationGoalTranslationFinal,
             clearPathToGoalForForce);
     var netForceToGoal =
-        getGoalForce(curTrans, goalManager.getGoalTranslation()).plus(obstacleForceToGoal);
+        getGoalForce(curTrans, calculationGoalTranslationFinal).plus(obstacleForceToGoal);
     Rotation2d headingToGoal = netForceToGoal.getAngle();
 
     var maybeBypass =
         bypass.update(
             pose,
-            goalManager.getGoalPose(),
+            calculationGoalFinal,
             headingToGoal,
             driveTuning.dtSeconds(),
             robot_x,
@@ -746,13 +764,13 @@ public class FieldPlanner {
                 isClearPath(
                     "Repulsor/Bypass/Rejoin",
                     curTrans,
-                    goalManager.getGoalTranslation(),
+                    calculationGoalTranslationFinal,
                     effectiveDynamicsFinal,
                     robot_x,
                     robot_y,
                     true));
 
-    Pose2d effectiveGoal = maybeBypass.orElse(goalManager.getGoalPose());
+    Pose2d effectiveGoal = maybeBypass.orElse(calculationGoalFinal);
 
     var obstacleForce =
         getObstacleForce(curTrans, effectiveGoal.getTranslation(), effectiveDynamicsFinal)

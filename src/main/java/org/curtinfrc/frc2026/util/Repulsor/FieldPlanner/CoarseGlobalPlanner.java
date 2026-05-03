@@ -17,19 +17,28 @@ import java.util.PriorityQueue;
  * limiting, heading control, and dynamic bypass.
  */
 public final class CoarseGlobalPlanner {
-  private static final double DEFAULT_CELL_M = 0.55;
-  private static final double DEFAULT_WAYPOINT_LOOKAHEAD_M = 1.4;
-
-  private final double cellMeters;
-  private final double waypointLookaheadMeters;
+  private final CoarseGlobalPlannerConfig config;
+  private CoarseGlobalPlannerStats lastStats = CoarseGlobalPlannerStats.empty();
 
   public CoarseGlobalPlanner() {
-    this(DEFAULT_CELL_M, DEFAULT_WAYPOINT_LOOKAHEAD_M);
+    this(CoarseGlobalPlannerConfig.defaults());
   }
 
   public CoarseGlobalPlanner(double cellMeters, double waypointLookaheadMeters) {
-    this.cellMeters = Math.max(0.20, cellMeters);
-    this.waypointLookaheadMeters = Math.max(this.cellMeters, waypointLookaheadMeters);
+    this(
+        new CoarseGlobalPlannerConfig(
+            cellMeters,
+            waypointLookaheadMeters,
+            CoarseGlobalPlannerConfig.defaults().maxExpandedNodes(),
+            CoarseGlobalPlannerConfig.defaults().maxRuntimeSeconds()));
+  }
+
+  public CoarseGlobalPlanner(CoarseGlobalPlannerConfig config) {
+    this.config = config == null ? CoarseGlobalPlannerConfig.defaults() : config;
+  }
+
+  public CoarseGlobalPlannerStats lastStats() {
+    return lastStats;
   }
 
   public Optional<Pose2d> nextWaypoint(
@@ -40,10 +49,14 @@ public final class CoarseGlobalPlanner {
       double robotHalfWidthMeters,
       double fieldLengthMeters,
       double fieldWidthMeters) {
-    if (start == null || goal == null) return Optional.empty();
+    long startNanos = System.nanoTime();
+    if (start == null || goal == null) {
+      finishStats(false, false, false, 0, 0, 0, startNanos);
+      return Optional.empty();
+    }
 
-    int nx = Math.max(2, (int) Math.ceil(fieldLengthMeters / cellMeters) + 1);
-    int ny = Math.max(2, (int) Math.ceil(fieldWidthMeters / cellMeters) + 1);
+    int nx = Math.max(2, (int) Math.ceil(fieldLengthMeters / config.cellMeters()) + 1);
+    int ny = Math.max(2, (int) Math.ceil(fieldWidthMeters / config.cellMeters()) + 1);
     Node s = nearestNode(start, nx, ny, fieldLengthMeters, fieldWidthMeters);
     Node g = nearestNode(goal.getTranslation(), nx, ny, fieldLengthMeters, fieldWidthMeters);
     if (!isFree(
@@ -55,6 +68,7 @@ public final class CoarseGlobalPlanner {
         fieldWidthMeters,
         nx,
         ny)) {
+      finishStats(false, false, false, 0, 0, 0, startNanos);
       return Optional.empty();
     }
     if (!isFree(
@@ -66,6 +80,7 @@ public final class CoarseGlobalPlanner {
         fieldWidthMeters,
         nx,
         ny)) {
+      finishStats(false, false, false, 0, 0, 0, startNanos);
       return Optional.empty();
     }
 
@@ -84,11 +99,28 @@ public final class CoarseGlobalPlanner {
     best[startIdx] = 0.0;
     open.add(new Entry(s, 0.0, heuristic(s, g)));
 
+    int expanded = 0;
+    int generated = 1;
+    boolean timedOut = false;
+    boolean exhaustedBudget = false;
+    long maxRuntimeNanos = (long) (config.maxRuntimeSeconds() * 1_000_000_000.0);
+    long searchStartNanos = System.nanoTime();
+
     while (!open.isEmpty()) {
+      if (System.nanoTime() - searchStartNanos > maxRuntimeNanos) {
+        timedOut = true;
+        break;
+      }
+      if (expanded >= config.maxExpandedNodes()) {
+        exhaustedBudget = true;
+        break;
+      }
+
       Entry cur = open.poll();
       int curIdx = index(cur.node, ny);
       if (closed[curIdx]) continue;
       closed[curIdx] = true;
+      expanded++;
       if (curIdx == goalIdx) break;
 
       for (int dx = -1; dx <= 1; dx++) {
@@ -128,19 +160,46 @@ public final class CoarseGlobalPlanner {
             best[nextIdx] = tentative;
             parent[nextIdx] = curIdx;
             open.add(new Entry(next, tentative, tentative + heuristic(next, g)));
+            generated++;
           }
         }
       }
     }
 
-    if (parent[goalIdx] < 0 && goalIdx != startIdx) return Optional.empty();
+    if (parent[goalIdx] < 0 && goalIdx != startIdx) {
+      finishStats(false, timedOut, exhaustedBudget, expanded, generated, 0, startNanos);
+      return Optional.empty();
+    }
     List<Node> path = reconstruct(goalIdx, startIdx, parent, ny);
-    if (path.size() < 2) return Optional.empty();
+    if (path.size() < 2) {
+      finishStats(false, timedOut, exhaustedBudget, expanded, generated, path.size(), startNanos);
+      return Optional.empty();
+    }
 
     Translation2d waypoint =
         chooseLookahead(path, fieldLengthMeters, fieldWidthMeters, nx, ny, start);
     Rotation2d heading = goal.getTranslation().minus(waypoint).getAngle();
+    finishStats(true, timedOut, exhaustedBudget, expanded, generated, path.size(), startNanos);
     return Optional.of(new Pose2d(waypoint, heading));
+  }
+
+  private void finishStats(
+      boolean found,
+      boolean timedOut,
+      boolean exhaustedBudget,
+      int expanded,
+      int generated,
+      int pathNodes,
+      long startNanos) {
+    lastStats =
+        new CoarseGlobalPlannerStats(
+            found,
+            timedOut,
+            exhaustedBudget,
+            expanded,
+            generated,
+            pathNodes,
+            System.nanoTime() - startNanos);
   }
 
   private Translation2d chooseLookahead(
@@ -149,7 +208,7 @@ public final class CoarseGlobalPlanner {
     for (int i = 1; i < path.size(); i++) {
       Translation2d p = toPoint(path.get(i), fieldLength, fieldWidth, nx, ny);
       bestPoint = p;
-      if (start.getDistance(p) >= waypointLookaheadMeters) break;
+      if (start.getDistance(p) >= config.waypointLookaheadMeters()) break;
     }
     return bestPoint;
   }
