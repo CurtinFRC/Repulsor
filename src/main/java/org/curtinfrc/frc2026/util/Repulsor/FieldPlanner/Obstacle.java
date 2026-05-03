@@ -64,6 +64,17 @@ public abstract class Obstacle {
    */
   public abstract Force getForceAtPosition(Translation2d position, Translation2d target);
 
+  /**
+   * Returns a force sample intended for visualization, heatmaps, or background analysis.
+   *
+   * <p>Most obstacles are stateless, so this delegates to {@link #getForceAtPosition}. Stateful
+   * obstacles should override this method to avoid changing control-loop hysteresis/commit state
+   * while telemetry is sampled.
+   */
+  public Force sampleForceAtPosition(Translation2d position, Translation2d target) {
+    return getForceAtPosition(position, target);
+  }
+
   protected double distToForceMag(double dist) {
     var forceMag = strength / (0.00001 + Math.abs(dist * dist));
     forceMag *= positive ? 1 : -1;

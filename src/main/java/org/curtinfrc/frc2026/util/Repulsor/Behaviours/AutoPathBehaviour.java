@@ -45,6 +45,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Metrics.HPStationMetrics;
 import org.curtinfrc.frc2026.util.Repulsor.Metrics.MetricRecorder;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.Candidate;
 import org.curtinfrc.frc2026.util.Repulsor.ReactiveBypass.ReactiveBypass;
+import org.curtinfrc.frc2026.util.Repulsor.RepulsorDiagnostics;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.HeightSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.MutablePoseSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
@@ -276,7 +277,8 @@ public class AutoPathBehaviour extends Behaviour {
   private Command buildResetCommand() {
     return Commands.runOnce(
         () -> {
-          System.out.println("AutoPathBehaviour: Resetting FieldTracker");
+          RepulsorDiagnostics.warnThrottled(
+              "AutoPath/resetFieldTracker", "AutoPathBehaviour resetting FieldTracker", 2.0);
           FieldTrackerCore.getInstance().resetAll();
         });
   }

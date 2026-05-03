@@ -40,8 +40,16 @@ public final class FieldPlannerPathingOffloadEntrypoints {
       double robotLengthMeters,
       double robotWidthMeters,
       boolean publishSamples) {
-    return ExtraPathing.isClearPath(
-        topicRoot, start, goal, obstacles, robotLengthMeters, robotWidthMeters, publishSamples);
+    return OffloadExecutionContext.runWorker(
+        () ->
+            ExtraPathing.isClearPath(
+                topicRoot,
+                start,
+                goal,
+                obstacles,
+                robotLengthMeters,
+                robotWidthMeters,
+                publishSamples));
   }
 
   @Offloadable(
@@ -63,6 +71,7 @@ public final class FieldPlannerPathingOffloadEntrypoints {
       double robotLengthMeters,
       double robotWidthMeters,
       List<? extends Obstacle> obstacles) {
-    return ExtraPathing.robotIntersects(center, robotLengthMeters, robotWidthMeters, obstacles);
+    return OffloadExecutionContext.runWorker(
+        () -> ExtraPathing.robotIntersects(center, robotLengthMeters, robotWidthMeters, obstacles));
   }
 }

@@ -36,8 +36,10 @@ public final class FieldTrackerOffloadEntrypoints {
       int goalUnits,
       boolean flipRedToBlue,
       List<ShuttleRecoveryDynamicObjectDTO> dynamicObjects) {
-    return FieldTrackerLocalAccess.nextAllianceShuttleRecoveryGoalBlueLocal(
-        robotPoseBlue, ourSpeedCap, goalUnits, flipRedToBlue, dynamicObjects);
+    return OffloadExecutionContext.runWorker(
+        () ->
+            FieldTrackerLocalAccess.nextAllianceShuttleRecoveryGoalBlueLocal(
+                robotPoseBlue, ourSpeedCap, goalUnits, flipRedToBlue, dynamicObjects));
   }
 
   /**
@@ -59,7 +61,9 @@ public final class FieldTrackerOffloadEntrypoints {
       boolean flipRedToBlue,
       List<ShuttleRecoveryDynamicObjectDTO> dynamicObjects,
       ResourceRecoveryProfile profile) {
-    return FieldTrackerLocalAccess.nextAllianceResourceRecoveryGoalBlueLocal(
-        robotPoseBlue, ourSpeedCap, goalUnits, flipRedToBlue, dynamicObjects, profile);
+    return OffloadExecutionContext.runWorker(
+        () ->
+            FieldTrackerLocalAccess.nextAllianceResourceRecoveryGoalBlueLocal(
+                robotPoseBlue, ourSpeedCap, goalUnits, flipRedToBlue, dynamicObjects, profile));
   }
 }

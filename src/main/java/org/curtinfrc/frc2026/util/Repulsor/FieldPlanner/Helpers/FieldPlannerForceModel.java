@@ -29,6 +29,7 @@ import org.curtinfrc.frc2026.util.Repulsor.DriverStation.RepulsorDriverStation;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Force;
+import org.curtinfrc.frc2026.util.Repulsor.Offload.OffloadExecutionContext;
 
 /**
  * Provides field planner force model functionality for the Repulsor repulsor-field planner that
@@ -118,8 +119,8 @@ public final class FieldPlannerForceModel {
         }
 
         var force = Force.kZero;
-        force = force.plus(getObstacleForce(translation, goal, dynamicObstacles));
-        force = force.plus(getWallForce(translation, goal));
+        force = force.plus(sampleObstacleForce(translation, goal, dynamicObstacles));
+        force = force.plus(sampleWallForce(translation, goal));
         force = force.plus(getGoalForce(translation, goal));
 
         if (force.getNorm() < 1e-6) {
@@ -139,6 +140,29 @@ public final class FieldPlannerForceModel {
    */
   public ArrayList<Pose2d> getArrows() {
     return arrows;
+  }
+
+  private Force sampleWallForce(Translation2d curLocation, Translation2d target) {
+    var force = Force.kZero;
+    for (Obstacle obs : walls) force = force.plus(obs.sampleForceAtPosition(curLocation, target));
+    return force;
+  }
+
+  private Force sampleObstacleForce(
+      Translation2d curLocation, Translation2d target, List<? extends Obstacle> extra) {
+    var force = Force.kZero;
+    var dsBase = safeDriverStation();
+    for (Obstacle obs : fieldObstacles)
+      force = force.plus(obs.sampleForceAtPosition(curLocation, target));
+    for (Obstacle obs : extra)
+      force =
+          force.plus(
+              obs.sampleForceAtPosition(curLocation, target)
+                  .times(
+                      dsBase instanceof NtRepulsorDriverStation ds
+                          ? ds.getConfigDouble("repulsion_scale")
+                          : 1.0));
+    return force;
   }
 
   /**
@@ -225,7 +249,7 @@ public final class FieldPlannerForceModel {
   }
 
   private static boolean isOffloadWorkerThread() {
-    return Thread.currentThread().getName().startsWith("offload-server-worker");
+    return OffloadExecutionContext.isWorkerOrLegacyThread();
   }
 
   private static boolean isSimulationSafe() {

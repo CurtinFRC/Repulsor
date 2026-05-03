@@ -37,6 +37,6 @@ public final class SampleMathOffloadEntrypoints {
    * @return value produced by this operation.
    */
   public static boolean runsOnOffloadWorkerThread(int marker) {
-    return marker == 1 && Thread.currentThread().getName().startsWith("offload-server-worker");
+    return marker == 1 && OffloadExecutionContext.isWorkerOrLegacyThread();
   }
 }

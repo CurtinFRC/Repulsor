@@ -770,9 +770,12 @@ public final class PredictiveFieldStateOps {
    */
   double[] scratchLogits2 = new double[0];
 
+  private final PredictiveSpatialDynCache spatialDynCache = new PredictiveSpatialDynCache();
+
   /**
-   * Configuration value for last dyn ref. The valid range and tuning source are defined by the
-   * owning subsystem or field profile.
+   * Configuration value for last dyn ref. Cache ownership lives in {@link
+   * PredictiveSpatialDynCache}; this mirror is retained for package-private diagnostics/backwards
+   * compatibility.
    */
   volatile List<DynamicObject> lastDynRef = null;
 
@@ -820,29 +823,19 @@ public final class PredictiveFieldStateOps {
    * @return spatial dyn result for cached dyn.
    */
   public SpatialDyn cachedDyn() {
-    List<DynamicObject> ref = dynamicObjects;
-    int sv = specsVersion;
-    SpatialDyn d = lastDyn;
-    if (d != null && ref == lastDynRef && sv == lastDynSpecsVersion) return d;
-    SpatialDyn nd =
-        new SpatialDyn(
-            ref,
-            resourceSpecs,
-            otherTypeWeights,
-            collectResourceTypes,
-            collectResourcePositionFilter,
-            collectionProfile.observationHardMaxAgeSeconds(),
-            collectionProfile.observationAgeDecay());
-    lastDynRef = ref;
-    lastDyn = nd;
-    lastDynSpecsVersion = sv;
-    return nd;
+    SpatialDyn dyn = spatialDynCache.cached(this);
+    lastDynRef = dynamicObjects;
+    lastDyn = dyn;
+    lastDynSpecsVersion = specsVersion;
+    return dyn;
   }
 
   /** Runs invalidate dyn cache in the Repulsor runtime. */
   public void invalidateDynCache() {
+    spatialDynCache.invalidate();
     lastDynRef = null;
     lastDyn = null;
+    lastDynSpecsVersion = -1;
     lastFootprintDyn = null;
     footprintCache.clear();
   }

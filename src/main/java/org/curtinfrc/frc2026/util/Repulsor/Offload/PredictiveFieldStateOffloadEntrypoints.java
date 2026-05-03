@@ -38,8 +38,10 @@ public final class PredictiveFieldStateOffloadEntrypoints {
       int goalUnits,
       boolean flipRedToBlue,
       List<ShuttleRecoveryDynamicObjectDTO> dynamicObjects) {
-    return PredictiveFieldStateLocalAccess.selectShuttleRecoveryPointLocal(
-        robotPoseBlue, ourSpeedCap, goalUnits, flipRedToBlue, dynamicObjects);
+    return OffloadExecutionContext.runWorker(
+        () ->
+            PredictiveFieldStateLocalAccess.selectShuttleRecoveryPointLocal(
+                robotPoseBlue, ourSpeedCap, goalUnits, flipRedToBlue, dynamicObjects));
   }
 
   /**
@@ -62,7 +64,9 @@ public final class PredictiveFieldStateOffloadEntrypoints {
       boolean flipRedToBlue,
       List<ShuttleRecoveryDynamicObjectDTO> dynamicObjects,
       ResourceRecoveryProfile profile) {
-    return PredictiveFieldStateLocalAccess.selectResourceRecoveryPointLocal(
-        robotPoseBlue, ourSpeedCap, goalUnits, flipRedToBlue, dynamicObjects, profile);
+    return OffloadExecutionContext.runWorker(
+        () ->
+            PredictiveFieldStateLocalAccess.selectResourceRecoveryPointLocal(
+                robotPoseBlue, ourSpeedCap, goalUnits, flipRedToBlue, dynamicObjects, profile));
   }
 }

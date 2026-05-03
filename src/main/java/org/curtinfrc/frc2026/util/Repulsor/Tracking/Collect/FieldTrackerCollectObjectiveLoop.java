@@ -71,6 +71,8 @@ public final class FieldTrackerCollectObjectiveLoop {
    */
   final Predicate<String> collectTypePredicate;
 
+  public final CollectPlannerTuning tuning;
+
   /**
    * Creates a field tracker collect objective loop instance with the dependencies and tuning values
    * used by this Repulsor component.
@@ -85,10 +87,25 @@ public final class FieldTrackerCollectObjectiveLoop {
       Supplier<Translation2d[]> collectObjectivePoints,
       Supplier<List<DynamicObject>> dynamicsSupplier,
       Predicate<String> collectTypePredicate) {
+    this(
+        predictor,
+        collectObjectivePoints,
+        dynamicsSupplier,
+        collectTypePredicate,
+        CollectPlannerTuning.defaults());
+  }
+
+  FieldTrackerCollectObjectiveLoop(
+      PredictiveFieldStateRuntime predictor,
+      Supplier<Translation2d[]> collectObjectivePoints,
+      Supplier<List<DynamicObject>> dynamicsSupplier,
+      Predicate<String> collectTypePredicate,
+      CollectPlannerTuning tuning) {
     this.predictor = predictor;
     this.collectObjectivePoints = collectObjectivePoints;
     this.dynamicsSupplier = dynamicsSupplier;
     this.collectTypePredicate = collectTypePredicate;
+    this.tuning = tuning == null ? CollectPlannerTuning.defaults() : tuning;
   }
 
   /**

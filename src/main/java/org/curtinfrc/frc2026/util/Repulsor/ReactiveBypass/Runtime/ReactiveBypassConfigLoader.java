@@ -26,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import org.curtinfrc.frc2026.util.Repulsor.Offload.OffloadExecutionContext;
 
 /**
  * Provides reactive bypass config loader functionality for the Repulsor runtime helper layer shared
@@ -74,7 +75,7 @@ final class ReactiveBypassConfigLoader {
       return Path.of(env.trim());
     }
 
-    if (!isOffloadWorkerThread()) {
+    if (!OffloadExecutionContext.isWorkerOrLegacyThread()) {
       try {
         Class<?> fs = Class.forName("edu.wpi.first.wpilibj.Filesystem");
         Method getDeployDirectory = fs.getMethod("getDeployDirectory");
@@ -88,10 +89,6 @@ final class ReactiveBypassConfigLoader {
 
     Path cwd = Path.of(System.getProperty("user.dir", "."));
     return cwd.resolve("deploy");
-  }
-
-  private static boolean isOffloadWorkerThread() {
-    return Thread.currentThread().getName().startsWith("offload-server-worker");
   }
 
   private static void applyConfigField(

@@ -49,16 +49,18 @@ public final class DragShotPlannerOffloadEntrypoints {
       double robotHalfWidthMeters,
       List<? extends Obstacle> dynamicObstacles,
       Constraints constraints) {
-    return DragShotPlannerLocalAccess.findBestShotAutoLocal(
-        gamePiece,
-        targetFieldPosition,
-        targetHeightMeters,
-        robotPose,
-        shooterReleaseHeightMeters,
-        robotHalfLengthMeters,
-        robotHalfWidthMeters,
-        dynamicObstacles,
-        constraints);
+    return OffloadExecutionContext.runWorker(
+        () ->
+            DragShotPlannerLocalAccess.findBestShotAutoLocal(
+                gamePiece,
+                targetFieldPosition,
+                targetHeightMeters,
+                robotPose,
+                shooterReleaseHeightMeters,
+                robotHalfLengthMeters,
+                robotHalfWidthMeters,
+                dynamicObstacles,
+                constraints));
   }
 
   @Offloadable(
@@ -86,12 +88,14 @@ public final class DragShotPlannerOffloadEntrypoints {
       double targetHeightMeters,
       double shooterReleaseHeightMeters,
       Constraints constraints) {
-    return DragShotPlannerLocalAccess.calculateStaticShotAngleAndSpeedLocal(
-        gamePiece,
-        shooterFieldPosition,
-        targetFieldPosition,
-        targetHeightMeters,
-        shooterReleaseHeightMeters,
-        constraints);
+    return OffloadExecutionContext.runWorker(
+        () ->
+            DragShotPlannerLocalAccess.calculateStaticShotAngleAndSpeedLocal(
+                gamePiece,
+                shooterFieldPosition,
+                targetFieldPosition,
+                targetHeightMeters,
+                shooterReleaseHeightMeters,
+                constraints));
   }
 }

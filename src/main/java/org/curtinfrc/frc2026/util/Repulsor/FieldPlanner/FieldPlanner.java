@@ -49,7 +49,9 @@ import org.curtinfrc.frc2026.util.Repulsor.HeadingGate;
 import org.curtinfrc.frc2026.util.Repulsor.Offload.FieldPlannerCalculateResultDTO;
 import org.curtinfrc.frc2026.util.Repulsor.Offload.FieldPlannerOffloadEntrypoints_Offloaded;
 import org.curtinfrc.frc2026.util.Repulsor.Offload.FieldPlannerPathingOffloadEntrypoints_Offloaded;
+import org.curtinfrc.frc2026.util.Repulsor.Offload.OffloadExecutionContext;
 import org.curtinfrc.frc2026.util.Repulsor.ReactiveBypass.ReactiveBypass;
+import org.curtinfrc.frc2026.util.Repulsor.RepulsorDiagnostics;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointContext;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
@@ -504,6 +506,21 @@ public class FieldPlanner {
         pose, dynamicObstacles, robot_x, robot_y, cat, false, shooterReleaseHeightMeters);
   }
 
+  /** Computes a planner sample from an immutable request object. */
+  public RepulsorSample calculate(PlannerCalculationRequest request) {
+    if (request == null) {
+      return new RepulsorSample(Pose2d.kZero.getTranslation(), 0, 0, Radians.of(0.0));
+    }
+    return calculate(
+        request.pose(),
+        request.dynamicObstacles(),
+        request.robotHalfLengthMeters(),
+        request.robotHalfWidthMeters(),
+        request.category(),
+        request.suppressFallback(),
+        request.shooterReleaseHeightMeters());
+  }
+
   /**
    * Computes the calculate value for the current Repulsor planning state. Call this from periodic
    * planning or tests when a fresh decision is required; inputs should already be expressed in the
@@ -537,7 +554,11 @@ public class FieldPlanner {
             cat,
             suppressFallback,
             shooterReleaseHeightMeters);
-      } catch (RuntimeException ignored) {
+      } catch (RuntimeException ex) {
+        RepulsorDiagnostics.warnThrottled(
+            "FieldPlanner/offloadCalculateFallback",
+            "Offloaded FieldPlanner.calculate failed, using local planner: " + ex.getMessage(),
+            2.0);
         // If remote calculate fails, continue with local calculate behavior.
       }
     }
@@ -738,7 +759,10 @@ public class FieldPlanner {
     }
 
     if (stuckStepCount >= MAX_STUCK_STEPS) {
-      System.out.println("[Repulsor] Stuck! Aborting after " + stuckStepCount + " tiny steps.");
+      RepulsorDiagnostics.warnThrottled(
+          "FieldPlanner/stuck",
+          "Planner stuck, aborting after " + stuckStepCount + " tiny steps.",
+          1.0);
       return new RepulsorSample(curTrans, 0, 0, Radians.of(pose.getRotation().getRadians()));
     }
 
@@ -864,7 +888,7 @@ public class FieldPlanner {
   }
 
   private static boolean isOffloadWorkerThread() {
-    return Thread.currentThread().getName().startsWith("offload-server-worker");
+    return OffloadExecutionContext.isWorkerOrLegacyThread();
   }
 
   /**
@@ -894,7 +918,11 @@ public class FieldPlanner {
   private static RepulsorDriverStation safeDriverStation() {
     try {
       return RepulsorDriverStation.getInstance();
-    } catch (Throwable ignored) {
+    } catch (Throwable ex) {
+      RepulsorDiagnostics.warnThrottled(
+          "FieldPlanner/driverStationUnavailable",
+          "Driver station unavailable while resolving planner state: " + ex.getMessage(),
+          5.0);
       return null;
     }
   }

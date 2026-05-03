@@ -47,16 +47,18 @@ public final class FieldPlannerOffloadEntrypoints {
       String preferredAllianceName,
       boolean suppressFallback,
       double shooterReleaseHeightMeters) {
-    return FieldPlannerOffloadLocalAccess.calculateLocal(
-        pose,
-        requestedGoalPose,
-        activeGoalPose,
-        dynamicObstacles,
-        robot_x,
-        robot_y,
-        categoryName,
-        preferredAllianceName,
-        suppressFallback,
-        shooterReleaseHeightMeters);
+    return OffloadExecutionContext.runWorker(
+        () ->
+            FieldPlannerOffloadLocalAccess.calculateLocal(
+                pose,
+                requestedGoalPose,
+                activeGoalPose,
+                dynamicObstacles,
+                robot_x,
+                robot_y,
+                categoryName,
+                preferredAllianceName,
+                suppressFallback,
+                shooterReleaseHeightMeters));
   }
 }

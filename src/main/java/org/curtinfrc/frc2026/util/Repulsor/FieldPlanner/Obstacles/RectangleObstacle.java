@@ -70,8 +70,7 @@ public class RectangleObstacle extends Obstacle {
   public final double maxRangeY;
 
   private final boolean flowAssist;
-
-  private static final double X_AXIS_ANGLE_BIAS_RAD = Math.toRadians(18.0);
+  private final RectangleObstacleTuning tuning;
 
   private static final double CORNER_RANGE_M = 1.15;
   private static final double CORNER_FORCE_SCALE = 14.0;
@@ -110,7 +109,6 @@ public class RectangleObstacle extends Obstacle {
   private static final double EDGE_TEAR_RANGE_M = 1.55;
   private static final double EDGE_TEAR_END_TAPER_M = 0.42;
   private static final double EDGE_TEAR_CORNER_SUPPRESS = 0.22;
-  private static final double EDGE_TEAR_BLEND = 0.70;
   private static final double EDGE_TEAR_CORNER_MIN = 0.30;
 
   private static final double EDGE_CONVEY_RANGE_M = 0.65;
@@ -119,10 +117,6 @@ public class RectangleObstacle extends Obstacle {
   private static final double EDGE_CONVEY_MIN_FRAC = 0.40;
   private static final double EDGE_CONVEY_CORNER_SUPPRESS = 0.55;
 
-  private static final double TEARDROP_EDGE_OFFSET_MIN = 0.18;
-  private static final double TEARDROP_EDGE_OFFSET_EXTRA = 0.52;
-  private static final double TEARDROP_EDGE_OFFSET_MAX = 0.50;
-  private static final double TEARDROP_GOAL_BIAS = 0.65;
   private static final double TEARDROP_OUTWARD_DOT_MIN = 0.12;
   private static final double TEARDROP_SHORT_ALIGN_M = 0.10;
 
@@ -142,9 +136,6 @@ public class RectangleObstacle extends Obstacle {
 
   private static final double CORNER_LOCK_SEC = 0.95;
   private static final double CORNER_SWITCH_HYST_M = 0.10;
-
-  private static final double DESIRED_EDGE_CLEAR_M = 0.24;
-  private static final double DESIRED_CORNER_CLEAR_M = 0.30;
 
   private static final double CLEAR_PUSH_SCALE = 3.6;
   private static final double CLEAR_PUSH_SOFTEN = 0.20;
@@ -171,6 +162,39 @@ public class RectangleObstacle extends Obstacle {
   private int cornerLockIdx = -1;
   private Translation2d cornerLockCornerWorld = null;
   private double cornerLockUntilSec = 0.0;
+
+  private static final class StateSnapshot {
+    final int commitDir;
+    final double commitUntilSec;
+    final Translation2d commitCornerWorld;
+    final int handoffShortSign;
+    final double handoffUntilSec;
+    final int cornerLockIdx;
+    final Translation2d cornerLockCornerWorld;
+    final double cornerLockUntilSec;
+
+    StateSnapshot(RectangleObstacle obstacle) {
+      this.commitDir = obstacle.commitDir;
+      this.commitUntilSec = obstacle.commitUntilSec;
+      this.commitCornerWorld = obstacle.commitCornerWorld;
+      this.handoffShortSign = obstacle.handoffShortSign;
+      this.handoffUntilSec = obstacle.handoffUntilSec;
+      this.cornerLockIdx = obstacle.cornerLockIdx;
+      this.cornerLockCornerWorld = obstacle.cornerLockCornerWorld;
+      this.cornerLockUntilSec = obstacle.cornerLockUntilSec;
+    }
+
+    void restore(RectangleObstacle obstacle) {
+      obstacle.commitDir = commitDir;
+      obstacle.commitUntilSec = commitUntilSec;
+      obstacle.commitCornerWorld = commitCornerWorld;
+      obstacle.handoffShortSign = handoffShortSign;
+      obstacle.handoffUntilSec = handoffUntilSec;
+      obstacle.cornerLockIdx = cornerLockIdx;
+      obstacle.cornerLockCornerWorld = cornerLockCornerWorld;
+      obstacle.cornerLockUntilSec = cornerLockUntilSec;
+    }
+  }
 
   private final FlowTeardrop tearA_CCW;
   private final FlowTeardrop tearA_CW;
@@ -1047,6 +1071,28 @@ public class RectangleObstacle extends Obstacle {
       double maxRangeX,
       double maxRangeY,
       boolean flowAssist) {
+    this(
+        center,
+        widthMeters,
+        heightMeters,
+        rot,
+        strength,
+        maxRangeX,
+        maxRangeY,
+        flowAssist,
+        RectangleObstacleTuning.defaults());
+  }
+
+  public RectangleObstacle(
+      Translation2d center,
+      double widthMeters,
+      double heightMeters,
+      Rotation2d rot,
+      double strength,
+      double maxRangeX,
+      double maxRangeY,
+      boolean flowAssist,
+      RectangleObstacleTuning tuning) {
     super(strength, true);
     this.center = center;
     this.halfX = Math.max(0.0, widthMeters * 0.5);
@@ -1055,6 +1101,7 @@ public class RectangleObstacle extends Obstacle {
     this.maxRangeX = Math.max(0.0, maxRangeX);
     this.maxRangeY = Math.max(0.0, maxRangeY);
     this.flowAssist = flowAssist;
+    this.tuning = tuning == null ? RectangleObstacleTuning.defaults() : tuning;
 
     this.longAxisX = this.halfX >= this.halfY;
 
@@ -1071,8 +1118,10 @@ public class RectangleObstacle extends Obstacle {
 
     double edgeOffset =
         Math.max(
-            TEARDROP_EDGE_OFFSET_MIN,
-            Math.min(TEARDROP_EDGE_OFFSET_MAX, primaryRadius + TEARDROP_EDGE_OFFSET_EXTRA));
+            this.tuning.teardropEdgeOffsetMin(),
+            Math.min(
+                this.tuning.teardropEdgeOffsetMax(),
+                primaryRadius + this.tuning.teardropEdgeOffsetExtra()));
 
     Translation2d locALocal =
         longAxisX
@@ -1260,7 +1309,9 @@ public class RectangleObstacle extends Obstacle {
         double sign = Math.signum(target.getY() - position.getY());
         if (sign == 0.0) sign = 1.0;
         Rotation2d biasedAngle =
-            awayLocal.getAngle().rotateBy(Rotation2d.fromRadians(sign * X_AXIS_ANGLE_BIAS_RAD));
+            awayLocal
+                .getAngle()
+                .rotateBy(Rotation2d.fromRadians(sign * tuning.xAxisAngleBiasRad()));
         awayLocal = new Translation2d(n, biasedAngle);
       }
       effectiveDistMeters = Math.hypot(ax, ay);
@@ -1313,7 +1364,13 @@ public class RectangleObstacle extends Obstacle {
         sum =
             sum.plus(
                 edgeClearancePush(
-                    position, poly, awayWorldU, DESIRED_EDGE_CLEAR_M, strength, 1.4, 0.28));
+                    position,
+                    poly,
+                    awayWorldU,
+                    tuning.desiredEdgeClearMeters(),
+                    strength,
+                    1.4,
+                    0.28));
       }
 
       double n = sum.getNorm();
@@ -1458,7 +1515,7 @@ public class RectangleObstacle extends Obstacle {
         FlowTeardrop tear = (teardropSide == shortSignA) ? tearA_CCW : tearB_CCW;
         Rotation2d dir = teardropTailDir(goalSide, teardropSide, tear.loc, target, gLocal, pLocal);
         Translation2d v = tear.forceVec(position, dir);
-        tearVec = v.times(EDGE_TEAR_BLEND * wEdge);
+        tearVec = v.times(tuning.edgeTearBlend() * wEdge);
       }
     }
 
@@ -1485,7 +1542,7 @@ public class RectangleObstacle extends Obstacle {
                   position,
                   poly,
                   awayWorldU,
-                  DESIRED_EDGE_CLEAR_M,
+                  tuning.desiredEdgeClearMeters(),
                   strength,
                   CLEAR_PUSH_SCALE,
                   CLEAR_PUSH_SOFTEN));
@@ -1498,7 +1555,7 @@ public class RectangleObstacle extends Obstacle {
                   position,
                   cornerWorld,
                   awayWorldU,
-                  DESIRED_CORNER_CLEAR_M,
+                  tuning.desiredCornerClearMeters(),
                   strength,
                   CORNER_CLEAR_PUSH_SCALE,
                   CORNER_CLEAR_PUSH_SOFTEN));
@@ -1566,6 +1623,16 @@ public class RectangleObstacle extends Obstacle {
 
     if (sumN < EPS) return new Force();
     return new Force(sumN, sum.getAngle());
+  }
+
+  @Override
+  public Force sampleForceAtPosition(Translation2d position, Translation2d target) {
+    StateSnapshot snapshot = new StateSnapshot(this);
+    try {
+      return getForceAtPosition(position, target);
+    } finally {
+      snapshot.restore(this);
+    }
   }
 
   private Translation2d chooseTangentPolyWithWalls(

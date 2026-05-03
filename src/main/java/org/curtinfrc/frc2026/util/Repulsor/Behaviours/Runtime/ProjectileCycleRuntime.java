@@ -34,6 +34,7 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldActionProfile.ProjectileShotAction;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
+import org.curtinfrc.frc2026.util.Repulsor.RepulsorDiagnostics;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointContext;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.DragShotPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.MovingShotSolver;
@@ -521,7 +522,12 @@ public final class ProjectileCycleRuntime {
       if (distance != null) {
         return Math.max(0.0, distance.in(Meters));
       }
-    } catch (RuntimeException ignored) {
+    } catch (RuntimeException ex) {
+      RepulsorDiagnostics.warnThrottled(
+          "ProjectileCycle/releaseHeight",
+          "Failed to read projectile release height from mechanism setpoint, using context fallback: "
+              + ex.getMessage(),
+          5.0);
     }
     return Math.max(0.0, spCtx.shooterReleaseHeightMeters());
   }
