@@ -85,6 +85,9 @@ public class FieldPlanner {
   private static final boolean OFFLOAD_CALCULATE_ENABLED =
       Boolean.parseBoolean(
           System.getProperty("repulsor.offload.fieldplanner.calculate.enabled", "true"));
+  private static final boolean GLOBAL_FALLBACK_ENABLED =
+      Boolean.parseBoolean(
+          System.getProperty("repulsor.fieldplanner.globalFallback.enabled", "true"));
 
   private static final class ClearMemo {
     Boolean toGoalDyn;
@@ -171,6 +174,7 @@ public class FieldPlanner {
 
   private final FieldPlannerForceModel forceModel;
   private final FieldPlannerGoalManager goalManager;
+  private final CoarseGlobalPlanner globalPlanner = new CoarseGlobalPlanner();
 
   private Optional<Distance> currentErr = Optional.empty();
   private Optional<PlannerFallback> fallback = Optional.empty();
@@ -656,6 +660,30 @@ public class FieldPlanner {
             lastChosenSetpoint = Optional.of(sp);
             pathBlocked = false;
             break;
+          }
+        }
+
+        if (pathBlocked && GLOBAL_FALLBACK_ENABLED) {
+          ArrayList<Obstacle> globalObstacles =
+              new ArrayList<>(fieldObstacles.size() + walls.size() + effectiveDynamics.size());
+          globalObstacles.addAll(fieldObstacles);
+          globalObstacles.addAll(walls);
+          globalObstacles.addAll(effectiveDynamics);
+          Optional<Pose2d> waypoint =
+              globalPlanner.nextWaypoint(
+                  curTrans,
+                  goalManager.getGoalPose(),
+                  globalObstacles,
+                  robot_x,
+                  robot_y,
+                  fieldLengthMeters,
+                  fieldWidthMeters);
+          if (waypoint.isPresent()) {
+            setActiveGoal(waypoint.get());
+            lastChosenSetpoint = Optional.empty();
+            pathBlocked = false;
+            Logger.recordOutput("Repulsor/GlobalFallback/Active", true);
+            Logger.recordOutput("Repulsor/GlobalFallback/Waypoint", waypoint.get());
           }
         }
 

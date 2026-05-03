@@ -840,8 +840,9 @@ public final class PredictiveFieldStateOps {
     footprintCache.clear();
   }
 
-  public final HashMap<Integer, Track> allyMap = new HashMap<>();
-  public final HashMap<Integer, Track> enemyMap = new HashMap<>();
+  public final PredictiveTrackStore trackStore = new PredictiveTrackStore();
+  public final HashMap<Integer, Track> allyMap = trackStore.allies();
+  public final HashMap<Integer, Track> enemyMap = trackStore.enemies();
 
   public volatile List<GameElement> worldElements = List.of();
 
@@ -975,6 +976,27 @@ public final class PredictiveFieldStateOps {
    * by the owning subsystem or field profile.
    */
   public double lastCellMForCollect = COLLECT_CELL_M;
+
+  /** Returns an immutable view of the current collect commitment/progress state. */
+  public PredictiveCollectStateSnapshot collectStateSnapshot() {
+    return PredictiveCollectStateSnapshot.from(this);
+  }
+
+  /**
+   * Clears only collect commitment/progress state, leaving resource observations and tracks intact.
+   */
+  public void clearCollectState() {
+    lastReturnedCollect = null;
+    lastReturnedCollectTs = 0.0;
+    currentCollectTarget = null;
+    currentCollectChosenTs = 0.0;
+    currentCollectScore = -1e18;
+    currentCollectUnits = 0.0;
+    currentCollectEta = 0.0;
+    collectProgressLastTs = 0.0;
+    collectProgressLastDist = Double.POSITIVE_INFINITY;
+    collectArrivalTs = -1.0;
+  }
 
   /**
    * Configuration value for secondary collect api. Time values use seconds and should be tuned

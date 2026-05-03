@@ -128,6 +128,14 @@ public final class FieldTrackerCollectObjectiveLoop {
     return collectTypePredicate.test(type);
   }
 
+  public CollectPlannerTuning collectPlannerTuning() {
+    return tuning;
+  }
+
+  public CollectObjectiveStateSnapshot stateSnapshot() {
+    return CollectObjectiveStateSnapshot.from(this);
+  }
+
   public StickyTarget<Translation2d> collectStickySelector = new StickyTarget<>(0.22, 1.25, 1.80);
 
   /**
