@@ -386,6 +386,11 @@ class FieldPlannerGoalManagerTest {
     assertFalse(manager.updateStagedGoal(new Translation2d(2.0, 2.0), List.of()));
     assertEquals(4.0, manager.getGoalTranslation().getX(), EPS);
     assertEquals(6.0, manager.getGoalTranslation().getY(), EPS);
+    FieldPlannerWaypointStatus status = manager.getWaypointStatus();
+    assertEquals(FieldPlannerWaypointDecision.Mode.STAGE, status.lastStrategyDecision().mode());
+    assertTrue(status.activeStage());
+    assertEquals(4.0, status.stagedAttractor().getX(), EPS);
+    assertEquals(requested.getX(), status.requestedGoal().getX(), EPS);
 
     assertFalse(manager.updateStagedGoal(new Translation2d(3.0, 5.0), List.of()));
     assertEquals(4.0, manager.getGoalTranslation().getX(), EPS);

@@ -96,6 +96,8 @@ public final class FieldPlannerGoalManager {
   private boolean stagedCenterReturn = false;
   private boolean stagedExitPhase = false;
   private Translation2d stagedExitPoint = null;
+  private FieldPlannerWaypointDecision lastStrategyDecision =
+      FieldPlannerWaypointDecision.useDefault();
 
   private final List<GatedAttractorObstacle> gatedAttractors;
   private final double fieldLengthMeters;
@@ -219,6 +221,22 @@ public final class FieldPlannerGoalManager {
     return waypointConfig;
   }
 
+  public FieldPlannerWaypointStatus getWaypointStatus() {
+    return new FieldPlannerWaypointStatus(
+        requestedGoal,
+        goal,
+        lastStrategyDecision,
+        stagedAttractor != null,
+        stagedAttractor,
+        stagedExitPoint,
+        stagedGate == null ? null : stagedGate.center,
+        stagedExitPhase,
+        stagedComplete,
+        stagedUsingBypass,
+        stagedCenterReturn,
+        stagedModeTicks);
+  }
+
   /**
    * Updates set requested goal state or telemetry as part of the Repulsor runtime loop. This may
    * mutate local state, NetworkTables output, planner caches, or command-side runtime state
@@ -281,6 +299,7 @@ public final class FieldPlannerGoalManager {
             stagedExitPhase);
     FieldPlannerWaypointDecision decision = waypointStrategy.decide(context);
     if (decision == null) decision = FieldPlannerWaypointDecision.useDefault();
+    lastStrategyDecision = decision;
     if (decision.goesDirectlyToRequestedGoal()) {
       clearStagedState(false);
       goal = requestedGoal;

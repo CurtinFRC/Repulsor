@@ -1,7 +1,5 @@
 package org.curtinfrc.frc2026.util.Repulsor.Predictive.Model;
 
-import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateOps;
-
 /** Tunable weights used when ranking field-object setpoints. */
 public record PredictiveRankingConfig(
     double advantageGain,
@@ -12,28 +10,37 @@ public record PredictiveRankingConfig(
     double headingGain,
     double hysteresisBonus,
     double hysteresisPersistSeconds) {
+  public static final double DEFAULT_ADVANTAGE_GAIN = 1.1;
+  public static final double DEFAULT_DISTANCE_COST = 0.10;
+  public static final double DEFAULT_PRESSURE_COST = 0.72;
+  public static final double DEFAULT_CONGESTION_COST = 0.95;
+  public static final double DEFAULT_CAPACITY_GAIN = 0.45;
+  public static final double DEFAULT_HEADING_GAIN = 0.18;
+  public static final double DEFAULT_HYSTERESIS_BONUS = 0.22;
+  public static final double DEFAULT_HYSTERESIS_PERSIST_SECONDS = 0.8;
+
   public static PredictiveRankingConfig defaults() {
     return new PredictiveRankingConfig(
-        PredictiveFieldStateOps.ADV_GAIN,
-        PredictiveFieldStateOps.DIST_COST,
-        PredictiveFieldStateOps.PRESSURE_GAIN,
-        PredictiveFieldStateOps.CONGEST_COST,
-        PredictiveFieldStateOps.CAPACITY_GAIN,
-        PredictiveFieldStateOps.HEADING_GAIN,
-        PredictiveFieldStateOps.HYST_BONUS,
-        PredictiveFieldStateOps.HYST_PERSIST_S);
+        DEFAULT_ADVANTAGE_GAIN,
+        DEFAULT_DISTANCE_COST,
+        DEFAULT_PRESSURE_COST,
+        DEFAULT_CONGESTION_COST,
+        DEFAULT_CAPACITY_GAIN,
+        DEFAULT_HEADING_GAIN,
+        DEFAULT_HYSTERESIS_BONUS,
+        DEFAULT_HYSTERESIS_PERSIST_SECONDS);
   }
 
   public PredictiveRankingConfig {
-    advantageGain = finiteNonNegative(advantageGain, PredictiveFieldStateOps.ADV_GAIN);
-    distanceCost = finiteNonNegative(distanceCost, PredictiveFieldStateOps.DIST_COST);
-    pressureCost = finiteNonNegative(pressureCost, PredictiveFieldStateOps.PRESSURE_GAIN);
-    congestionCost = finiteNonNegative(congestionCost, PredictiveFieldStateOps.CONGEST_COST);
-    capacityGain = finiteNonNegative(capacityGain, PredictiveFieldStateOps.CAPACITY_GAIN);
-    headingGain = finiteNonNegative(headingGain, PredictiveFieldStateOps.HEADING_GAIN);
-    hysteresisBonus = finiteNonNegative(hysteresisBonus, PredictiveFieldStateOps.HYST_BONUS);
+    advantageGain = finiteNonNegative(advantageGain, DEFAULT_ADVANTAGE_GAIN);
+    distanceCost = finiteNonNegative(distanceCost, DEFAULT_DISTANCE_COST);
+    pressureCost = finiteNonNegative(pressureCost, DEFAULT_PRESSURE_COST);
+    congestionCost = finiteNonNegative(congestionCost, DEFAULT_CONGESTION_COST);
+    capacityGain = finiteNonNegative(capacityGain, DEFAULT_CAPACITY_GAIN);
+    headingGain = finiteNonNegative(headingGain, DEFAULT_HEADING_GAIN);
+    hysteresisBonus = finiteNonNegative(hysteresisBonus, DEFAULT_HYSTERESIS_BONUS);
     hysteresisPersistSeconds =
-        finiteNonNegative(hysteresisPersistSeconds, PredictiveFieldStateOps.HYST_PERSIST_S);
+        finiteNonNegative(hysteresisPersistSeconds, DEFAULT_HYSTERESIS_PERSIST_SECONDS);
   }
 
   public PredictiveRankingConfig withDistanceCost(double value) {

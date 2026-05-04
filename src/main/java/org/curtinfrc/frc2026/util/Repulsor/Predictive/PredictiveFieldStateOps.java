@@ -244,49 +244,50 @@ public final class PredictiveFieldStateOps {
    * Configuration value for hyst persist s. The valid range and tuning source are defined by the
    * owning subsystem or field profile.
    */
-  public static final double HYST_PERSIST_S = 0.8;
+  public static final double HYST_PERSIST_S =
+      PredictiveRankingConfig.DEFAULT_HYSTERESIS_PERSIST_SECONDS;
 
   /**
    * Configuration value for hyst bonus. The valid range and tuning source are defined by the owning
    * subsystem or field profile.
    */
-  public static final double HYST_BONUS = 0.22;
+  public static final double HYST_BONUS = PredictiveRankingConfig.DEFAULT_HYSTERESIS_BONUS;
 
   /**
    * Configuration value for adv gain. The valid range and tuning source are defined by the owning
    * subsystem or field profile.
    */
-  public static final double ADV_GAIN = 1.1;
+  public static final double ADV_GAIN = PredictiveRankingConfig.DEFAULT_ADVANTAGE_GAIN;
 
   /**
    * Configuration value for dist cost. The valid range and tuning source are defined by the owning
    * subsystem or field profile.
    */
-  public static final double DIST_COST = 0.10;
+  public static final double DIST_COST = PredictiveRankingConfig.DEFAULT_DISTANCE_COST;
 
   /**
    * Configuration value for pressure gain. The valid range and tuning source are defined by the
    * owning subsystem or field profile.
    */
-  public static final double PRESSURE_GAIN = 0.72;
+  public static final double PRESSURE_GAIN = PredictiveRankingConfig.DEFAULT_PRESSURE_COST;
 
   /**
    * Configuration value for congest cost. The valid range and tuning source are defined by the
    * owning subsystem or field profile.
    */
-  public static final double CONGEST_COST = 0.95;
+  public static final double CONGEST_COST = PredictiveRankingConfig.DEFAULT_CONGESTION_COST;
 
   /**
    * Configuration value for capacity gain. The valid range and tuning source are defined by the
    * owning subsystem or field profile.
    */
-  public static final double CAPACITY_GAIN = 0.45;
+  public static final double CAPACITY_GAIN = PredictiveRankingConfig.DEFAULT_CAPACITY_GAIN;
 
   /**
    * Configuration value for heading gain. The valid range and tuning source are defined by the
    * owning subsystem or field profile.
    */
-  public static final double HEADING_GAIN = 0.18;
+  public static final double HEADING_GAIN = PredictiveRankingConfig.DEFAULT_HEADING_GAIN;
 
   /**
    * Configuration value for collect value gain. The valid range and tuning source are defined by
