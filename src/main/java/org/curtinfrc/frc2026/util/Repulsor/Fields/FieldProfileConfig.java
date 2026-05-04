@@ -21,6 +21,7 @@ package org.curtinfrc.frc2026.util.Repulsor.Fields;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PredictiveRankingConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.MovingShotSolver;
 
@@ -53,6 +54,7 @@ public class FieldProfileConfig {
   public Map<String, ResourceConfig> resources = new LinkedHashMap<>();
   public Map<String, ProjectileShotConfig> projectileShots = new LinkedHashMap<>();
   public RankingConfig predictiveRanking = new RankingConfig();
+  public WaypointingConfig waypointing = new WaypointingConfig();
 
   /** Compatibility input for older 2026-specific YAML. Prefer projectileShots. */
   @Deprecated(forRemoval = false)
@@ -116,10 +118,57 @@ public class FieldProfileConfig {
     }
 
     mergeRanking(base.predictiveRanking, overlay.predictiveRanking);
+    mergeWaypointing(base.waypointing, overlay.waypointing);
 
     mergeProjectileShot(base.shuttleShot, overlay.shuttleShot);
     mergeCorridor(base.rebuiltCorridor, overlay.rebuiltCorridor);
     return base;
+  }
+
+  private static void mergeWaypointing(WaypointingConfig base, WaypointingConfig overlay) {
+    if (base == null || overlay == null) return;
+    if (overlay.bandTransitionStagingEnabled != null) {
+      base.bandTransitionStagingEnabled = overlay.bandTransitionStagingEnabled;
+    }
+    if (overlay.occludingGateStagingEnabled != null) {
+      base.occludingGateStagingEnabled = overlay.occludingGateStagingEnabled;
+    }
+    if (overlay.centerReturnStagingEnabled != null) {
+      base.centerReturnStagingEnabled = overlay.centerReturnStagingEnabled;
+    }
+    if (overlay.centerBandMeters != null) base.centerBandMeters = overlay.centerBandMeters;
+    if (overlay.restageDistanceMeters != null) {
+      base.restageDistanceMeters = overlay.restageDistanceMeters;
+    }
+    if (overlay.gatePaddingMeters != null) base.gatePaddingMeters = overlay.gatePaddingMeters;
+    if (overlay.leadThroughScale != null) base.leadThroughScale = overlay.leadThroughScale;
+    if (overlay.leadThroughMinMeters != null) {
+      base.leadThroughMinMeters = overlay.leadThroughMinMeters;
+    }
+    if (overlay.leadThroughMaxMeters != null) {
+      base.leadThroughMaxMeters = overlay.leadThroughMaxMeters;
+    }
+    if (overlay.deepCenterBandMeters != null) {
+      base.deepCenterBandMeters = overlay.deepCenterBandMeters;
+    }
+    if (overlay.centerReturnStageTriggerMeters != null) {
+      base.centerReturnStageTriggerMeters = overlay.centerReturnStageTriggerMeters;
+    }
+    if (overlay.centerReturnIntersectionTriggerMeters != null) {
+      base.centerReturnIntersectionTriggerMeters = overlay.centerReturnIntersectionTriggerMeters;
+    }
+    if (overlay.centerReturnExitMinMeters != null) {
+      base.centerReturnExitMinMeters = overlay.centerReturnExitMinMeters;
+    }
+    if (overlay.centerReturnExitMaxMeters != null) {
+      base.centerReturnExitMaxMeters = overlay.centerReturnExitMaxMeters;
+    }
+    if (overlay.centerReturnGateMinOffsetMeters != null) {
+      base.centerReturnGateMinOffsetMeters = overlay.centerReturnGateMinOffsetMeters;
+    }
+    if (overlay.fieldEdgeMarginMeters != null) {
+      base.fieldEdgeMarginMeters = overlay.fieldEdgeMarginMeters;
+    }
   }
 
   private static void mergeRanking(RankingConfig base, RankingConfig overlay) {
@@ -344,6 +393,54 @@ public class FieldProfileConfig {
           finiteNonNegative(headingGain, defaults.headingGain()),
           finiteNonNegative(hysteresisBonus, defaults.hysteresisBonus()),
           finiteNonNegative(hysteresisPersistSeconds, defaults.hysteresisPersistSeconds()));
+    }
+  }
+
+  public static class WaypointingConfig {
+    public Boolean bandTransitionStagingEnabled;
+    public Boolean occludingGateStagingEnabled;
+    public Boolean centerReturnStagingEnabled;
+    public Double centerBandMeters;
+    public Double restageDistanceMeters;
+    public Double gatePaddingMeters;
+    public Double leadThroughScale;
+    public Double leadThroughMinMeters;
+    public Double leadThroughMaxMeters;
+    public Double deepCenterBandMeters;
+    public Double centerReturnStageTriggerMeters;
+    public Double centerReturnIntersectionTriggerMeters;
+    public Double centerReturnExitMinMeters;
+    public Double centerReturnExitMaxMeters;
+    public Double centerReturnGateMinOffsetMeters;
+    public Double fieldEdgeMarginMeters;
+
+    public FieldPlannerWaypointConfig toFieldPlannerWaypointConfig() {
+      FieldPlannerWaypointConfig defaults = FieldPlannerWaypointConfig.defaults();
+      return new FieldPlannerWaypointConfig(
+          boolOrDefault(bandTransitionStagingEnabled, defaults.bandTransitionStagingEnabled()),
+          boolOrDefault(occludingGateStagingEnabled, defaults.occludingGateStagingEnabled()),
+          boolOrDefault(centerReturnStagingEnabled, defaults.centerReturnStagingEnabled()),
+          finiteNonNegative(centerBandMeters, defaults.centerBandMeters()),
+          finiteNonNegative(restageDistanceMeters, defaults.restageDistanceMeters()),
+          finiteNonNegative(gatePaddingMeters, defaults.gatePaddingMeters()),
+          finiteNonNegative(leadThroughScale, defaults.leadThroughScale()),
+          finiteNonNegative(leadThroughMinMeters, defaults.leadThroughMinMeters()),
+          finiteNonNegative(leadThroughMaxMeters, defaults.leadThroughMaxMeters()),
+          finiteNonNegative(deepCenterBandMeters, defaults.deepCenterBandMeters()),
+          finiteNonNegative(
+              centerReturnStageTriggerMeters, defaults.centerReturnStageTriggerMeters()),
+          finiteNonNegative(
+              centerReturnIntersectionTriggerMeters,
+              defaults.centerReturnIntersectionTriggerMeters()),
+          finiteNonNegative(centerReturnExitMinMeters, defaults.centerReturnExitMinMeters()),
+          finiteNonNegative(centerReturnExitMaxMeters, defaults.centerReturnExitMaxMeters()),
+          finiteNonNegative(
+              centerReturnGateMinOffsetMeters, defaults.centerReturnGateMinOffsetMeters()),
+          finiteNonNegative(fieldEdgeMarginMeters, defaults.fieldEdgeMarginMeters()));
+    }
+
+    private static boolean boolOrDefault(Boolean value, boolean fallback) {
+      return value != null ? value : fallback;
     }
   }
 

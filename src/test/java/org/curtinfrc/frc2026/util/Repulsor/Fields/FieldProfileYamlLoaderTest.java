@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
+import org.curtinfrc.frc2026.util.Repulsor.Tuning.DefaultDriveTuning;
+import org.curtinfrc.frc2026.util.Repulsor.Tuning.DefaultTurnTuning;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -196,6 +199,65 @@ class FieldProfileYamlLoaderTest {
       assertEquals(2.0, cfg.predictiveRanking.advantageGain, 1e-9);
       assertEquals(0.5, cfg.predictiveRanking.distanceCost, 1e-9);
       assertEquals(1.25, cfg.predictiveRanking.toPredictiveRankingConfig().capacityGain(), 1e-9);
+    } finally {
+      if (previous == null) {
+        System.clearProperty("repulsor.profile.path");
+      } else {
+        System.setProperty("repulsor.profile.path", previous);
+      }
+    }
+  }
+
+  @Test
+  void loadsWaypointingPolicyFromYamlAndPlannerUsesFieldProfile() throws Exception {
+    Path profile = tempDir.resolve("waypointing.yaml");
+    Files.writeString(
+        profile,
+        """
+        id: waypointing
+        gameName: CUSTOM
+        gameYear: 2099
+        geometry:
+          lengthMeters: 12.5
+          widthMeters: 6.25
+        resources: {}
+        projectileShots: {}
+        waypointing:
+          bandTransitionStagingEnabled: false
+          occludingGateStagingEnabled: true
+          centerReturnStagingEnabled: false
+          centerBandMeters: 2.2
+          restageDistanceMeters: 0.9
+          gatePaddingMeters: 0.15
+          leadThroughScale: 0.4
+          leadThroughMinMeters: 0.6
+          leadThroughMaxMeters: 1.4
+          deepCenterBandMeters: 1.1
+          centerReturnStageTriggerMeters: 2.0
+          centerReturnIntersectionTriggerMeters: 3.1
+          centerReturnExitMinMeters: 0.5
+          centerReturnExitMaxMeters: 1.5
+          centerReturnGateMinOffsetMeters: 1.2
+          fieldEdgeMarginMeters: 0.2
+        """);
+
+    String previous = System.getProperty("repulsor.profile.path");
+    try {
+      System.setProperty("repulsor.profile.path", profile.toString());
+      FieldProfileConfig cfg =
+          FieldProfileYamlLoader.loadOrDefault("waypointing", new FieldProfileConfig());
+
+      assertEquals(2.2, cfg.waypointing.centerBandMeters, 1e-9);
+      assertEquals(
+          1.4, cfg.waypointing.toFieldPlannerWaypointConfig().leadThroughMaxMeters(), 1e-9);
+      assertEquals(
+          false, cfg.waypointing.toFieldPlannerWaypointConfig().bandTransitionStagingEnabled());
+
+      Rebuilt2026 field = new Rebuilt2026(cfg);
+      FieldPlanner planner =
+          new FieldPlanner(new DefaultTurnTuning(), new DefaultDriveTuning(), field);
+      assertEquals(2.2, planner.getWaypointConfig().centerBandMeters(), 1e-9);
+      assertEquals(false, planner.getWaypointConfig().centerReturnStagingEnabled());
     } finally {
       if (previous == null) {
         System.clearProperty("repulsor.profile.path");

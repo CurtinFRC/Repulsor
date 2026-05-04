@@ -29,6 +29,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.CorridorCenterlineRail;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.GatedAttractorObstacle;
@@ -194,6 +195,13 @@ public final class Rebuilt2026 implements FieldDefinition {
 
   private static double positive(Double value, double fallback) {
     return value != null && Double.isFinite(value) && value > 0.0 ? value : fallback;
+  }
+
+  @Override
+  public FieldPlannerWaypointConfig waypointConfig() {
+    return profile.waypointing == null
+        ? FieldPlannerWaypointConfig.defaults()
+        : profile.waypointing.toFieldPlannerWaypointConfig();
   }
 
   /**

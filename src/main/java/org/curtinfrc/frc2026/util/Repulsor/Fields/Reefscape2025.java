@@ -26,6 +26,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.DiagonalWallObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.HorizontalObstacle;
@@ -107,6 +108,13 @@ public final class Reefscape2025 implements FieldDefinition {
     coral.sigmaMeters = 0.95;
     cfg.resources.put("coral", coral);
     return cfg;
+  }
+
+  @Override
+  public FieldPlannerWaypointConfig waypointConfig() {
+    return profile.waypointing == null
+        ? FieldPlannerWaypointConfig.defaults()
+        : profile.waypointing.toFieldPlannerWaypointConfig();
   }
 
   /**

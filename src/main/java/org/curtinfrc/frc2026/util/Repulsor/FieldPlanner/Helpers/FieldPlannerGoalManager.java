@@ -215,6 +215,10 @@ public final class FieldPlannerGoalManager {
     return goal.getTranslation();
   }
 
+  public FieldPlannerWaypointConfig getWaypointConfig() {
+    return waypointConfig;
+  }
+
   /**
    * Updates set requested goal state or telemetry as part of the Repulsor runtime loop. This may
    * mutate local state, NetworkTables output, planner caches, or command-side runtime state

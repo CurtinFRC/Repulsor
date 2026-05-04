@@ -233,7 +233,15 @@ public class FieldPlanner {
    */
   public FieldPlanner(
       TurnTuning turnTuning, DriveTuning driveTuning, ObstacleProvider obstacleProvider) {
-    this(turnTuning, driveTuning, obstacleProvider, FieldPlannerWaypointConfig.defaults());
+    this(turnTuning, driveTuning, obstacleProvider, waypointConfigFor(obstacleProvider));
+  }
+
+  private static FieldPlannerWaypointConfig waypointConfigFor(ObstacleProvider obstacleProvider) {
+    if (obstacleProvider instanceof FieldLayoutProvider field) {
+      FieldPlannerWaypointConfig config = field.waypointConfig();
+      return config == null ? FieldPlannerWaypointConfig.defaults() : config;
+    }
+    return FieldPlannerWaypointConfig.defaults();
   }
 
   public FieldPlanner(
@@ -362,6 +370,10 @@ public class FieldPlanner {
 
   public CoarseGlobalPlannerStats getGlobalFallbackStats() {
     return globalPlanner.lastStats();
+  }
+
+  public FieldPlannerWaypointConfig getWaypointConfig() {
+    return goalManager.getWaypointConfig();
   }
 
   /**

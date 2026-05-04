@@ -97,6 +97,7 @@ public final class FieldProfileValidator {
     }
 
     validateRanking(cfg.predictiveRanking, errors);
+    validateWaypointing(cfg.waypointing, errors);
 
     if (cfg.shuttleShot != null && Boolean.TRUE.equals(cfg.shuttleShot.enabled)) {
       validateProjectileShot("legacyShuttleShot", cfg.shuttleShot, errors);
@@ -118,6 +119,52 @@ public final class FieldProfileValidator {
     requireOptionalNonNegative(ranking.hysteresisBonus, prefix + ".hysteresisBonus", errors);
     requireOptionalNonNegative(
         ranking.hysteresisPersistSeconds, prefix + ".hysteresisPersistSeconds", errors);
+  }
+
+  private static void validateWaypointing(
+      FieldProfileConfig.WaypointingConfig waypointing, List<String> errors) {
+    if (waypointing == null) return;
+    String prefix = "waypointing";
+    requireOptionalNonNegative(waypointing.centerBandMeters, prefix + ".centerBandMeters", errors);
+    requireOptionalNonNegative(
+        waypointing.restageDistanceMeters, prefix + ".restageDistanceMeters", errors);
+    requireOptionalNonNegative(
+        waypointing.gatePaddingMeters, prefix + ".gatePaddingMeters", errors);
+    requireOptionalNonNegative(waypointing.leadThroughScale, prefix + ".leadThroughScale", errors);
+    requireOptionalNonNegative(
+        waypointing.leadThroughMinMeters, prefix + ".leadThroughMinMeters", errors);
+    requireOptionalNonNegative(
+        waypointing.leadThroughMaxMeters, prefix + ".leadThroughMaxMeters", errors);
+    requireOptionalNonNegative(
+        waypointing.deepCenterBandMeters, prefix + ".deepCenterBandMeters", errors);
+    requireOptionalNonNegative(
+        waypointing.centerReturnStageTriggerMeters,
+        prefix + ".centerReturnStageTriggerMeters",
+        errors);
+    requireOptionalNonNegative(
+        waypointing.centerReturnIntersectionTriggerMeters,
+        prefix + ".centerReturnIntersectionTriggerMeters",
+        errors);
+    requireOptionalNonNegative(
+        waypointing.centerReturnExitMinMeters, prefix + ".centerReturnExitMinMeters", errors);
+    requireOptionalNonNegative(
+        waypointing.centerReturnExitMaxMeters, prefix + ".centerReturnExitMaxMeters", errors);
+    requireOptionalNonNegative(
+        waypointing.centerReturnGateMinOffsetMeters,
+        prefix + ".centerReturnGateMinOffsetMeters",
+        errors);
+    requireOptionalNonNegative(
+        waypointing.fieldEdgeMarginMeters, prefix + ".fieldEdgeMarginMeters", errors);
+    if (waypointing.leadThroughMinMeters != null
+        && waypointing.leadThroughMaxMeters != null
+        && waypointing.leadThroughMaxMeters < waypointing.leadThroughMinMeters) {
+      errors.add(prefix + ".leadThroughMaxMeters must be >= leadThroughMinMeters");
+    }
+    if (waypointing.centerReturnExitMinMeters != null
+        && waypointing.centerReturnExitMaxMeters != null
+        && waypointing.centerReturnExitMaxMeters < waypointing.centerReturnExitMinMeters) {
+      errors.add(prefix + ".centerReturnExitMaxMeters must be >= centerReturnExitMinMeters");
+    }
   }
 
   /**
