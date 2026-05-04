@@ -1,17 +1,15 @@
 package org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers;
 
-import java.util.Optional;
-
 /**
- * Strategy hook for staged waypoint generation. Return {@link Optional#empty()} to let the default
- * goal-manager policy decide. Return a plan to define exactly when and where this update should
- * stage.
+ * Strategy hook for staged waypoint generation. Return {@code useDefault()} to delegate to the
+ * built-in goal-manager policy, {@code stage(plan)} to provide exact waypoints, or {@code direct()}
+ * to suppress staging for this update.
  */
 @FunctionalInterface
 public interface FieldPlannerWaypointStrategy {
-  Optional<FieldPlannerWaypointPlan> plan(FieldPlannerWaypointContext context);
+  FieldPlannerWaypointDecision decide(FieldPlannerWaypointContext context);
 
   static FieldPlannerWaypointStrategy defaults() {
-    return context -> Optional.empty();
+    return context -> FieldPlannerWaypointDecision.useDefault();
   }
 }

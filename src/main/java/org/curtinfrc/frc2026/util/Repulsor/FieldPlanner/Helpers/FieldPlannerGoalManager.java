@@ -261,40 +261,49 @@ public final class FieldPlannerGoalManager {
    */
   public boolean updateStagedGoal(Translation2d curPos, List<? extends Obstacle> obstacles) {
     Translation2d reqT = requestedGoal.getTranslation();
-    if (stagedAttractor == null) {
-      var context =
-          new FieldPlannerWaypointContext(
-              curPos,
-              requestedGoal,
-              List.copyOf(gatedAttractors),
-              obstacles == null ? List.of() : obstacles,
-              fieldLengthMeters,
-              fieldWidthMeters,
-              waypointConfig,
-              stagedComplete,
-              lastStagedPoint);
-      var customPlan = waypointStrategy.plan(context);
-      if (customPlan.isPresent() && applyWaypointPlan(customPlan.get(), curPos)) {
+    var context =
+        new FieldPlannerWaypointContext(
+            curPos,
+            requestedGoal,
+            List.copyOf(gatedAttractors),
+            obstacles == null ? List.of() : obstacles,
+            fieldLengthMeters,
+            fieldWidthMeters,
+            waypointConfig,
+            stagedComplete,
+            lastStagedPoint,
+            stagedAttractor != null,
+            stagedAttractor,
+            stagedExitPhase);
+    FieldPlannerWaypointDecision decision = waypointStrategy.decide(context);
+    if (decision == null) decision = FieldPlannerWaypointDecision.useDefault();
+    if (decision.goesDirectlyToRequestedGoal()) {
+      clearStagedState(false);
+      goal = requestedGoal;
+      return true;
+    }
+    if (decision.stages()) {
+      if (shouldApplyWaypointPlan(decision.plan()) && applyWaypointPlan(decision.plan(), curPos)) {
         return false;
       }
+      if (stagedAttractor != null) {
+        // Strategy intentionally owns the active stage, but the requested waypoint is unchanged.
+        // Continue the normal stage progression/release logic below.
+      } else {
+        clearStagedState(false);
+        goal = requestedGoal;
+        return true;
+      }
+    }
+    if (!decision.usesDefaultPolicy() && stagedAttractor == null) {
+      clearStagedState(false);
+      goal = requestedGoal;
+      return true;
     }
 
-    if (gatedAttractors.isEmpty()) {
+    if (gatedAttractors.isEmpty() && stagedAttractor == null) {
       goal = requestedGoal;
-      stagedAttractor = null;
-      stagedGate = null;
-      stagedUsingBypass = false;
-      stagedGatePassed = false;
-      stagedLatchedPull = null;
-      lastStagedPoint = null;
-      stagedComplete = false;
-      stagedReachTicks = 0;
-      stagedModeTicks = 0;
-      stagedGateClearTicks = 0;
-      stagedLaneY = null;
-      stagedCenterReturn = false;
-      stagedExitPhase = false;
-      stagedExitPoint = null;
+      clearStagedState(false);
       return true;
     }
 
@@ -539,6 +548,32 @@ public final class FieldPlannerGoalManager {
 
     goal = requestedGoal;
     return true;
+  }
+
+  private void clearStagedState(boolean complete) {
+    stagedAttractor = null;
+    stagedGate = null;
+    stagedUsingBypass = false;
+    stagedGatePassed = false;
+    stagedLatchedPull = null;
+    if (!complete) lastStagedPoint = null;
+    stagedComplete = complete;
+    stagedReachTicks = 0;
+    stagedModeTicks = 0;
+    stagedGateClearTicks = 0;
+    stagedLaneY = null;
+    stagedCenterReturn = false;
+    stagedExitPhase = false;
+    stagedExitPoint = null;
+  }
+
+  private boolean shouldApplyWaypointPlan(FieldPlannerWaypointPlan plan) {
+    if (plan == null || plan.entryPoint() == null) return false;
+    if (stagedAttractor == null) return true;
+    if (stagedAttractor.getDistance(plan.entryPoint()) > 0.02) return true;
+    if (stagedExitPoint == null) return plan.exitPoint() != null;
+    if (plan.exitPoint() == null) return true;
+    return stagedExitPoint.getDistance(plan.exitPoint()) > 0.02;
   }
 
   private boolean applyWaypointPlan(FieldPlannerWaypointPlan plan, Translation2d curPos) {

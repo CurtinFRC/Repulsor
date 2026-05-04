@@ -116,6 +116,35 @@ class PredictiveFieldStateAbstractionTest {
   }
 
   @Test
+  void rankSynthesizesFallbackSetpointForRedFieldObjectiveWithoutFlipping() {
+    PredictiveFieldStateRuntime predictor = new PredictiveFieldStateRuntime();
+    GameElement generic =
+        new GameElement(
+            Alliance.kRed,
+            2,
+            new GameElementModel(new Pose3d(13.0, 6.0, 0.0, null)),
+            gameObject -> true,
+            null,
+            CategorySpec.kScore);
+
+    predictor.setWorld(List.of(generic), Alliance.kRed);
+
+    List<Candidate> ranked =
+        predictor.rank(new Translation2d(14.0, 6.0), 3.0, CategorySpec.kScore, 4);
+
+    assertEquals(1, ranked.size());
+    assertEquals(13.0, ranked.get(0).targetXY.getX(), EPS);
+    assertEquals(6.0, ranked.get(0).targetXY.getY(), EPS);
+    Pose2d redPose =
+        ranked
+            .get(0)
+            .setpoint
+            .getForAlliance(edu.wpi.first.wpilibj.DriverStation.Alliance.Red, null);
+    assertEquals(13.0, redPose.getX(), EPS);
+    assertEquals(6.0, redPose.getY(), EPS);
+  }
+
+  @Test
   void rankStillUsesRebuilt2026ProfileRelatedSetpoints() {
     FieldTrackerCore tracker = new FieldTrackerCore(new Rebuilt2026());
 

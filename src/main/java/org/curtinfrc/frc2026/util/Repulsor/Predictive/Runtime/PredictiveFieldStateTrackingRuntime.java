@@ -288,11 +288,18 @@ public final class PredictiveFieldStateTrackingRuntime {
 
   private static RepulsorSetpoint fallbackSetpoint(GameElement e, Pose2d pose) {
     String category = categoryLevelId(e.getCategory());
-    String name = String.format("field-%s-%.2f-%.2f", category, pose.getX(), pose.getY());
+    String alliance = e.getAlliance() == null ? "field" : e.getAlliance().name().toLowerCase();
+    String name =
+        String.format("field-%s-%s-%.2f-%.2f", alliance, category, pose.getX(), pose.getY());
     GameSetpoint point =
         new GameSetpoint(name, SetpointType.kOther, false) {
           @Override
           public Pose2d bluePose(SetpointContext ctx) {
+            return pose;
+          }
+
+          @Override
+          public Pose2d redPose(SetpointContext ctx) {
             return pose;
           }
         };

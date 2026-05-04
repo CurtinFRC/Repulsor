@@ -16,4 +16,7 @@ public record FieldPlannerWaypointContext(
     double fieldWidthMeters,
     FieldPlannerWaypointConfig config,
     boolean previousStageComplete,
-    Translation2d previousStagePoint) {}
+    Translation2d previousStagePoint,
+    boolean currentlyStaging,
+    Translation2d activeWaypoint,
+    boolean exitPhase) {}

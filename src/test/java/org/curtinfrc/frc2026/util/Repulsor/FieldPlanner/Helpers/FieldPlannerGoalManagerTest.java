@@ -8,7 +8,6 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.List;
-import java.util.Optional;
 import org.curtinfrc.frc2026.util.Repulsor.Constants;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.GatedAttractorObstacle;
@@ -367,10 +366,11 @@ class FieldPlannerGoalManagerTest {
   void customStrategyCanDefineNonCorridorWaypointingWithoutGates() {
     FieldPlannerWaypointStrategy strategy =
         context -> {
-          if (context.robotPosition().getX() < 5.0) {
-            return Optional.of(FieldPlannerWaypointPlan.single(new Translation2d(4.0, 6.0)));
+          if (!context.currentlyStaging() && context.robotPosition().getX() < 5.0) {
+            return FieldPlannerWaypointDecision.stage(
+                FieldPlannerWaypointPlan.single(new Translation2d(4.0, 6.0)));
           }
-          return Optional.empty();
+          return FieldPlannerWaypointDecision.useDefault();
         };
     FieldPlannerGoalManager manager =
         new FieldPlannerGoalManager(
@@ -387,7 +387,53 @@ class FieldPlannerGoalManagerTest {
     assertEquals(4.0, manager.getGoalTranslation().getX(), EPS);
     assertEquals(6.0, manager.getGoalTranslation().getY(), EPS);
 
+    assertFalse(manager.updateStagedGoal(new Translation2d(3.0, 5.0), List.of()));
+    assertEquals(4.0, manager.getGoalTranslation().getX(), EPS);
+    assertEquals(6.0, manager.getGoalTranslation().getY(), EPS);
+
     assertTrue(manager.updateStagedGoal(new Translation2d(4.0, 6.0), List.of()));
+    assertEquals(requested.getX(), manager.getGoalTranslation().getX(), EPS);
+    assertEquals(requested.getY(), manager.getGoalTranslation().getY(), EPS);
+  }
+
+  @Test
+  void customStrategyCanSuppressDefaultCorridorWaypointing() {
+    GatedAttractorObstacle gate = gate(new Translation2d(8.0, 4.0), new Translation2d(8.2, 4.0));
+    FieldPlannerGoalManager manager =
+        new FieldPlannerGoalManager(
+            List.of(gate),
+            Constants.FIELD_LENGTH,
+            Constants.FIELD_WIDTH,
+            FieldPlannerWaypointConfig.defaults(),
+            context -> FieldPlannerWaypointDecision.direct());
+
+    Pose2d requested = new Pose2d(new Translation2d(12.0, 4.0), Rotation2d.kZero);
+    manager.setRequestedGoal(requested);
+
+    assertTrue(manager.updateStagedGoal(new Translation2d(6.0, 4.0), List.of(gate)));
+    assertEquals(requested.getX(), manager.getGoalTranslation().getX(), EPS);
+    assertEquals(requested.getY(), manager.getGoalTranslation().getY(), EPS);
+  }
+
+  @Test
+  void customStrategyCanCancelActiveDefaultStage() {
+    GatedAttractorObstacle gate = gate(new Translation2d(8.0, 4.0), new Translation2d(8.2, 4.0));
+    FieldPlannerGoalManager manager =
+        new FieldPlannerGoalManager(
+            List.of(gate),
+            Constants.FIELD_LENGTH,
+            Constants.FIELD_WIDTH,
+            FieldPlannerWaypointConfig.defaults(),
+            context ->
+                context.currentlyStaging()
+                    ? FieldPlannerWaypointDecision.direct()
+                    : FieldPlannerWaypointDecision.useDefault());
+
+    Pose2d requested = new Pose2d(new Translation2d(12.0, 4.0), Rotation2d.kZero);
+    manager.setRequestedGoal(requested);
+
+    assertFalse(manager.updateStagedGoal(new Translation2d(6.0, 4.0), List.of(gate)));
+    assertTrue(manager.updateStagedGoal(new Translation2d(6.5, 4.0), List.of(gate)));
     assertEquals(requested.getX(), manager.getGoalTranslation().getX(), EPS);
     assertEquals(requested.getY(), manager.getGoalTranslation().getY(), EPS);
   }
