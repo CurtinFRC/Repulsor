@@ -78,6 +78,7 @@ public final class FieldPlannerGoalManager {
       new FieldGeometry(16.540988, 8.211236);
 
   private final FieldPlannerWaypointConfig waypointConfig;
+  private final FieldPlannerWaypointStrategy waypointStrategy;
 
   private Pose2d goal = Pose2d.kZero;
   private Pose2d requestedGoal = Pose2d.kZero;
@@ -128,6 +129,19 @@ public final class FieldPlannerGoalManager {
         gatedAttractors, fieldGeometry.lengthMeters(), fieldGeometry.widthMeters(), waypointConfig);
   }
 
+  public FieldPlannerGoalManager(
+      List<GatedAttractorObstacle> gatedAttractors,
+      FieldGeometry fieldGeometry,
+      FieldPlannerWaypointConfig waypointConfig,
+      FieldPlannerWaypointStrategy waypointStrategy) {
+    this(
+        gatedAttractors,
+        fieldGeometry.lengthMeters(),
+        fieldGeometry.widthMeters(),
+        waypointConfig,
+        waypointStrategy);
+  }
+
   /**
    * Returns the field planner goal manager value maintained by this Repulsor component.
    *
@@ -151,11 +165,22 @@ public final class FieldPlannerGoalManager {
       double fieldLengthMeters,
       double fieldWidthMeters,
       FieldPlannerWaypointConfig waypointConfig) {
+    this(gatedAttractors, fieldLengthMeters, fieldWidthMeters, waypointConfig, null);
+  }
+
+  public FieldPlannerGoalManager(
+      List<GatedAttractorObstacle> gatedAttractors,
+      double fieldLengthMeters,
+      double fieldWidthMeters,
+      FieldPlannerWaypointConfig waypointConfig,
+      FieldPlannerWaypointStrategy waypointStrategy) {
     this.gatedAttractors = gatedAttractors;
     this.fieldLengthMeters = fieldLengthMeters;
     this.fieldWidthMeters = fieldWidthMeters;
     this.waypointConfig =
         waypointConfig == null ? FieldPlannerWaypointConfig.defaults() : waypointConfig;
+    this.waypointStrategy =
+        waypointStrategy == null ? FieldPlannerWaypointStrategy.defaults() : waypointStrategy;
     Logger.recordOutput(
         "GoalManagerGatedAttractors",
         this.gatedAttractors.stream()
@@ -235,6 +260,25 @@ public final class FieldPlannerGoalManager {
    * @return value produced by this operation.
    */
   public boolean updateStagedGoal(Translation2d curPos, List<? extends Obstacle> obstacles) {
+    Translation2d reqT = requestedGoal.getTranslation();
+    if (stagedAttractor == null) {
+      var context =
+          new FieldPlannerWaypointContext(
+              curPos,
+              requestedGoal,
+              List.copyOf(gatedAttractors),
+              obstacles == null ? List.of() : obstacles,
+              fieldLengthMeters,
+              fieldWidthMeters,
+              waypointConfig,
+              stagedComplete,
+              lastStagedPoint);
+      var customPlan = waypointStrategy.plan(context);
+      if (customPlan.isPresent() && applyWaypointPlan(customPlan.get(), curPos)) {
+        return false;
+      }
+    }
+
     if (gatedAttractors.isEmpty()) {
       goal = requestedGoal;
       stagedAttractor = null;
@@ -254,7 +298,6 @@ public final class FieldPlannerGoalManager {
       return true;
     }
 
-    Translation2d reqT = requestedGoal.getTranslation();
     GatedAttractorObstacle firstBlock = firstOccludingGateAlongSegment(curPos, reqT);
 
     Logger.recordOutput(
@@ -495,6 +538,35 @@ public final class FieldPlannerGoalManager {
     }
 
     goal = requestedGoal;
+    return true;
+  }
+
+  private boolean applyWaypointPlan(FieldPlannerWaypointPlan plan, Translation2d curPos) {
+    if (plan == null || plan.entryPoint() == null) return false;
+    Translation2d pick = clampToField(plan.entryPoint());
+    if (pick == null) return false;
+
+    if (!plan.forceStage() && curPos != null && curPos.getDistance(pick) <= STAGED_REACH_EXIT_M) {
+      return false;
+    }
+
+    stagedGate = plan.gate();
+    stagedLatchedPull = null;
+    if (stagedGate != null && stagedGate.center != null) stagedLaneY = stagedGate.center.getY();
+    stagedCenterReturn = plan.centerReturn();
+    stagedExitPhase = false;
+    stagedExitPoint = plan.exitPoint() == null ? null : clampToField(plan.exitPoint());
+    stagedUsingBypass = plan.usingBypass();
+    stagedAttractor = pick;
+    lastStagedPoint = pick;
+    stagedReachTicks = 0;
+    stagedModeTicks = 0;
+    stagedGatePassed = stagedGate == null;
+    stagedGateClearTicks = 0;
+    stagedComplete = false;
+
+    setActiveGoal(new Pose2d(pick, requestedGoal.getRotation()));
+    Logger.recordOutput("CustomWaypointStage", new Pose2d(pick, requestedGoal.getRotation()));
     return true;
   }
 

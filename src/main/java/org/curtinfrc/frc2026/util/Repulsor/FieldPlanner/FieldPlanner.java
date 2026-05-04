@@ -41,6 +41,7 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerForc
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerGoalManager;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointConfig;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointStrategy;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.GatedAttractorObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldLayoutProvider;
@@ -240,6 +241,20 @@ public class FieldPlanner {
       DriveTuning driveTuning,
       ObstacleProvider obstacleProvider,
       FieldPlannerWaypointConfig waypointConfig) {
+    this(
+        turnTuning,
+        driveTuning,
+        obstacleProvider,
+        waypointConfig,
+        FieldPlannerWaypointStrategy.defaults());
+  }
+
+  public FieldPlanner(
+      TurnTuning turnTuning,
+      DriveTuning driveTuning,
+      ObstacleProvider obstacleProvider,
+      FieldPlannerWaypointConfig waypointConfig,
+      FieldPlannerWaypointStrategy waypointStrategy) {
     this.turnTuning = turnTuning;
     this.driveTuning = driveTuning;
     this.obstacleProvider =
@@ -267,7 +282,7 @@ public class FieldPlanner {
         new FieldPlannerForceModel(fieldObstacles, walls, fieldLengthMeters, fieldWidthMeters);
     this.goalManager =
         new FieldPlannerGoalManager(
-            gatedAttractors, fieldLengthMeters, fieldWidthMeters, waypointConfig);
+            gatedAttractors, fieldLengthMeters, fieldWidthMeters, waypointConfig, waypointStrategy);
 
     String prefix = System.getenv("REACTIVE_BYPASS_ID");
     String logName;
