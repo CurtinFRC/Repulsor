@@ -21,6 +21,7 @@ package org.curtinfrc.frc2026.util.Repulsor.Fields;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PredictiveRankingConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.MovingShotSolver;
 
 /**
@@ -51,6 +52,7 @@ public class FieldProfileConfig {
   public GeometryConfig geometry = new GeometryConfig();
   public Map<String, ResourceConfig> resources = new LinkedHashMap<>();
   public Map<String, ProjectileShotConfig> projectileShots = new LinkedHashMap<>();
+  public RankingConfig predictiveRanking = new RankingConfig();
 
   /** Compatibility input for older 2026-specific YAML. Prefer projectileShots. */
   @Deprecated(forRemoval = false)
@@ -113,9 +115,25 @@ public class FieldProfileConfig {
           });
     }
 
+    mergeRanking(base.predictiveRanking, overlay.predictiveRanking);
+
     mergeProjectileShot(base.shuttleShot, overlay.shuttleShot);
     mergeCorridor(base.rebuiltCorridor, overlay.rebuiltCorridor);
     return base;
+  }
+
+  private static void mergeRanking(RankingConfig base, RankingConfig overlay) {
+    if (base == null || overlay == null) return;
+    if (overlay.advantageGain != null) base.advantageGain = overlay.advantageGain;
+    if (overlay.distanceCost != null) base.distanceCost = overlay.distanceCost;
+    if (overlay.pressureCost != null) base.pressureCost = overlay.pressureCost;
+    if (overlay.congestionCost != null) base.congestionCost = overlay.congestionCost;
+    if (overlay.capacityGain != null) base.capacityGain = overlay.capacityGain;
+    if (overlay.headingGain != null) base.headingGain = overlay.headingGain;
+    if (overlay.hysteresisBonus != null) base.hysteresisBonus = overlay.hysteresisBonus;
+    if (overlay.hysteresisPersistSeconds != null) {
+      base.hysteresisPersistSeconds = overlay.hysteresisPersistSeconds;
+    }
   }
 
   private static void mergeProjectileShot(ProjectileShotConfig base, ProjectileShotConfig overlay) {
@@ -303,6 +321,30 @@ public class FieldProfileConfig {
      * should be treated as tunable when sourced from profiles.
      */
     public Double sigmaMeters;
+  }
+
+  public static class RankingConfig {
+    public Double advantageGain;
+    public Double distanceCost;
+    public Double pressureCost;
+    public Double congestionCost;
+    public Double capacityGain;
+    public Double headingGain;
+    public Double hysteresisBonus;
+    public Double hysteresisPersistSeconds;
+
+    public PredictiveRankingConfig toPredictiveRankingConfig() {
+      PredictiveRankingConfig defaults = PredictiveRankingConfig.defaults();
+      return new PredictiveRankingConfig(
+          finiteNonNegative(advantageGain, defaults.advantageGain()),
+          finiteNonNegative(distanceCost, defaults.distanceCost()),
+          finiteNonNegative(pressureCost, defaults.pressureCost()),
+          finiteNonNegative(congestionCost, defaults.congestionCost()),
+          finiteNonNegative(capacityGain, defaults.capacityGain()),
+          finiteNonNegative(headingGain, defaults.headingGain()),
+          finiteNonNegative(hysteresisBonus, defaults.hysteresisBonus()),
+          finiteNonNegative(hysteresisPersistSeconds, defaults.hysteresisPersistSeconds()));
+    }
   }
 
   /**

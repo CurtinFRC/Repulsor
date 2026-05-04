@@ -32,6 +32,8 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.Candidate;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.CollectProbe;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PointCandidate;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PredictiveRankingBreakdown;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PredictiveRankingConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceCollectionProfile;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceRecoveryProfile;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
@@ -326,6 +328,14 @@ public class PredictiveFieldStateRuntime {
   public List<Candidate> rank(
       Translation2d ourPos, double ourSpeedCap, CategorySpec cat, int limit) {
     return ops.rank(ourPos, ourSpeedCap, cat, limit);
+  }
+
+  public void configureRanking(PredictiveRankingConfig config) {
+    ops.configureRanking(config);
+  }
+
+  public List<PredictiveRankingBreakdown> lastRankingBreakdown() {
+    return ops.lastRankingBreakdown();
   }
 
   /**

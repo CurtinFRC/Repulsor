@@ -161,4 +161,47 @@ class FieldProfileYamlLoaderTest {
       }
     }
   }
+
+  @Test
+  void loadsPredictiveRankingTuningFromYaml() throws Exception {
+    Path profile = tempDir.resolve("ranking.yaml");
+    Files.writeString(
+        profile,
+        """
+        id: ranking
+        gameName: CUSTOM
+        gameYear: 2099
+        geometry:
+          lengthMeters: 12.5
+          widthMeters: 6.25
+        resources: {}
+        projectileShots: {}
+        predictiveRanking:
+          advantageGain: 2.0
+          distanceCost: 0.5
+          pressureCost: 0.25
+          congestionCost: 0.75
+          capacityGain: 1.25
+          headingGain: 0.1
+          hysteresisBonus: 0.4
+          hysteresisPersistSeconds: 1.5
+        """);
+
+    String previous = System.getProperty("repulsor.profile.path");
+    try {
+      System.setProperty("repulsor.profile.path", profile.toString());
+      FieldProfileConfig cfg =
+          FieldProfileYamlLoader.loadOrDefault("ranking", new FieldProfileConfig());
+
+      assertEquals(2.0, cfg.predictiveRanking.advantageGain, 1e-9);
+      assertEquals(0.5, cfg.predictiveRanking.distanceCost, 1e-9);
+      assertEquals(1.25, cfg.predictiveRanking.toPredictiveRankingConfig().capacityGain(), 1e-9);
+    } finally {
+      if (previous == null) {
+        System.clearProperty("repulsor.profile.path");
+      } else {
+        System.setProperty("repulsor.profile.path", previous);
+      }
+    }
+  }
 }

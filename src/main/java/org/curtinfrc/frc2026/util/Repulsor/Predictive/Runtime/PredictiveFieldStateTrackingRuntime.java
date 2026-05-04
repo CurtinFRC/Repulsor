@@ -31,6 +31,8 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal.IntentAgg;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Internal.Track;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.Candidate;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PredictiveRankingBreakdown;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PredictiveRankingConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveClock;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateOps;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.SpatialDyn;
@@ -213,6 +215,9 @@ public final class PredictiveFieldStateTrackingRuntime {
 
     double now = PredictiveClock.nowSeconds();
     List<Candidate> out = new ArrayList<>();
+    List<PredictiveRankingBreakdown> breakdowns = new ArrayList<>();
+    PredictiveRankingConfig ranking =
+        ops.rankingConfig == null ? PredictiveRankingConfig.defaults() : ops.rankingConfig;
     double cap = ourSpeedCap > 0 ? ourSpeedCap : PredictiveFieldStateOps.DEFAULT_OUR_SPEED;
 
     for (int i = 0; i < targets.size(); i++) {
@@ -228,7 +233,10 @@ public final class PredictiveFieldStateTrackingRuntime {
           ops.radialPressure(ops.enemyMap, t, ourEta, enemyAgg.intent[i], enemyAgg.count);
       double congestion =
           ops.radialCongestion(ops.allyMap, t, ourEta, allyAgg.intent[i], allyAgg.count);
-      double distBias = ourPos.getDistance(t) * PredictiveFieldStateOps.DIST_COST;
+      double advantageTerm = advantageTerm(enemyEta, ourEta, ranking.advantageGain());
+      double distTerm = penaltyTerm(ourPos.getDistance(t), ranking.distanceCost());
+      double pressureTerm = penaltyTerm(pressure, ranking.pressureCost());
+      double congestionTerm = penaltyTerm(congestion, ranking.congestionCost());
 
       double capacityFrac = 0.0;
       GameElement e = target.element();
@@ -240,25 +248,38 @@ public final class PredictiveFieldStateTrackingRuntime {
       }
 
       double heading = ops.headingAffinity(ourPos, t, ops.allyMap, ops.enemyMap);
+      double capacityTerm = gainTerm(capacityFrac, ranking.capacityGain());
+      double headingTerm = gainTerm(heading, ranking.headingGain());
 
+      double hysteresisTerm = 0.0;
       double score =
-          (enemyEta - ourEta) * PredictiveFieldStateOps.ADV_GAIN
-              - congestion * PredictiveFieldStateOps.CONGEST_COST
-              - pressure * PredictiveFieldStateOps.PRESSURE_GAIN
-              - distBias
-              + capacityFrac * PredictiveFieldStateOps.CAPACITY_GAIN
-              + heading * PredictiveFieldStateOps.HEADING_GAIN;
+          advantageTerm + congestionTerm + pressureTerm + distTerm + capacityTerm + headingTerm;
 
       if (ops.lastChosen != null
           && sp.equals(ops.lastChosen)
-          && now - ops.lastChosenTs < PredictiveFieldStateOps.HYST_PERSIST_S) {
-        score += PredictiveFieldStateOps.HYST_BONUS;
+          && now - ops.lastChosenTs < ranking.hysteresisPersistSeconds()) {
+        hysteresisTerm = ranking.hysteresisBonus();
+        score += hysteresisTerm;
       }
 
       out.add(new Candidate(sp, t, ourEta, enemyEta, allyEta, congestion, pressure, score));
+      breakdowns.add(
+          new PredictiveRankingBreakdown(
+              sp.levelId(),
+              t,
+              score,
+              advantageTerm,
+              distTerm,
+              pressureTerm,
+              congestionTerm,
+              capacityTerm,
+              headingTerm,
+              hysteresisTerm));
     }
 
     out.sort(Comparator.comparingDouble((Candidate c) -> -c.score));
+    breakdowns.sort(Comparator.comparingDouble((PredictiveRankingBreakdown b) -> -b.totalScore()));
+    ops.lastRankingBreakdown = List.copyOf(breakdowns);
     if (!out.isEmpty()) {
       ops.lastChosen = out.get(0).setpoint;
       ops.lastChosenTs = now;
@@ -310,6 +331,20 @@ public final class PredictiveFieldStateTrackingRuntime {
     if (category == null) return "objective";
     String raw = category.name().trim().toLowerCase();
     return raw.startsWith("k") && raw.length() > 1 ? raw.substring(1) : raw;
+  }
+
+  private static double advantageTerm(double enemyEta, double ourEta, double weight) {
+    if (weight <= 0.0 || !Double.isFinite(enemyEta) || !Double.isFinite(ourEta)) return 0.0;
+    return (enemyEta - ourEta) * weight;
+  }
+
+  private static double penaltyTerm(double value, double weight) {
+    return -gainTerm(value, weight);
+  }
+
+  private static double gainTerm(double value, double weight) {
+    if (weight <= 0.0 || !Double.isFinite(value)) return 0.0;
+    return value * weight;
   }
 
   private record RankTarget(GameElement element, Translation2d point, RepulsorSetpoint setpoint) {}

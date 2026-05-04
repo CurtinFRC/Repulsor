@@ -44,6 +44,8 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.Candidate;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.CollectProbe;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PointCandidate;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PredictiveRankingBreakdown;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PredictiveRankingConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceCollectionProfile;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Runtime.*;
@@ -845,6 +847,17 @@ public final class PredictiveFieldStateOps {
   public final HashMap<Integer, Track> enemyMap = trackStore.enemies();
 
   public volatile List<GameElement> worldElements = List.of();
+
+  public volatile PredictiveRankingConfig rankingConfig = PredictiveRankingConfig.defaults();
+  public volatile List<PredictiveRankingBreakdown> lastRankingBreakdown = List.of();
+
+  public void configureRanking(PredictiveRankingConfig config) {
+    rankingConfig = config == null ? PredictiveRankingConfig.defaults() : config;
+  }
+
+  public List<PredictiveRankingBreakdown> lastRankingBreakdown() {
+    return lastRankingBreakdown;
+  }
 
   /**
    * Configuration value for our alliance. The valid range and tuning source are defined by the

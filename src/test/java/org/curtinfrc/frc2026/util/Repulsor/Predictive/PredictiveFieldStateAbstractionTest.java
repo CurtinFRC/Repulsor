@@ -16,6 +16,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Offload.ShuttleRecoveryDynamicObjectD
 import org.curtinfrc.frc2026.util.Repulsor.Offload.ShuttleRecoveryPointDTO;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.Candidate;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PredictiveRankingConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceCollectionProfile;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceRecoveryProfile;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
@@ -24,6 +25,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElementModel;
+import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameObject;
 import org.junit.jupiter.api.Test;
 
 class PredictiveFieldStateAbstractionTest {
@@ -156,6 +158,59 @@ class PredictiveFieldStateAbstractionTest {
     assertTrue(
         ranked.stream().anyMatch(candidate -> "net".equals(candidate.setpoint.levelId())),
         "Rebuilt2026 score candidates should preserve profile-provided net mechanism setpoints");
+  }
+
+  @Test
+  void rankingConfigCanRetuneScoreTermsAndExposesDiagnostics() {
+    PredictiveFieldStateRuntime predictor = new PredictiveFieldStateRuntime();
+    GameElement nearLowCapacity =
+        new GameElement(
+            Alliance.kBlue,
+            10,
+            new GameElementModel(new Pose3d(1.0, 1.0, 0.0, null)),
+            gameObject -> true,
+            null,
+            CategorySpec.kScore);
+    GameElement farHighCapacity =
+        new GameElement(
+            Alliance.kBlue,
+            10,
+            new GameElementModel(new Pose3d(4.0, 1.0, 0.0, null)),
+            gameObject -> true,
+            null,
+            CategorySpec.kScore);
+    nearLowCapacity.setContained(
+        new GameObject[] {
+          new GameObject("a", "piece"),
+          new GameObject("b", "piece"),
+          new GameObject("c", "piece"),
+          new GameObject("d", "piece"),
+          new GameObject("e", "piece"),
+          new GameObject("f", "piece"),
+          new GameObject("g", "piece"),
+          new GameObject("h", "piece"),
+          new GameObject("i", "piece")
+        });
+
+    predictor.setWorld(List.of(nearLowCapacity, farHighCapacity), Alliance.kBlue);
+
+    predictor.configureRanking(
+        new PredictiveRankingConfig(0.0, 0.05, 0.0, 0.0, 3.0, 0.0, 0.0, 0.0));
+    List<Candidate> capacityBiased =
+        predictor.rank(new Translation2d(0.0, 1.0), 3.0, CategorySpec.kScore, 2);
+    assertEquals(4.0, capacityBiased.get(0).targetXY.getX(), EPS);
+    assertTrue(Double.isFinite(capacityBiased.get(0).score));
+    assertTrue(predictor.lastRankingBreakdown().get(0).capacityTerm() > 0.0);
+
+    predictor.configureRanking(new PredictiveRankingConfig(0.0, 1.0, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0));
+    List<Candidate> distanceBiased =
+        predictor.rank(new Translation2d(0.0, 1.0), 3.0, CategorySpec.kScore, 2);
+
+    assertEquals(1.0, distanceBiased.get(0).targetXY.getX(), EPS);
+    assertEquals(2, predictor.lastRankingBreakdown().size());
+    assertEquals(1.0, predictor.lastRankingBreakdown().get(0).target().getX(), EPS);
+    assertTrue(Double.isFinite(predictor.lastRankingBreakdown().get(0).totalScore()));
+    assertTrue(predictor.lastRankingBreakdown().get(0).distanceTerm() < 0.0);
   }
 
   private static ShuttleRecoveryDynamicObjectDTO resourceObject(

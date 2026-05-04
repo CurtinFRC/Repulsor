@@ -96,11 +96,28 @@ public final class FieldProfileValidator {
       }
     }
 
+    validateRanking(cfg.predictiveRanking, errors);
+
     if (cfg.shuttleShot != null && Boolean.TRUE.equals(cfg.shuttleShot.enabled)) {
       validateProjectileShot("legacyShuttleShot", cfg.shuttleShot, errors);
     }
 
     return errors;
+  }
+
+  private static void validateRanking(
+      FieldProfileConfig.RankingConfig ranking, List<String> errors) {
+    if (ranking == null) return;
+    String prefix = "predictiveRanking";
+    requireOptionalNonNegative(ranking.advantageGain, prefix + ".advantageGain", errors);
+    requireOptionalNonNegative(ranking.distanceCost, prefix + ".distanceCost", errors);
+    requireOptionalNonNegative(ranking.pressureCost, prefix + ".pressureCost", errors);
+    requireOptionalNonNegative(ranking.congestionCost, prefix + ".congestionCost", errors);
+    requireOptionalNonNegative(ranking.capacityGain, prefix + ".capacityGain", errors);
+    requireOptionalNonNegative(ranking.headingGain, prefix + ".headingGain", errors);
+    requireOptionalNonNegative(ranking.hysteresisBonus, prefix + ".hysteresisBonus", errors);
+    requireOptionalNonNegative(
+        ranking.hysteresisPersistSeconds, prefix + ".hysteresisPersistSeconds", errors);
   }
 
   /**
