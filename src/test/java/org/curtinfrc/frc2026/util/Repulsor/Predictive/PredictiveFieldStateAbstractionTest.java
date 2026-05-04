@@ -5,17 +5,25 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.List;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.Rebuilt2026;
 import org.curtinfrc.frc2026.util.Repulsor.Offload.ShuttleRecoveryDynamicObjectDTO;
 import org.curtinfrc.frc2026.util.Repulsor.Offload.ShuttleRecoveryPointDTO;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.Candidate;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceCollectionProfile;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceRecoveryProfile;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
 import org.curtinfrc.frc2026.util.Repulsor.Strategy.ResourceRegionSummary;
+import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
+import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
+import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
+import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElementModel;
 import org.junit.jupiter.api.Test;
 
 class PredictiveFieldStateAbstractionTest {
@@ -80,6 +88,45 @@ class PredictiveFieldStateAbstractionTest {
     assertTrue(point.isFound());
     assertTrue(point.getX() <= geometry.lengthMeters() * profile.allianceZoneXMaxFraction());
     assertEquals(1.0, point.getX(), 0.55);
+  }
+
+  @Test
+  void rankSynthesizesFallbackSetpointForGenericFieldObjective() {
+    PredictiveFieldStateRuntime predictor = new PredictiveFieldStateRuntime();
+    GameElement generic =
+        new GameElement(
+            Alliance.kBlue,
+            3,
+            new GameElementModel(new Pose3d(3.0, 2.0, 0.0, null)),
+            gameObject -> true,
+            null,
+            CategorySpec.kScore);
+
+    predictor.setWorld(List.of(generic), Alliance.kBlue);
+
+    List<Candidate> ranked =
+        predictor.rank(new Translation2d(1.0, 2.0), 3.0, CategorySpec.kScore, 4);
+
+    assertEquals(1, ranked.size());
+    assertEquals(3.0, ranked.get(0).targetXY.getX(), EPS);
+    assertEquals(2.0, ranked.get(0).targetXY.getY(), EPS);
+    assertEquals("score", ranked.get(0).setpoint.levelId());
+    assertEquals(3.0, ranked.get(0).setpoint.getBlue(null).getX(), EPS);
+    assertEquals(2.0, ranked.get(0).setpoint.getBlue(null).getY(), EPS);
+  }
+
+  @Test
+  void rankStillUsesRebuilt2026ProfileRelatedSetpoints() {
+    FieldTrackerCore tracker = new FieldTrackerCore(new Rebuilt2026());
+
+    List<Candidate> ranked =
+        tracker.getPredictedCandidates(
+            Alliance.kBlue, new Translation2d(1.0, 2.0), 3.0, CategorySpec.kScore, 0);
+
+    assertFalse(ranked.isEmpty());
+    assertTrue(
+        ranked.stream().anyMatch(candidate -> "net".equals(candidate.setpoint.levelId())),
+        "Rebuilt2026 score candidates should preserve profile-provided net mechanism setpoints");
   }
 
   private static ShuttleRecoveryDynamicObjectDTO resourceObject(

@@ -18,6 +18,8 @@
  */
 package org.curtinfrc.frc2026.util.Repulsor.Predictive.Runtime;
 
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -32,7 +34,11 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveClock;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateOps;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.SpatialDyn;
+import org.curtinfrc.frc2026.util.Repulsor.Setpoints.GameSetpoint;
+import org.curtinfrc.frc2026.util.Repulsor.Setpoints.HeightSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
+import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointContext;
+import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointType;
 import org.curtinfrc.frc2026.util.Repulsor.Strategy.ResourceRegionSummary;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
 
@@ -188,36 +194,31 @@ public final class PredictiveFieldStateTrackingRuntime {
       CategorySpec cat,
       int limit) {
     Objects.requireNonNull(ourPos);
-    List<GameElement> elems = new ArrayList<>();
+    List<RankTarget> targets = new ArrayList<>();
     for (GameElement e : ops.worldElements) {
-      if (e.getAlliance() == ops.ourAlliance
-          && e.getCategory() == cat
-          && e.getRelatedPoint().isPresent()
-          && !e.isAtCapacity()) {
-        elems.add(e);
+      RankTarget target = rankTargetFor(e, ops.ourAlliance, cat);
+      if (target != null) {
+        targets.add(target);
       }
     }
-    if (elems.isEmpty()) return List.of();
+    if (targets.isEmpty()) return List.of();
 
-    List<Translation2d> targets = new ArrayList<>();
-    List<RepulsorSetpoint> sps = new ArrayList<>();
-    for (GameElement e : elems) {
-      Translation2d p =
-          new Translation2d(e.getModel().getPosition().getX(), e.getModel().getPosition().getY());
-      targets.add(p);
-      sps.add(e.getRelatedPoint().get());
+    List<Translation2d> targetPoints = new ArrayList<>();
+    for (RankTarget target : targets) {
+      targetPoints.add(target.point());
     }
 
-    IntentAgg allyAgg = ops.softIntentAgg(ops.allyMap, targets);
-    IntentAgg enemyAgg = ops.softIntentAgg(ops.enemyMap, targets);
+    IntentAgg allyAgg = ops.softIntentAgg(ops.allyMap, targetPoints);
+    IntentAgg enemyAgg = ops.softIntentAgg(ops.enemyMap, targetPoints);
 
     double now = PredictiveClock.nowSeconds();
     List<Candidate> out = new ArrayList<>();
     double cap = ourSpeedCap > 0 ? ourSpeedCap : PredictiveFieldStateOps.DEFAULT_OUR_SPEED;
 
     for (int i = 0; i < targets.size(); i++) {
-      Translation2d t = targets.get(i);
-      RepulsorSetpoint sp = sps.get(i);
+      RankTarget target = targets.get(i);
+      Translation2d t = target.point();
+      RepulsorSetpoint sp = target.setpoint();
 
       double ourEta = ops.estimateTravelTime(ourPos, t, cap);
       double enemyEta = PredictiveFieldStateOps.minEtaToTarget(ops.enemyMap, t);
@@ -230,7 +231,7 @@ public final class PredictiveFieldStateTrackingRuntime {
       double distBias = ourPos.getDistance(t) * PredictiveFieldStateOps.DIST_COST;
 
       double capacityFrac = 0.0;
-      GameElement e = elems.get(i);
+      GameElement e = target.element();
       if (e.getMaxContained() > 0) {
         capacityFrac =
             1.0
@@ -265,6 +266,46 @@ public final class PredictiveFieldStateTrackingRuntime {
     if (limit > 0 && out.size() > limit) return new ArrayList<>(out.subList(0, limit));
     return out;
   }
+
+  private static RankTarget rankTargetFor(
+      GameElement e,
+      org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance alliance,
+      CategorySpec cat) {
+    if (e == null || e.isAtCapacity()) return null;
+    if (e.getAlliance() != alliance) return null;
+    if (cat != null && e.getCategory() != cat) return null;
+    if (e.getModel() == null || e.getModel().getPosition() == null) return null;
+
+    var position = e.getModel().getPosition();
+    var rotation = position.getRotation();
+    double headingRadians = rotation == null ? 0.0 : rotation.getZ();
+    Pose2d pose =
+        new Pose2d(position.getX(), position.getY(), Rotation2d.fromRadians(headingRadians));
+    Translation2d point = pose.getTranslation();
+    RepulsorSetpoint setpoint = e.getRelatedPoint().orElseGet(() -> fallbackSetpoint(e, pose));
+    return new RankTarget(e, point, setpoint);
+  }
+
+  private static RepulsorSetpoint fallbackSetpoint(GameElement e, Pose2d pose) {
+    String category = categoryLevelId(e.getCategory());
+    String name = String.format("field-%s-%.2f-%.2f", category, pose.getX(), pose.getY());
+    GameSetpoint point =
+        new GameSetpoint(name, SetpointType.kOther, false) {
+          @Override
+          public Pose2d bluePose(SetpointContext ctx) {
+            return pose;
+          }
+        };
+    return new RepulsorSetpoint(point, category, HeightSetpoint.NONE);
+  }
+
+  private static String categoryLevelId(CategorySpec category) {
+    if (category == null) return "objective";
+    String raw = category.name().trim().toLowerCase();
+    return raw.startsWith("k") && raw.length() > 1 ? raw.substring(1) : raw;
+  }
+
+  private record RankTarget(GameElement element, Translation2d point, RepulsorSetpoint setpoint) {}
 
   /**
    * Runs sort idx by key in the Repulsor runtime.
