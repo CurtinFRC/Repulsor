@@ -77,6 +77,8 @@ public final class FieldPlannerGoalManager {
   private static final FieldGeometry COMPATIBILITY_FIELD_GEOMETRY =
       new FieldGeometry(16.540988, 8.211236);
 
+  private final FieldPlannerWaypointConfig waypointConfig;
+
   private Pose2d goal = Pose2d.kZero;
   private Pose2d requestedGoal = Pose2d.kZero;
   private Translation2d stagedAttractor = null;
@@ -115,7 +117,15 @@ public final class FieldPlannerGoalManager {
    */
   public FieldPlannerGoalManager(
       List<GatedAttractorObstacle> gatedAttractors, FieldGeometry fieldGeometry) {
-    this(gatedAttractors, fieldGeometry.lengthMeters(), fieldGeometry.widthMeters());
+    this(gatedAttractors, fieldGeometry, FieldPlannerWaypointConfig.defaults());
+  }
+
+  public FieldPlannerGoalManager(
+      List<GatedAttractorObstacle> gatedAttractors,
+      FieldGeometry fieldGeometry,
+      FieldPlannerWaypointConfig waypointConfig) {
+    this(
+        gatedAttractors, fieldGeometry.lengthMeters(), fieldGeometry.widthMeters(), waypointConfig);
   }
 
   /**
@@ -129,9 +139,23 @@ public final class FieldPlannerGoalManager {
       List<GatedAttractorObstacle> gatedAttractors,
       double fieldLengthMeters,
       double fieldWidthMeters) {
+    this(
+        gatedAttractors,
+        fieldLengthMeters,
+        fieldWidthMeters,
+        FieldPlannerWaypointConfig.defaults());
+  }
+
+  public FieldPlannerGoalManager(
+      List<GatedAttractorObstacle> gatedAttractors,
+      double fieldLengthMeters,
+      double fieldWidthMeters,
+      FieldPlannerWaypointConfig waypointConfig) {
     this.gatedAttractors = gatedAttractors;
     this.fieldLengthMeters = fieldLengthMeters;
     this.fieldWidthMeters = fieldWidthMeters;
+    this.waypointConfig =
+        waypointConfig == null ? FieldPlannerWaypointConfig.defaults() : waypointConfig;
     Logger.recordOutput(
         "GoalManagerGatedAttractors",
         this.gatedAttractors.stream()
@@ -238,13 +262,17 @@ public final class FieldPlannerGoalManager {
         firstBlock != null ? new Pose2d(firstBlock.center, new Rotation2d()) : null);
 
     boolean stageForOccludingGate =
-        firstBlock != null && !shouldDeferCenterReturnStage(curPos, reqT, firstBlock);
+        waypointConfig.occludingGateStagingEnabled()
+            && firstBlock != null
+            && !shouldDeferCenterReturnStage(curPos, reqT, firstBlock);
     boolean stageByBand = shouldStageThroughAttractor(curPos, reqT);
     boolean shouldStage = stageByBand || stageForOccludingGate;
     boolean allowImmediateCenterExitRestage = stageByBand && isCenterReturnTransition(curPos, reqT);
     if (stagedComplete && lastStagedPoint != null) {
       double d = curPos.getDistance(lastStagedPoint);
-      if (d < STAGED_RESTAGE_DIST_M && !stageForOccludingGate && !allowImmediateCenterExitRestage) {
+      if (d < waypointConfig.restageDistanceMeters()
+          && !stageForOccludingGate
+          && !allowImmediateCenterExitRestage) {
         shouldStage = false;
       } else {
         stagedComplete = false;
@@ -273,7 +301,9 @@ public final class FieldPlannerGoalManager {
         stagedUsingBypass =
             (stagedGate.gatePoly != null && stagedGate.bypassPoint != null)
                 && FieldPlannerGeometry.segmentIntersectsPolygonOuter(
-                    curPos, reqT, expandPoly(stagedGate.gatePoly, STAGED_GATE_PAD_M));
+                    curPos,
+                    reqT,
+                    expandPoly(stagedGate.gatePoly, waypointConfig.gatePaddingMeters()));
 
         Translation2d pick = stagingEntryPoint(stagedGate, curPos, reqT);
         if (pick == null) pick = stagingPullPoint(stagedGate, curPos, reqT);
@@ -341,7 +371,9 @@ public final class FieldPlannerGoalManager {
         boolean gateOccludingNow =
             stagedGate.gatePoly != null
                 && FieldPlannerGeometry.segmentIntersectsPolygonOuter(
-                    curPos, reqT, expandPoly(stagedGate.gatePoly, STAGED_GATE_PAD_M));
+                    curPos,
+                    reqT,
+                    expandPoly(stagedGate.gatePoly, waypointConfig.gatePaddingMeters()));
         stagedGatePassed =
             stagedGatePassed
                 || gateIsBehind(curPos, reqT, stagedGate)
@@ -374,7 +406,9 @@ public final class FieldPlannerGoalManager {
           stagedUsingBypass =
               (stagedGate.gatePoly != null && stagedGate.bypassPoint != null)
                   && FieldPlannerGeometry.segmentIntersectsPolygonOuter(
-                      curPos, reqT, expandPoly(stagedGate.gatePoly, STAGED_GATE_PAD_M));
+                      curPos,
+                      reqT,
+                      expandPoly(stagedGate.gatePoly, waypointConfig.gatePaddingMeters()));
 
           Translation2d repick = stagingEntryPoint(stagedGate, curPos, reqT);
           if (repick == null) repick = stagingPullPoint(stagedGate, curPos, reqT);
@@ -579,7 +613,7 @@ public final class FieldPlannerGoalManager {
       if (gate == null || gate.gatePoly == null) continue;
       if (gateIsBehind(pos, target, gate)) continue;
 
-      Translation2d[] poly = expandPoly(gate.gatePoly, STAGED_GATE_PAD_M);
+      Translation2d[] poly = expandPoly(gate.gatePoly, waypointConfig.gatePaddingMeters());
 
       if (!FieldPlannerGeometry.segmentIntersectsPolygonOuter(pos, target, poly)) continue;
       double t = firstIntersectionT(pos, target, poly);
@@ -617,14 +651,15 @@ public final class FieldPlannerGoalManager {
   }
 
   private boolean shouldStageThroughAttractor(Translation2d pos, Translation2d target) {
-    int goalSide = sideSignXBand(target.getX(), STAGED_CENTER_BAND_M);
-    int robotSide = sideSignXBand(pos.getX(), STAGED_CENTER_BAND_M);
+    if (!waypointConfig.bandTransitionStagingEnabled()) return false;
+    int goalSide = sideSignXBand(target.getX(), waypointConfig.centerBandMeters());
+    int robotSide = sideSignXBand(pos.getX(), waypointConfig.centerBandMeters());
     if (goalSide == 0 && robotSide != 0) return true;
     // When exiting deep center toward an alliance side, avoid forced staging.
     // This reduces stop/slow behavior in open corridor return paths.
     if (goalSide != 0 && robotSide == 0) {
       double mid = fieldLengthMeters * 0.5;
-      boolean deepCenter = Math.abs(pos.getX() - mid) <= STAGED_DEEP_CENTER_BAND_M;
+      boolean deepCenter = Math.abs(pos.getX() - mid) <= waypointConfig.deepCenterBandMeters();
       return !deepCenter;
     }
     return goalSide != 0 && robotSide != 0 && goalSide != robotSide;
@@ -634,35 +669,37 @@ public final class FieldPlannerGoalManager {
       Translation2d pos, Translation2d target, GatedAttractorObstacle gate) {
     if (pos == null || target == null || gate == null || gate.center == null) return false;
 
-    int goalSide = sideSignXBand(target.getX(), STAGED_CENTER_BAND_M);
-    int robotSide = sideSignXBand(pos.getX(), STAGED_CENTER_BAND_M);
+    if (!waypointConfig.centerReturnStagingEnabled()) return false;
+    int goalSide = sideSignXBand(target.getX(), waypointConfig.centerBandMeters());
+    int robotSide = sideSignXBand(pos.getX(), waypointConfig.centerBandMeters());
     if (!(goalSide != 0 && robotSide == 0)) return false;
 
     double mid = fieldLengthMeters * 0.5;
-    boolean deepCenter = Math.abs(pos.getX() - mid) <= STAGED_DEEP_CENTER_BAND_M;
+    boolean deepCenter = Math.abs(pos.getX() - mid) <= waypointConfig.deepCenterBandMeters();
     if (!deepCenter) return false;
 
-    Translation2d[] poly = expandPoly(gate.gatePoly, STAGED_GATE_PAD_M);
+    Translation2d[] poly = expandPoly(gate.gatePoly, waypointConfig.gatePaddingMeters());
     double t = firstIntersectionT(pos, target, poly);
     if (Double.isFinite(t) && t >= 0.0 && t <= 1.0) {
       double segDist = pos.getDistance(target);
       double hitDist = segDist * t;
-      return hitDist > STAGED_CENTER_RETURN_INTERSECTION_TRIGGER_M;
+      return hitDist > waypointConfig.centerReturnIntersectionTriggerMeters();
     }
 
-    return pos.getDistance(gate.center) > STAGED_CENTER_RETURN_STAGE_TRIGGER_M;
+    return pos.getDistance(gate.center) > waypointConfig.centerReturnStageTriggerMeters();
   }
 
   private boolean isCenterReturnTransition(Translation2d pos, Translation2d target) {
-    int goalSide = sideSignXBand(target.getX(), STAGED_CENTER_BAND_M);
-    int robotSide = sideSignXBand(pos.getX(), STAGED_CENTER_BAND_M);
+    if (!waypointConfig.centerReturnStagingEnabled()) return false;
+    int goalSide = sideSignXBand(target.getX(), waypointConfig.centerBandMeters());
+    int robotSide = sideSignXBand(pos.getX(), waypointConfig.centerBandMeters());
     return goalSide != 0 && robotSide == 0;
   }
 
   private boolean isCorridorSideGate(GatedAttractorObstacle gate) {
     if (gate == null || gate.center == null) return false;
     double mid = fieldLengthMeters * 0.5;
-    return Math.abs(gate.center.getX() - mid) >= STAGED_CENTER_RETURN_GATE_MIN_OFFSET_M;
+    return Math.abs(gate.center.getX() - mid) >= waypointConfig.centerReturnGateMinOffsetMeters();
   }
 
   private Translation2d computeCenterReturnExitPoint(
@@ -678,17 +715,21 @@ public final class FieldPlannerGoalManager {
 
     double advance =
         MathUtil.clamp(
-            Math.abs(dx) * 0.45, STAGED_CENTER_RETURN_EXIT_MIN_M, STAGED_CENTER_RETURN_EXIT_MAX_M);
+            Math.abs(dx) * 0.45,
+            waypointConfig.centerReturnExitMinMeters(),
+            waypointConfig.centerReturnExitMaxMeters());
 
     double x =
         MathUtil.clamp(
             gate.center.getX() + sign * advance,
-            STAGED_FIELD_EDGE_MARGIN_M,
-            fieldLengthMeters - STAGED_FIELD_EDGE_MARGIN_M);
+            waypointConfig.fieldEdgeMarginMeters(),
+            fieldLengthMeters - waypointConfig.fieldEdgeMarginMeters());
     double yBase = stagedLaneY != null ? stagedLaneY.doubleValue() : gate.center.getY();
     double y =
         MathUtil.clamp(
-            yBase, STAGED_FIELD_EDGE_MARGIN_M, fieldWidthMeters - STAGED_FIELD_EDGE_MARGIN_M);
+            yBase,
+            waypointConfig.fieldEdgeMarginMeters(),
+            fieldWidthMeters - waypointConfig.fieldEdgeMarginMeters());
 
     return new Translation2d(x, y);
   }
@@ -708,9 +749,13 @@ public final class FieldPlannerGoalManager {
     if (p == null) return null;
     return new Translation2d(
         MathUtil.clamp(
-            p.getX(), STAGED_FIELD_EDGE_MARGIN_M, fieldLengthMeters - STAGED_FIELD_EDGE_MARGIN_M),
+            p.getX(),
+            waypointConfig.fieldEdgeMarginMeters(),
+            fieldLengthMeters - waypointConfig.fieldEdgeMarginMeters()),
         MathUtil.clamp(
-            p.getY(), STAGED_FIELD_EDGE_MARGIN_M, fieldWidthMeters - STAGED_FIELD_EDGE_MARGIN_M));
+            p.getY(),
+            waypointConfig.fieldEdgeMarginMeters(),
+            fieldWidthMeters - waypointConfig.fieldEdgeMarginMeters()));
   }
 
   private static Translation2d gateSidePoint(GatedAttractorObstacle gate, boolean rightSide) {
@@ -766,7 +811,7 @@ public final class FieldPlannerGoalManager {
 
     if (gate == stagedGate && stagedLatchedPull != null) return stagedLatchedPull;
 
-    Translation2d[] poly = expandPoly(gate.gatePoly, STAGED_GATE_PAD_M);
+    Translation2d[] poly = expandPoly(gate.gatePoly, waypointConfig.gatePaddingMeters());
     boolean hit = FieldPlannerGeometry.segmentIntersectsPolygonOuter(pos, target, poly);
 
     Translation2d inside = gate.bypassPoint;
@@ -812,20 +857,20 @@ public final class FieldPlannerGoalManager {
 
     double lead =
         MathUtil.clamp(
-            Math.abs(dx) * STAGED_LEAD_THROUGH_SCALE,
-            STAGED_LEAD_THROUGH_MIN_M,
-            STAGED_LEAD_THROUGH_MAX_M);
+            Math.abs(dx) * waypointConfig.leadThroughScale(),
+            waypointConfig.leadThroughMinMeters(),
+            waypointConfig.leadThroughMaxMeters());
 
     double x =
         MathUtil.clamp(
             pullPoint.getX() + sign * lead,
-            STAGED_FIELD_EDGE_MARGIN_M,
-            fieldLengthMeters - STAGED_FIELD_EDGE_MARGIN_M);
+            waypointConfig.fieldEdgeMarginMeters(),
+            fieldLengthMeters - waypointConfig.fieldEdgeMarginMeters());
     double y =
         MathUtil.clamp(
             pullPoint.getY(),
-            STAGED_FIELD_EDGE_MARGIN_M,
-            fieldWidthMeters - STAGED_FIELD_EDGE_MARGIN_M);
+            waypointConfig.fieldEdgeMarginMeters(),
+            fieldWidthMeters - waypointConfig.fieldEdgeMarginMeters());
     return new Translation2d(x, y);
   }
 

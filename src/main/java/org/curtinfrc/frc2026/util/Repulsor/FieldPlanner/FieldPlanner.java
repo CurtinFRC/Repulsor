@@ -40,6 +40,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Fallback.PlannerFallback;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerForceModel;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerGoalManager;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.GatedAttractorObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldLayoutProvider;
@@ -231,6 +232,14 @@ public class FieldPlanner {
    */
   public FieldPlanner(
       TurnTuning turnTuning, DriveTuning driveTuning, ObstacleProvider obstacleProvider) {
+    this(turnTuning, driveTuning, obstacleProvider, FieldPlannerWaypointConfig.defaults());
+  }
+
+  public FieldPlanner(
+      TurnTuning turnTuning,
+      DriveTuning driveTuning,
+      ObstacleProvider obstacleProvider,
+      FieldPlannerWaypointConfig waypointConfig) {
     this.turnTuning = turnTuning;
     this.driveTuning = driveTuning;
     this.obstacleProvider =
@@ -249,9 +258,6 @@ public class FieldPlanner {
     for (Obstacle obs : this.fieldObstacles) {
       if (obs instanceof GatedAttractorObstacle gated) {
         if (gated.waypoint) {
-          if (gated.center.getY() > fieldWidthMeters / 2.0) { // TODO REMOVE FOR REAL MATCH
-            continue;
-          }
           gatedAttractors.add(gated);
         }
       }
@@ -260,7 +266,8 @@ public class FieldPlanner {
     this.forceModel =
         new FieldPlannerForceModel(fieldObstacles, walls, fieldLengthMeters, fieldWidthMeters);
     this.goalManager =
-        new FieldPlannerGoalManager(gatedAttractors, fieldLengthMeters, fieldWidthMeters);
+        new FieldPlannerGoalManager(
+            gatedAttractors, fieldLengthMeters, fieldWidthMeters, waypointConfig);
 
     String prefix = System.getenv("REACTIVE_BYPASS_ID");
     String logName;

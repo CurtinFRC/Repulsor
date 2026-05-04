@@ -323,6 +323,45 @@ class FieldPlannerGoalManagerTest {
     assertEquals(requested.getY(), manager.getGoalTranslation().getY(), EPS);
   }
 
+  @Test
+  void configurablePolicyCanDisableOccludingGateWaypointing() {
+    GatedAttractorObstacle gate = gate(new Translation2d(8.0, 4.0), new Translation2d(8.2, 4.0));
+    FieldPlannerWaypointConfig config =
+        FieldPlannerWaypointConfig.defaults()
+            .withBandTransitionStagingEnabled(false)
+            .withOccludingGateStagingEnabled(false);
+    FieldPlannerGoalManager manager =
+        new FieldPlannerGoalManager(
+            List.of(gate), Constants.FIELD_LENGTH, Constants.FIELD_WIDTH, config);
+
+    Pose2d requested = new Pose2d(new Translation2d(12.0, 4.0), Rotation2d.kZero);
+    manager.setRequestedGoal(requested);
+
+    assertTrue(manager.updateStagedGoal(new Translation2d(6.0, 4.0), List.of(gate)));
+    assertEquals(requested.getX(), manager.getGoalTranslation().getX(), EPS);
+    assertEquals(requested.getY(), manager.getGoalTranslation().getY(), EPS);
+  }
+
+  @Test
+  void configurablePolicyControlsExitWaypointLeadThroughDistance() {
+    GatedAttractorObstacle gate = gate(new Translation2d(8.0, 4.0), new Translation2d(8.2, 4.0));
+    FieldPlannerGoalManager manager =
+        new FieldPlannerGoalManager(
+            List.of(gate),
+            Constants.FIELD_LENGTH,
+            Constants.FIELD_WIDTH,
+            FieldPlannerWaypointConfig.defaults().withLeadThroughMeters(1.60, 1.60));
+
+    manager.setRequestedGoal(new Pose2d(new Translation2d(12.0, 4.0), Rotation2d.kZero));
+    assertFalse(manager.updateStagedGoal(new Translation2d(6.0, 4.0), List.of(gate)));
+    Translation2d entry = manager.getGoalTranslation();
+
+    assertFalse(manager.updateStagedGoal(entry, List.of(gate)));
+
+    assertEquals(9.8, manager.getGoalTranslation().getX(), EPS);
+    assertEquals(4.0, manager.getGoalTranslation().getY(), EPS);
+  }
+
   private static GatedAttractorObstacle gate(Translation2d center, Translation2d bypassPoint) {
     Translation2d[] gatePoly =
         new Translation2d[] {
