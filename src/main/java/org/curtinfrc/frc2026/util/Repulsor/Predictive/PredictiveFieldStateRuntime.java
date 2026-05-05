@@ -37,6 +37,9 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PredictiveRankingCon
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceCollectionProfile;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceRecoveryProfile;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Objective.ObjectiveSelectionConfig;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Objective.ObjectiveSelectionDecision;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Objective.ObjectiveSelector;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Strategy.ResourceRegionSummary;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
@@ -328,6 +331,18 @@ public class PredictiveFieldStateRuntime {
   public List<Candidate> rank(
       Translation2d ourPos, double ourSpeedCap, CategorySpec cat, int limit) {
     return ops.rank(ourPos, ourSpeedCap, cat, limit);
+  }
+
+  public ObjectiveSelectionDecision selectObjective(
+      Translation2d ourPos,
+      double ourSpeedCap,
+      CategorySpec cat,
+      RepulsorSetpoint currentObjective,
+      ObjectiveSelectionConfig config) {
+    ObjectiveSelectionConfig safeConfig =
+        config == null ? ObjectiveSelectionConfig.defaults() : config;
+    return ObjectiveSelector.select(
+        rank(ourPos, ourSpeedCap, cat, safeConfig.candidateLimit()), currentObjective, safeConfig);
   }
 
   public void configureRanking(PredictiveRankingConfig config) {

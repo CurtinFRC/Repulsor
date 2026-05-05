@@ -40,6 +40,8 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.Candidate;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PredictiveRankingConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Objective.ObjectiveSelectionConfig;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Objective.ObjectiveSelectionDecision;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateRuntime;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Strategy.ResourceRegionSummary;
@@ -380,6 +382,17 @@ public class FieldTrackerCore {
       Alliance alliance, Translation2d ourPos, double ourSpeedCap, CategorySpec cat, int limit) {
     updatePredictorWorld(alliance);
     return predictor.rank(ourPos, ourSpeedCap, cat, limit);
+  }
+
+  public ObjectiveSelectionDecision selectPredictedObjective(
+      Alliance alliance,
+      Translation2d ourPos,
+      double ourSpeedCap,
+      CategorySpec cat,
+      RepulsorSetpoint currentObjective,
+      ObjectiveSelectionConfig config) {
+    updatePredictorWorld(alliance);
+    return predictor.selectObjective(ourPos, ourSpeedCap, cat, currentObjective, config);
   }
 
   /**
