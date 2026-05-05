@@ -26,6 +26,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlannerRuntimeConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.DiagonalWallObstacle;
@@ -115,6 +116,13 @@ public final class Reefscape2025 implements FieldDefinition {
     return profile.waypointing == null
         ? FieldPlannerWaypointConfig.defaults()
         : profile.waypointing.toFieldPlannerWaypointConfig();
+  }
+
+  @Override
+  public FieldPlannerRuntimeConfig fieldPlannerRuntimeConfig() {
+    return profile.plannerRuntime == null
+        ? FieldPlannerRuntimeConfig.defaults()
+        : profile.plannerRuntime.toFieldPlannerRuntimeConfig();
   }
 
   /**

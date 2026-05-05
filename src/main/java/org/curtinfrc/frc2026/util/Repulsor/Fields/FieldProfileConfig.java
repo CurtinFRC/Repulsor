@@ -21,6 +21,8 @@ package org.curtinfrc.frc2026.util.Repulsor.Fields;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.CoarseGlobalPlannerConfig;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlannerRuntimeConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PredictiveRankingConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.MovingShotSolver;
@@ -55,6 +57,7 @@ public class FieldProfileConfig {
   public Map<String, ProjectileShotConfig> projectileShots = new LinkedHashMap<>();
   public RankingConfig predictiveRanking = new RankingConfig();
   public WaypointingConfig waypointing = new WaypointingConfig();
+  public PlannerRuntimeConfig plannerRuntime = new PlannerRuntimeConfig();
 
   /** Compatibility input for older 2026-specific YAML. Prefer projectileShots. */
   @Deprecated(forRemoval = false)
@@ -119,6 +122,7 @@ public class FieldProfileConfig {
 
     mergeRanking(base.predictiveRanking, overlay.predictiveRanking);
     mergeWaypointing(base.waypointing, overlay.waypointing);
+    mergePlannerRuntime(base.plannerRuntime, overlay.plannerRuntime);
 
     mergeProjectileShot(base.shuttleShot, overlay.shuttleShot);
     mergeCorridor(base.rebuiltCorridor, overlay.rebuiltCorridor);
@@ -182,6 +186,31 @@ public class FieldProfileConfig {
     if (overlay.hysteresisBonus != null) base.hysteresisBonus = overlay.hysteresisBonus;
     if (overlay.hysteresisPersistSeconds != null) {
       base.hysteresisPersistSeconds = overlay.hysteresisPersistSeconds;
+    }
+  }
+
+  private static void mergePlannerRuntime(PlannerRuntimeConfig base, PlannerRuntimeConfig overlay) {
+    if (base == null || overlay == null) return;
+    if (overlay.globalFallbackEnabled != null) {
+      base.globalFallbackEnabled = overlay.globalFallbackEnabled;
+    }
+    if (overlay.globalFallbackCellMeters != null) {
+      base.globalFallbackCellMeters = overlay.globalFallbackCellMeters;
+    }
+    if (overlay.globalFallbackLookaheadMeters != null) {
+      base.globalFallbackLookaheadMeters = overlay.globalFallbackLookaheadMeters;
+    }
+    if (overlay.globalFallbackMaxExpandedNodes != null) {
+      base.globalFallbackMaxExpandedNodes = overlay.globalFallbackMaxExpandedNodes;
+    }
+    if (overlay.globalFallbackMaxRuntimeSeconds != null) {
+      base.globalFallbackMaxRuntimeSeconds = overlay.globalFallbackMaxRuntimeSeconds;
+    }
+    if (overlay.forceThroughGoalDistanceMeters != null) {
+      base.forceThroughGoalDistanceMeters = overlay.forceThroughGoalDistanceMeters;
+    }
+    if (overlay.forceThroughWallDistanceMeters != null) {
+      base.forceThroughWallDistanceMeters = overlay.forceThroughWallDistanceMeters;
     }
   }
 
@@ -441,6 +470,35 @@ public class FieldProfileConfig {
 
     private static boolean boolOrDefault(Boolean value, boolean fallback) {
       return value != null ? value : fallback;
+    }
+  }
+
+  public static class PlannerRuntimeConfig {
+    public Boolean globalFallbackEnabled;
+    public Double globalFallbackCellMeters;
+    public Double globalFallbackLookaheadMeters;
+    public Integer globalFallbackMaxExpandedNodes;
+    public Double globalFallbackMaxRuntimeSeconds;
+    public Double forceThroughGoalDistanceMeters;
+    public Double forceThroughWallDistanceMeters;
+
+    public FieldPlannerRuntimeConfig toFieldPlannerRuntimeConfig() {
+      FieldPlannerRuntimeConfig defaults = FieldPlannerRuntimeConfig.defaults();
+      CoarseGlobalPlannerConfig globalDefaults = defaults.globalFallbackConfig();
+      CoarseGlobalPlannerConfig globalConfig =
+          new CoarseGlobalPlannerConfig(
+              finitePositive(globalFallbackCellMeters, globalDefaults.cellMeters()),
+              finitePositive(
+                  globalFallbackLookaheadMeters, globalDefaults.waypointLookaheadMeters()),
+              positive(globalFallbackMaxExpandedNodes, globalDefaults.maxExpandedNodes()),
+              finitePositive(globalFallbackMaxRuntimeSeconds, globalDefaults.maxRuntimeSeconds()));
+      return new FieldPlannerRuntimeConfig(
+          globalFallbackEnabled == null ? defaults.globalFallbackEnabled() : globalFallbackEnabled,
+          globalConfig,
+          finiteNonNegative(
+              forceThroughGoalDistanceMeters, defaults.forceThroughGoalDistanceMeters()),
+          finiteNonNegative(
+              forceThroughWallDistanceMeters, defaults.forceThroughWallDistanceMeters()));
     }
   }
 

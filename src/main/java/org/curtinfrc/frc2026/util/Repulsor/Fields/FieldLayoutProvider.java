@@ -21,6 +21,7 @@ package org.curtinfrc.frc2026.util.Repulsor.Fields;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlannerRuntimeConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
@@ -101,6 +102,10 @@ public interface FieldLayoutProvider {
 
   default FieldPlannerWaypointConfig waypointConfig() {
     return FieldPlannerWaypointConfig.defaults();
+  }
+
+  default FieldPlannerRuntimeConfig fieldPlannerRuntimeConfig() {
+    return FieldPlannerRuntimeConfig.defaults();
   }
 
   /**

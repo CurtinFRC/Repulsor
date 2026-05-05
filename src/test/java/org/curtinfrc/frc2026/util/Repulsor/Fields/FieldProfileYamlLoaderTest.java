@@ -239,6 +239,14 @@ class FieldProfileYamlLoaderTest {
           centerReturnExitMaxMeters: 1.5
           centerReturnGateMinOffsetMeters: 1.2
           fieldEdgeMarginMeters: 0.2
+        plannerRuntime:
+          globalFallbackEnabled: false
+          globalFallbackCellMeters: 0.42
+          globalFallbackLookaheadMeters: 1.7
+          globalFallbackMaxExpandedNodes: 321
+          globalFallbackMaxRuntimeSeconds: 0.02
+          forceThroughGoalDistanceMeters: 1.8
+          forceThroughWallDistanceMeters: 0.5
         """);
 
     String previous = System.getProperty("repulsor.profile.path");
@@ -252,12 +260,27 @@ class FieldProfileYamlLoaderTest {
           1.4, cfg.waypointing.toFieldPlannerWaypointConfig().leadThroughMaxMeters(), 1e-9);
       assertEquals(
           false, cfg.waypointing.toFieldPlannerWaypointConfig().bandTransitionStagingEnabled());
+      assertEquals(false, cfg.plannerRuntime.toFieldPlannerRuntimeConfig().globalFallbackEnabled());
+      assertEquals(
+          0.42,
+          cfg.plannerRuntime.toFieldPlannerRuntimeConfig().globalFallbackConfig().cellMeters(),
+          1e-9);
+      assertEquals(
+          321,
+          cfg.plannerRuntime
+              .toFieldPlannerRuntimeConfig()
+              .globalFallbackConfig()
+              .maxExpandedNodes());
 
       Rebuilt2026 field = new Rebuilt2026(cfg);
       FieldPlanner planner =
           new FieldPlanner(new DefaultTurnTuning(), new DefaultDriveTuning(), field);
       assertEquals(2.2, planner.getWaypointConfig().centerBandMeters(), 1e-9);
       assertEquals(false, planner.getWaypointConfig().centerReturnStagingEnabled());
+      assertEquals(false, planner.getRuntimeConfig().globalFallbackEnabled());
+      assertEquals(
+          1.7, planner.getRuntimeConfig().globalFallbackConfig().waypointLookaheadMeters(), 1e-9);
+      assertEquals(1.8, planner.getRuntimeConfig().forceThroughGoalDistanceMeters(), 1e-9);
     } finally {
       if (previous == null) {
         System.clearProperty("repulsor.profile.path");

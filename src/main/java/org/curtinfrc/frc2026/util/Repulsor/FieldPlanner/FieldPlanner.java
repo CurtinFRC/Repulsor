@@ -74,9 +74,6 @@ import org.littletonrobotics.junction.Logger;
  * documents robot-relative motion.
  */
 public class FieldPlanner {
-  private static final double FORCE_THROUGH_GOAL_DIST = 2.0;
-  private static final double FORCE_THROUGH_WALL_DIST = 0.7;
-
   /**
    * Configuration value for goal strength. The valid range and tuning source are defined by the
    * owning subsystem or field profile.
@@ -90,9 +87,6 @@ public class FieldPlanner {
   private static final boolean OFFLOAD_CALCULATE_ENABLED =
       Boolean.parseBoolean(
           System.getProperty("repulsor.offload.fieldplanner.calculate.enabled", "true"));
-  private static final boolean GLOBAL_FALLBACK_ENABLED =
-      Boolean.parseBoolean(
-          System.getProperty("repulsor.fieldplanner.globalFallback.enabled", "true"));
 
   private static final class ClearMemo {
     Boolean toGoalDyn;
@@ -179,10 +173,13 @@ public class FieldPlanner {
 
   private final FieldPlannerForceModel forceModel;
   private final FieldPlannerGoalManager goalManager;
-  private final CoarseGlobalPlanner globalPlanner = new CoarseGlobalPlanner();
+  private final FieldPlannerRuntimeConfig runtimeConfig;
+  private final CoarseGlobalPlanner globalPlanner;
 
   private Optional<Distance> currentErr = Optional.empty();
   private Optional<PlannerFallback> fallback = Optional.empty();
+  private volatile RepulsorPlanningResult lastPlanningResult = RepulsorPlanningResult.empty();
+  private Alliance fallbackAllianceOverride = null;
 
   /**
    * Configuration value for suppress is clear path. The valid range and tuning source are defined
@@ -236,7 +233,13 @@ public class FieldPlanner {
    */
   public FieldPlanner(
       TurnTuning turnTuning, DriveTuning driveTuning, ObstacleProvider obstacleProvider) {
-    this(turnTuning, driveTuning, obstacleProvider, waypointConfigFor(obstacleProvider));
+    this(
+        turnTuning,
+        driveTuning,
+        obstacleProvider,
+        waypointConfigFor(obstacleProvider),
+        FieldPlannerWaypointStrategy.defaults(),
+        runtimeConfigFor(obstacleProvider));
   }
 
   private static FieldPlannerWaypointConfig waypointConfigFor(ObstacleProvider obstacleProvider) {
@@ -245,6 +248,14 @@ public class FieldPlanner {
       return config == null ? FieldPlannerWaypointConfig.defaults() : config;
     }
     return FieldPlannerWaypointConfig.defaults();
+  }
+
+  private static FieldPlannerRuntimeConfig runtimeConfigFor(ObstacleProvider obstacleProvider) {
+    if (obstacleProvider instanceof FieldLayoutProvider field) {
+      FieldPlannerRuntimeConfig config = field.fieldPlannerRuntimeConfig();
+      return config == null ? FieldPlannerRuntimeConfig.defaults() : config;
+    }
+    return FieldPlannerRuntimeConfig.defaults();
   }
 
   public FieldPlanner(
@@ -257,7 +268,8 @@ public class FieldPlanner {
         driveTuning,
         obstacleProvider,
         waypointConfig,
-        FieldPlannerWaypointStrategy.defaults());
+        FieldPlannerWaypointStrategy.defaults(),
+        runtimeConfigFor(obstacleProvider));
   }
 
   public FieldPlanner(
@@ -266,10 +278,29 @@ public class FieldPlanner {
       ObstacleProvider obstacleProvider,
       FieldPlannerWaypointConfig waypointConfig,
       FieldPlannerWaypointStrategy waypointStrategy) {
+    this(
+        turnTuning,
+        driveTuning,
+        obstacleProvider,
+        waypointConfig,
+        waypointStrategy,
+        runtimeConfigFor(obstacleProvider));
+  }
+
+  public FieldPlanner(
+      TurnTuning turnTuning,
+      DriveTuning driveTuning,
+      ObstacleProvider obstacleProvider,
+      FieldPlannerWaypointConfig waypointConfig,
+      FieldPlannerWaypointStrategy waypointStrategy,
+      FieldPlannerRuntimeConfig runtimeConfig) {
     this.turnTuning = turnTuning;
     this.driveTuning = driveTuning;
     this.obstacleProvider =
         obstacleProvider == null ? new DefaultObstacleProvider() : obstacleProvider;
+    this.runtimeConfig =
+        runtimeConfig == null ? FieldPlannerRuntimeConfig.defaults() : runtimeConfig;
+    this.globalPlanner = new CoarseGlobalPlanner(this.runtimeConfig.globalFallbackConfig());
     if (this.obstacleProvider instanceof FieldLayoutProvider field) {
       FieldGeometry geometry = field.geometry();
       this.fieldLengthMeters = geometry.lengthMeters();
@@ -377,6 +408,10 @@ public class FieldPlanner {
 
   public FieldPlannerWaypointConfig getWaypointConfig() {
     return goalManager.getWaypointConfig();
+  }
+
+  public FieldPlannerRuntimeConfig getRuntimeConfig() {
+    return runtimeConfig;
   }
 
   public FieldPlannerWaypointStatus getWaypointStatus() {
@@ -578,6 +613,33 @@ public class FieldPlanner {
         request.shooterReleaseHeightMeters());
   }
 
+  public RepulsorPlanningResult calculateDetailed(RepulsorPlanningRequest request) {
+    RepulsorPlanningRequest safeRequest =
+        request == null ? RepulsorPlanningRequest.from(null) : request;
+    Alliance previousOverride = fallbackAllianceOverride;
+    fallbackAllianceOverride = safeRequest.fallbackAllianceOverride().orElse(null);
+    try {
+      RepulsorSample sample =
+          calculate(
+              safeRequest.pose(),
+              safeRequest.dynamicObstacles(),
+              safeRequest.robotHalfLengthMeters(),
+              safeRequest.robotHalfWidthMeters(),
+              safeRequest.category(),
+              safeRequest.suppressFallback(),
+              safeRequest.shooterReleaseHeightMeters());
+      lastPlanningResult =
+          new RepulsorPlanningResult(safeRequest, sample, lastPlanningResult.diagnostics());
+      return lastPlanningResult;
+    } finally {
+      fallbackAllianceOverride = previousOverride;
+    }
+  }
+
+  public RepulsorPlanningResult lastPlanningResult() {
+    return lastPlanningResult;
+  }
+
   /**
    * Computes the calculate value for the current Repulsor planning state. Call this from periodic
    * planning or tests when a fresh decision is required; inputs should already be expressed in the
@@ -600,17 +662,40 @@ public class FieldPlanner {
       CategorySpec cat,
       boolean suppressFallback,
       double shooterReleaseHeightMeters) {
-
-    if (OFFLOAD_CALCULATE_ENABLED && !isOffloadWorkerThread()) {
-      try {
-        return calculateOffloaded(
+    RepulsorPlanningRequest planningRequest =
+        new RepulsorPlanningRequest(
             pose,
             dynamicObstacles,
             robot_x,
             robot_y,
             cat,
             suppressFallback,
-            shooterReleaseHeightMeters);
+            shooterReleaseHeightMeters,
+            preferredAllianceForFallback(),
+            "default");
+
+    if (OFFLOAD_CALCULATE_ENABLED && !isOffloadWorkerThread()) {
+      try {
+        RepulsorSample sample =
+            calculateOffloaded(
+                pose,
+                dynamicObstacles,
+                robot_x,
+                robot_y,
+                cat,
+                suppressFallback,
+                shooterReleaseHeightMeters);
+        return finishPlanningResult(
+            planningRequest,
+            sample,
+            false,
+            bypass.isPinnedMode(),
+            false,
+            Optional.empty(),
+            false,
+            false,
+            false,
+            true);
       } catch (RuntimeException ex) {
         RepulsorDiagnostics.warnThrottled(
             "FieldPlanner/offloadCalculateFallback",
@@ -642,6 +727,12 @@ public class FieldPlanner {
     boolean forceThrough = bypass.isPinnedMode();
     List<? extends Obstacle> effectiveDynamics =
         forceThrough ? Collections.emptyList() : dynamicObstacles;
+    boolean pathBlocked = false;
+    boolean robotIntersecting = false;
+    boolean globalFallbackActive = false;
+    Optional<Pose2d> globalFallbackWaypoint = Optional.empty();
+    boolean reactiveBypassActive = false;
+    boolean stuckAbort = false;
 
     if (!forceThrough && !suppressFallback) {
       boolean blockedWithDynamics =
@@ -660,8 +751,8 @@ public class FieldPlanner {
       double dxWall = Math.min(curTrans.getX(), fieldLengthMeters - curTrans.getX());
       double dyWall = Math.min(curTrans.getY(), fieldWidthMeters - curTrans.getY());
       double dWall = Math.min(dxWall, dyWall);
-      boolean nearWall = dWall < FORCE_THROUGH_WALL_DIST;
-      boolean nearGoal = distToGoal <= FORCE_THROUGH_GOAL_DIST;
+      boolean nearWall = dWall < runtimeConfig.forceThroughWallDistanceMeters();
+      boolean nearGoal = distToGoal <= runtimeConfig.forceThroughGoalDistanceMeters();
 
       if (blockedWithDynamics && !blockedWithoutDynamics && nearGoal && nearWall) {
         forceThrough = true;
@@ -671,11 +762,21 @@ public class FieldPlanner {
 
     if (!suppressFallback) {
       if (!forceThrough && robotIntersects(curTrans, robot_x, robot_y, dynamicObstacles)) {
+        robotIntersecting = true;
         currentErr = Optional.of(Meters.of(curTrans.getDistance(goalManager.getGoalTranslation())));
-        return new RepulsorSample(curTrans, 0, 0, Radians.of(pose.getRotation().getRadians()));
+        return finishPlanningResult(
+            planningRequest,
+            new RepulsorSample(curTrans, 0, 0, Radians.of(pose.getRotation().getRadians())),
+            pathBlocked,
+            forceThrough,
+            globalFallbackActive,
+            globalFallbackWaypoint,
+            reactiveBypassActive,
+            robotIntersecting,
+            stuckAbort,
+            false);
       }
 
-      boolean pathBlocked = false;
       if (!suppressIsClearPath) {
         pathBlocked =
             !memo.toGoalDyn(
@@ -684,8 +785,6 @@ public class FieldPlanner {
 
       if (pathBlocked && !suppressFallback) {
         Alliance preferred = preferredAllianceForFallback();
-        boolean globalFallbackActive = false;
-        Optional<Pose2d> globalFallbackWaypoint = Optional.empty();
 
         var cands =
             FieldTrackerCore.getInstance().getPredictedSetpoints(preferred, curTrans, 3.5, cat, 8);
@@ -724,7 +823,7 @@ public class FieldPlanner {
           }
         }
 
-        if (pathBlocked && GLOBAL_FALLBACK_ENABLED) {
+        if (pathBlocked && runtimeConfig.globalFallbackEnabled()) {
           ArrayList<Obstacle> globalObstacles =
               new ArrayList<>(fieldObstacles.size() + walls.size() + effectiveDynamics.size());
           globalObstacles.addAll(fieldObstacles);
@@ -752,7 +851,17 @@ public class FieldPlanner {
         recordGlobalFallbackTelemetry(globalFallbackActive, globalFallbackWaypoint);
 
         if (pathBlocked) {
-          return new RepulsorSample(curTrans, 0, 0, Radians.of(pose.getRotation().getRadians()));
+          return finishPlanningResult(
+              planningRequest,
+              new RepulsorSample(curTrans, 0, 0, Radians.of(pose.getRotation().getRadians())),
+              true,
+              forceThrough,
+              globalFallbackActive,
+              globalFallbackWaypoint,
+              reactiveBypassActive,
+              robotIntersecting,
+              stuckAbort,
+              false);
         }
       }
     }
@@ -767,14 +876,34 @@ public class FieldPlanner {
     currentErr = Optional.of(Meters.of(err.getNorm()));
 
     if (err.getNorm() < 0.04) {
-      return new RepulsorSample(
-          curTrans, 0, 0, Radians.of(calculationGoalFinal.getRotation().getRadians()));
+      return finishPlanningResult(
+          planningRequest,
+          new RepulsorSample(
+              curTrans, 0, 0, Radians.of(calculationGoalFinal.getRotation().getRadians())),
+          pathBlocked,
+          forceThrough,
+          globalFallbackActive,
+          globalFallbackWaypoint,
+          reactiveBypassActive,
+          robotIntersecting,
+          stuckAbort,
+          false);
     }
 
     if (fallback.isPresent() && fallback.get().within(err)) {
       var speeds = fallback.get().calculate(curTrans, calculationGoalTranslationFinal);
-      return new RepulsorSample(
-          calculationGoalTranslationFinal, speeds, Radians.of(pose.getRotation().getRadians()));
+      return finishPlanningResult(
+          planningRequest,
+          new RepulsorSample(
+              calculationGoalTranslationFinal, speeds, Radians.of(pose.getRotation().getRadians())),
+          pathBlocked,
+          forceThrough,
+          globalFallbackActive,
+          globalFallbackWaypoint,
+          reactiveBypassActive,
+          robotIntersecting,
+          stuckAbort,
+          false);
     }
 
     var obstacleForceToGoal =
@@ -821,6 +950,7 @@ public class FieldPlanner {
                     true));
 
     Pose2d effectiveGoal = maybeBypass.orElse(calculationGoalFinal);
+    reactiveBypassActive = maybeBypass.isPresent();
 
     var obstacleForce =
         getObstacleForce(curTrans, effectiveGoal.getTranslation(), effectiveDynamicsFinal)
@@ -855,11 +985,22 @@ public class FieldPlanner {
     }
 
     if (stuckStepCount >= MAX_STUCK_STEPS) {
+      stuckAbort = true;
       RepulsorDiagnostics.warnThrottled(
           "FieldPlanner/stuck",
           "Planner stuck, aborting after " + stuckStepCount + " tiny steps.",
           1.0);
-      return new RepulsorSample(curTrans, 0, 0, Radians.of(pose.getRotation().getRadians()));
+      return finishPlanningResult(
+          planningRequest,
+          new RepulsorSample(curTrans, 0, 0, Radians.of(pose.getRotation().getRadians())),
+          pathBlocked,
+          forceThrough,
+          globalFallbackActive,
+          globalFallbackWaypoint,
+          reactiveBypassActive,
+          robotIntersecting,
+          stuckAbort,
+          false);
     }
 
     Rotation2d desiredHeadingRaw =
@@ -884,11 +1025,21 @@ public class FieldPlanner {
       Pose2d arrowPose = new Pose2d(curTrans, netForce.getAngle());
     }
 
-    return new RepulsorSample(
-        effectiveGoal.getTranslation(),
-        step.getX() / driveTuning.dtSeconds(),
-        step.getY() / driveTuning.dtSeconds(),
-        Radians.of(turn.yaw.getRadians()));
+    return finishPlanningResult(
+        planningRequest,
+        new RepulsorSample(
+            effectiveGoal.getTranslation(),
+            step.getX() / driveTuning.dtSeconds(),
+            step.getY() / driveTuning.dtSeconds(),
+            Radians.of(turn.yaw.getRadians())),
+        pathBlocked,
+        forceThrough,
+        globalFallbackActive,
+        globalFallbackWaypoint,
+        reactiveBypassActive,
+        robotIntersecting,
+        stuckAbort,
+        false);
   }
 
   private void recordGlobalFallbackTelemetry(boolean active, Optional<Pose2d> waypoint) {
@@ -902,6 +1053,43 @@ public class FieldPlanner {
     Logger.recordOutput("Repulsor/GlobalFallback/PathNodes", stats.pathNodes());
     Logger.recordOutput("Repulsor/GlobalFallback/ElapsedMs", stats.elapsedNanos() / 1.0e6);
     Logger.recordOutput("Repulsor/GlobalFallback/Waypoint", waypoint.orElse(Pose2d.kZero));
+  }
+
+  private RepulsorSample finishPlanningResult(
+      RepulsorPlanningRequest request,
+      RepulsorSample sample,
+      boolean pathBlocked,
+      boolean forceThrough,
+      boolean globalFallbackActive,
+      Optional<Pose2d> globalFallbackWaypoint,
+      boolean reactiveBypassActive,
+      boolean robotIntersecting,
+      boolean stuckAbort,
+      boolean offloaded) {
+    RepulsorDiagnosticsSnapshot diagnostics =
+        new RepulsorDiagnosticsSnapshot(
+            goalManager.getRequestedGoalPose(),
+            goalManager.getGoalPose(),
+            goalManager.getWaypointStatus(),
+            globalPlanner.lastStats(),
+            globalFallbackActive,
+            globalFallbackWaypoint,
+            reactiveBypassActive,
+            bypass.isPinnedMode(),
+            forceThrough,
+            pathBlocked,
+            robotIntersecting,
+            stuckAbort,
+            offloaded,
+            currentErr.map(distance -> distance.in(Meters)).orElse(Double.NaN));
+    lastPlanningResult = new RepulsorPlanningResult(request, sample, diagnostics);
+    Logger.recordOutput("Repulsor/Diagnostics/PathBlocked", pathBlocked);
+    Logger.recordOutput("Repulsor/Diagnostics/ReactiveBypassActive", reactiveBypassActive);
+    Logger.recordOutput("Repulsor/Diagnostics/ForceThrough", forceThrough);
+    Logger.recordOutput("Repulsor/Diagnostics/RobotIntersecting", robotIntersecting);
+    Logger.recordOutput("Repulsor/Diagnostics/StuckAbort", stuckAbort);
+    Logger.recordOutput("Repulsor/Diagnostics/Offloaded", offloaded);
+    return sample;
   }
 
   /**
@@ -981,7 +1169,8 @@ public class FieldPlanner {
         Radians.of(remote.getOmegaRadians()));
   }
 
-  private static Alliance preferredAllianceForFallback() {
+  private Alliance preferredAllianceForFallback() {
+    if (fallbackAllianceOverride != null) return fallbackAllianceOverride;
     if (isOffloadWorkerThread()) {
       Alliance supplied = OFFLOAD_FALLBACK_ALLIANCE.get();
       if (supplied != null) {
