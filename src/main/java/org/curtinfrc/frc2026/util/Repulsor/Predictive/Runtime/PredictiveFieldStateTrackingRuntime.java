@@ -36,6 +36,8 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PredictiveRankingCon
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveClock;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateOps;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.SpatialDyn;
+import org.curtinfrc.frc2026.util.Repulsor.Scoring.WeightedScoreBreakdown;
+import org.curtinfrc.frc2026.util.Repulsor.Scoring.WeightedScoreTerm;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.GameSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.HeightSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
@@ -252,29 +254,26 @@ public final class PredictiveFieldStateTrackingRuntime {
       double headingTerm = gainTerm(heading, ranking.headingGain());
 
       double hysteresisTerm = 0.0;
-      double score =
-          advantageTerm + congestionTerm + pressureTerm + distTerm + capacityTerm + headingTerm;
 
       if (ops.lastChosen != null
           && sp.equals(ops.lastChosen)
           && now - ops.lastChosenTs < ranking.hysteresisPersistSeconds()) {
         hysteresisTerm = ranking.hysteresisBonus();
-        score += hysteresisTerm;
       }
 
+      WeightedScoreBreakdown breakdown =
+          WeightedScoreBreakdown.of(
+              new WeightedScoreTerm("advantage", 1.0, advantageTerm),
+              new WeightedScoreTerm("distance", 1.0, distTerm),
+              new WeightedScoreTerm("pressure", 1.0, pressureTerm),
+              new WeightedScoreTerm("congestion", 1.0, congestionTerm),
+              new WeightedScoreTerm("capacity", 1.0, capacityTerm),
+              new WeightedScoreTerm("heading", 1.0, headingTerm),
+              new WeightedScoreTerm("hysteresis", 1.0, hysteresisTerm));
+      double score = breakdown.total();
+
       out.add(new Candidate(sp, t, ourEta, enemyEta, allyEta, congestion, pressure, score));
-      breakdowns.add(
-          new PredictiveRankingBreakdown(
-              sp.levelId(),
-              t,
-              score,
-              advantageTerm,
-              distTerm,
-              pressureTerm,
-              congestionTerm,
-              capacityTerm,
-              headingTerm,
-              hysteresisTerm));
+      breakdowns.add(new PredictiveRankingBreakdown(sp.levelId(), t, breakdown));
     }
 
     out.sort(Comparator.comparingDouble((Candidate c) -> -c.score));

@@ -211,6 +211,11 @@ class PredictiveFieldStateAbstractionTest {
     assertEquals(1.0, predictor.lastRankingBreakdown().get(0).target().getX(), EPS);
     assertTrue(Double.isFinite(predictor.lastRankingBreakdown().get(0).totalScore()));
     assertTrue(predictor.lastRankingBreakdown().get(0).distanceTerm() < 0.0);
+    assertTrue(predictor.lastRankingBreakdown().get(0).breakdown().term("distance").isPresent());
+    assertEquals(
+        predictor.lastRankingBreakdown().get(0).totalScore(),
+        predictor.lastRankingBreakdown().get(0).breakdown().total(),
+        EPS);
   }
 
   private static ShuttleRecoveryDynamicObjectDTO resourceObject(
