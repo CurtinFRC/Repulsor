@@ -72,6 +72,8 @@ public class FieldTrackerCore {
   private final FieldTrackerDynamicTracker dynamicTracker = new FieldTrackerDynamicTracker();
   private final FieldTrackerCollectPlanner collectPlanner;
   private final Map<String, ResourceSpec> collectResourceSpecs = new ConcurrentHashMap<>();
+  private volatile ObjectiveSelectionConfig objectiveSelectionConfig =
+      ObjectiveSelectionConfig.defaults();
 
   private final ConcurrentHashMap<String, String> typeAliases = new ConcurrentHashMap<>();
 
@@ -198,6 +200,14 @@ public class FieldTrackerCore {
 
   public void configurePredictiveRanking(PredictiveRankingConfig config) {
     predictor.configureRanking(config);
+  }
+
+  public void configureObjectiveSelection(ObjectiveSelectionConfig config) {
+    objectiveSelectionConfig = config == null ? ObjectiveSelectionConfig.defaults() : config;
+  }
+
+  public ObjectiveSelectionConfig objectiveSelectionConfig() {
+    return objectiveSelectionConfig;
   }
 
   private boolean isCollectResourceType(String type) {
@@ -392,7 +402,8 @@ public class FieldTrackerCore {
       RepulsorSetpoint currentObjective,
       ObjectiveSelectionConfig config) {
     updatePredictorWorld(alliance);
-    return predictor.selectObjective(ourPos, ourSpeedCap, cat, currentObjective, config);
+    ObjectiveSelectionConfig safeConfig = config == null ? objectiveSelectionConfig : config;
+    return predictor.selectObjective(ourPos, ourSpeedCap, cat, currentObjective, safeConfig);
   }
 
   /**

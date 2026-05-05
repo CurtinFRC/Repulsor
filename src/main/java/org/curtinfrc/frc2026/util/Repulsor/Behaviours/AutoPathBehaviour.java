@@ -43,7 +43,7 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.RepulsorSample;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
 import org.curtinfrc.frc2026.util.Repulsor.Metrics.HPStationMetrics;
 import org.curtinfrc.frc2026.util.Repulsor.Metrics.MetricRecorder;
-import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.Candidate;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Objective.ObjectiveSelectionDecision;
 import org.curtinfrc.frc2026.util.Repulsor.ReactiveBypass.ReactiveBypass;
 import org.curtinfrc.frc2026.util.Repulsor.RepulsorDiagnostics;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.HeightSetpoint;
@@ -456,7 +456,7 @@ public class AutoPathBehaviour extends Behaviour {
                 } else {
                   RepulsorSetpoint pred = pickPredicted(ctx);
                   FieldTrackerCore.getInstance().resetAll();
-                  desired = scoreFallback;
+                  desired = pred != null ? pred : scoreFallback;
                 }
 
               } else {
@@ -700,13 +700,25 @@ public class AutoPathBehaviour extends Behaviour {
    */
   RepulsorSetpoint pickPredicted(BehaviourContext ctx, Alliance alliance) {
     FieldTrackerCore ft = FieldTrackerCore.getInstance();
-    ft.updatePredictorWorld(alliance);
     double cap = ourSpeedCap != null ? Math.max(0.1, ourSpeedCap.get()) : 3.5;
-    List<Candidate> ranked =
-        ft.getPredictedCandidates(
-            alliance, ctx.robotPose.get().getTranslation(), cap, CategorySpec.kScore, 1);
-    if (ranked == null || ranked.isEmpty()) return null;
-    return ranked.get(0).setpoint;
+    RepulsorSetpoint current = currentScoreObjective(ctx);
+    ObjectiveSelectionDecision decision =
+        ft.selectPredictedObjective(
+            alliance,
+            ctx.robotPose.get().getTranslation(),
+            cap,
+            CategorySpec.kScore,
+            current,
+            null);
+    return decision.hasSelection() ? decision.selected().setpoint : null;
+  }
+
+  private RepulsorSetpoint currentScoreObjective(BehaviourContext ctx) {
+    if (ctx != null && ctx.repulsor != null) {
+      RepulsorSetpoint current = ctx.repulsor.getCurrentGoal();
+      if (current != null && current.height() != HeightSetpoint.NONE) return current;
+    }
+    return null;
   }
 
   private RepulsorSetpoint chooseCollect(

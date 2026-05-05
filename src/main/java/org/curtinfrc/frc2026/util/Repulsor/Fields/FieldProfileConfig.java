@@ -25,6 +25,7 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.CoarseGlobalPlannerConfi
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlannerRuntimeConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PredictiveRankingConfig;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Objective.ObjectiveSelectionConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.MovingShotSolver;
 
 /**
@@ -56,6 +57,7 @@ public class FieldProfileConfig {
   public Map<String, ResourceConfig> resources = new LinkedHashMap<>();
   public Map<String, ProjectileShotConfig> projectileShots = new LinkedHashMap<>();
   public RankingConfig predictiveRanking = new RankingConfig();
+  public ObjectiveSelectionProfileConfig objectiveSelection = new ObjectiveSelectionProfileConfig();
   public WaypointingConfig waypointing = new WaypointingConfig();
   public PlannerRuntimeConfig plannerRuntime = new PlannerRuntimeConfig();
 
@@ -121,6 +123,7 @@ public class FieldProfileConfig {
     }
 
     mergeRanking(base.predictiveRanking, overlay.predictiveRanking);
+    mergeObjectiveSelection(base.objectiveSelection, overlay.objectiveSelection);
     mergeWaypointing(base.waypointing, overlay.waypointing);
     mergePlannerRuntime(base.plannerRuntime, overlay.plannerRuntime);
 
@@ -186,6 +189,16 @@ public class FieldProfileConfig {
     if (overlay.hysteresisBonus != null) base.hysteresisBonus = overlay.hysteresisBonus;
     if (overlay.hysteresisPersistSeconds != null) {
       base.hysteresisPersistSeconds = overlay.hysteresisPersistSeconds;
+    }
+  }
+
+  private static void mergeObjectiveSelection(
+      ObjectiveSelectionProfileConfig base, ObjectiveSelectionProfileConfig overlay) {
+    if (base == null || overlay == null) return;
+    if (overlay.candidateLimit != null) base.candidateLimit = overlay.candidateLimit;
+    if (overlay.switchScoreMargin != null) base.switchScoreMargin = overlay.switchScoreMargin;
+    if (overlay.holdCurrentWhenRanked != null) {
+      base.holdCurrentWhenRanked = overlay.holdCurrentWhenRanked;
     }
   }
 
@@ -355,6 +368,10 @@ public class FieldProfileConfig {
     return value != null && value > 0 ? value : fallback;
   }
 
+  static boolean boolOrDefault(Boolean value, boolean fallback) {
+    return value != null ? value : fallback;
+  }
+
   /**
    * Provides geometry config functionality for the Repulsor field/profile definition layer used to
    * tune Repulsor for a specific game. Use this type from robot code, field profiles, or tests when
@@ -425,6 +442,20 @@ public class FieldProfileConfig {
     }
   }
 
+  public static class ObjectiveSelectionProfileConfig {
+    public Integer candidateLimit;
+    public Double switchScoreMargin;
+    public Boolean holdCurrentWhenRanked;
+
+    public ObjectiveSelectionConfig toObjectiveSelectionConfig() {
+      ObjectiveSelectionConfig defaults = ObjectiveSelectionConfig.defaults();
+      return new ObjectiveSelectionConfig(
+          positive(candidateLimit, defaults.candidateLimit()),
+          finiteNonNegative(switchScoreMargin, defaults.switchScoreMargin()),
+          boolOrDefault(holdCurrentWhenRanked, defaults.holdCurrentWhenRanked()));
+    }
+  }
+
   public static class WaypointingConfig {
     public Boolean bandTransitionStagingEnabled;
     public Boolean occludingGateStagingEnabled;
@@ -466,10 +497,6 @@ public class FieldProfileConfig {
           finiteNonNegative(
               centerReturnGateMinOffsetMeters, defaults.centerReturnGateMinOffsetMeters()),
           finiteNonNegative(fieldEdgeMarginMeters, defaults.fieldEdgeMarginMeters()));
-    }
-
-    private static boolean boolOrDefault(Boolean value, boolean fallback) {
-      return value != null ? value : fallback;
     }
   }
 

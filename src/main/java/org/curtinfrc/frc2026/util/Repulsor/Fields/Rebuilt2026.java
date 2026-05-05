@@ -392,6 +392,10 @@ public final class Rebuilt2026 implements FieldDefinition {
   @Override
   public void configureTracker(FieldTrackerCore ft) {
     ft.configurePredictiveRanking(profile.predictiveRanking.toPredictiveRankingConfig());
+    ft.configureObjectiveSelection(
+        profile.objectiveSelection == null
+            ? null
+            : profile.objectiveSelection.toObjectiveSelectionConfig());
     ft.setCollectResourceTypes(profile.resources.keySet());
     for (var entry : profile.resources.entrySet()) {
       FieldProfileConfig.ResourceConfig resource = entry.getValue();

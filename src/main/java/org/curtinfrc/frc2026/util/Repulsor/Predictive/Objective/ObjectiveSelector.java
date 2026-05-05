@@ -74,13 +74,21 @@ public final class ObjectiveSelector {
     if (rankedCandidates == null || currentObjective == null) return null;
     return rankedCandidates.stream()
         .filter(ObjectiveSelector::valid)
-        .filter(candidate -> currentObjective.equals(candidate.setpoint))
+        .filter(candidate -> sameSetpoint(currentObjective, candidate.setpoint))
         .findFirst()
         .orElse(null);
   }
 
   private static boolean sameSetpoint(Candidate a, Candidate b) {
-    return a != null && b != null && a.setpoint != null && a.setpoint.equals(b.setpoint);
+    return a != null && b != null && sameSetpoint(a.setpoint, b.setpoint);
+  }
+
+  private static boolean sameSetpoint(RepulsorSetpoint a, RepulsorSetpoint b) {
+    return a != null
+        && b != null
+        && a.point() == b.point()
+        && a.height() == b.height()
+        && a.levelId().equals(b.levelId());
   }
 
   private static boolean valid(Candidate candidate) {

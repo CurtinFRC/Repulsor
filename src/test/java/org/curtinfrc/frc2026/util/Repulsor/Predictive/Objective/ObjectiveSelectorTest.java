@@ -38,6 +38,23 @@ class ObjectiveSelectorTest {
   }
 
   @Test
+  void holdsSemanticallyEquivalentCurrentSetpoint() {
+    RepulsorSetpoint sameCurrent =
+        new RepulsorSetpoint(Setpoints.Rebuilt2026.HUB_SHOOT, "net", HeightSetpoint.NET);
+    Candidate currentCandidate = candidate(current, 10.0);
+    Candidate bestCandidate = candidate(challenger, 10.10);
+
+    ObjectiveSelectionDecision decision =
+        ObjectiveSelector.select(
+            List.of(bestCandidate, currentCandidate),
+            sameCurrent,
+            new ObjectiveSelectionConfig(8, 0.15, true));
+
+    assertEquals(ObjectiveSelectionDecision.Mode.HOLD_CURRENT, decision.mode());
+    assertSame(currentCandidate, decision.selected());
+  }
+
+  @Test
   void switchesWhenBestBeatsSwitchMargin() {
     Candidate currentCandidate = candidate(current, 10.0);
     Candidate bestCandidate = candidate(challenger, 10.30);

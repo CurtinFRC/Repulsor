@@ -97,6 +97,7 @@ public final class FieldProfileValidator {
     }
 
     validateRanking(cfg.predictiveRanking, errors);
+    validateObjectiveSelection(cfg.objectiveSelection, errors);
     validateWaypointing(cfg.waypointing, errors);
 
     if (cfg.shuttleShot != null && Boolean.TRUE.equals(cfg.shuttleShot.enabled)) {
@@ -119,6 +120,15 @@ public final class FieldProfileValidator {
     requireOptionalNonNegative(ranking.hysteresisBonus, prefix + ".hysteresisBonus", errors);
     requireOptionalNonNegative(
         ranking.hysteresisPersistSeconds, prefix + ".hysteresisPersistSeconds", errors);
+  }
+
+  private static void validateObjectiveSelection(
+      FieldProfileConfig.ObjectiveSelectionProfileConfig objectiveSelection, List<String> errors) {
+    if (objectiveSelection == null) return;
+    String prefix = "objectiveSelection";
+    requireOptionalPositive(objectiveSelection.candidateLimit, prefix + ".candidateLimit", errors);
+    requireOptionalNonNegative(
+        objectiveSelection.switchScoreMargin, prefix + ".switchScoreMargin", errors);
   }
 
   private static void validateWaypointing(
@@ -320,6 +330,12 @@ public final class FieldProfileValidator {
         && movingShot.maxFlightPredictionSeconds != null
         && movingShot.maxFlightPredictionSeconds < movingShot.minFlightPredictionSeconds) {
       errors.add(prefix + ".maxFlightPredictionSeconds must be >= minFlightPredictionSeconds");
+    }
+  }
+
+  private static void requireOptionalPositive(Integer value, String name, List<String> errors) {
+    if (value != null && value <= 0) {
+      errors.add(name + " must be > 0 when provided");
     }
   }
 

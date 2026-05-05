@@ -748,6 +748,10 @@ public class Repulsor {
     m_currentGoal = sp;
   }
 
+  public RepulsorSetpoint getCurrentGoal() {
+    return m_currentGoal;
+  }
+
   /**
    * Returns the get target height value maintained by this Repulsor component.
    *

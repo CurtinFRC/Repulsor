@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
+import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
 import org.curtinfrc.frc2026.util.Repulsor.Tuning.DefaultDriveTuning;
 import org.curtinfrc.frc2026.util.Repulsor.Tuning.DefaultTurnTuning;
 import org.junit.jupiter.api.Test;
@@ -188,6 +189,10 @@ class FieldProfileYamlLoaderTest {
           headingGain: 0.1
           hysteresisBonus: 0.4
           hysteresisPersistSeconds: 1.5
+        objectiveSelection:
+          candidateLimit: 5
+          switchScoreMargin: 0.33
+          holdCurrentWhenRanked: false
         """);
 
     String previous = System.getProperty("repulsor.profile.path");
@@ -199,6 +204,16 @@ class FieldProfileYamlLoaderTest {
       assertEquals(2.0, cfg.predictiveRanking.advantageGain, 1e-9);
       assertEquals(0.5, cfg.predictiveRanking.distanceCost, 1e-9);
       assertEquals(1.25, cfg.predictiveRanking.toPredictiveRankingConfig().capacityGain(), 1e-9);
+      assertEquals(5, cfg.objectiveSelection.toObjectiveSelectionConfig().candidateLimit());
+      assertEquals(
+          0.33, cfg.objectiveSelection.toObjectiveSelectionConfig().switchScoreMargin(), 1e-9);
+      assertEquals(
+          false, cfg.objectiveSelection.toObjectiveSelectionConfig().holdCurrentWhenRanked());
+
+      Rebuilt2026 field = new Rebuilt2026(cfg);
+      FieldTrackerCore tracker = new FieldTrackerCore(field);
+      assertEquals(5, tracker.objectiveSelectionConfig().candidateLimit());
+      assertEquals(0.33, tracker.objectiveSelectionConfig().switchScoreMargin(), 1e-9);
     } finally {
       if (previous == null) {
         System.clearProperty("repulsor.profile.path");
