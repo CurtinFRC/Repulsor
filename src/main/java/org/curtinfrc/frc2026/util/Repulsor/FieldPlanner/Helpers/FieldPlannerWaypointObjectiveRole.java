@@ -19,6 +19,7 @@ public enum FieldPlannerWaypointObjectiveRole {
   }
 
   public boolean matches(FieldPlannerWaypointObjectiveRole actual) {
-    return this == ANY || actual == ANY || this == actual;
+    if (this == ANY) return true;
+    return actual != null && actual != ANY && this == actual;
   }
 }

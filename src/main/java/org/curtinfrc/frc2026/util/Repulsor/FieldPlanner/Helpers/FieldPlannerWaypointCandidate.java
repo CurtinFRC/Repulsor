@@ -14,6 +14,7 @@ public record FieldPlannerWaypointCandidate(
   public FieldPlannerWaypointCandidate {
     if (name == null || name.isBlank()) name = "candidate";
     if (entryPoint == null) throw new IllegalArgumentException("entryPoint cannot be null");
+    if (!Double.isFinite(preference)) preference = 0.0;
   }
 
   public static FieldPlannerWaypointCandidate single(String name, Translation2d entryPoint) {
@@ -21,6 +22,7 @@ public record FieldPlannerWaypointCandidate(
   }
 
   public FieldPlannerWaypointPlan toPlan() {
-    return new FieldPlannerWaypointPlan(entryPoint, exitPoint, gate, false, false, forceStage);
+    return new FieldPlannerWaypointPlan(
+        entryPoint, exitPoint, gate, false, gate != null, forceStage);
   }
 }

@@ -77,7 +77,7 @@ public final class FieldPlannerGoalManager {
   private static final FieldGeometry COMPATIBILITY_FIELD_GEOMETRY =
       new FieldGeometry(16.540988, 8.211236);
 
-  private final FieldPlannerWaypointConfig waypointConfig;
+  private FieldPlannerWaypointConfig waypointConfig;
   private FieldPlannerWaypointStrategy waypointStrategy;
 
   private Pose2d goal = Pose2d.kZero;
@@ -243,6 +243,18 @@ public final class FieldPlannerGoalManager {
   public void setWaypointStrategy(FieldPlannerWaypointStrategy waypointStrategy) {
     this.waypointStrategy =
         waypointStrategy == null ? FieldPlannerWaypointStrategy.defaults() : waypointStrategy;
+  }
+
+  public void setWaypointPolicyProfile(FieldPlannerWaypointPolicyProfile profile) {
+    if (profile == null) {
+      this.waypointConfig = FieldPlannerWaypointConfig.defaults();
+      setWaypointStrategy(FieldPlannerWaypointStrategy.defaults());
+      return;
+    }
+    this.waypointConfig =
+        profile.config() == null ? FieldPlannerWaypointConfig.defaults() : profile.config();
+    setWaypointStrategy(profile.strategy());
+    clearStagedState(false);
   }
 
   /**

@@ -509,6 +509,66 @@ class FieldPlannerGoalManagerTest {
   }
 
   @Test
+  void objectiveSpecificRuleDoesNotStageWhenObjectiveIsUnknown() {
+    FieldPlannerWaypointRule rule =
+        FieldPlannerWaypointRule.stageBetweenZones(
+            "score-only",
+            FieldPlannerWaypointObjectiveRole.SCORE,
+            null,
+            null,
+            List.of(FieldPlannerWaypointCandidate.single("mid", new Translation2d(6.0, 4.0))));
+    FieldPlannerGoalManager manager =
+        new FieldPlannerGoalManager(
+            List.of(),
+            Constants.FIELD_LENGTH,
+            Constants.FIELD_WIDTH,
+            FieldPlannerWaypointConfig.defaults(),
+            new FieldPlannerWaypointRuleStrategy(List.of(rule)));
+
+    Pose2d requested = new Pose2d(new Translation2d(12.0, 4.0), Rotation2d.kZero);
+    manager.setRequestedGoal(requested);
+
+    assertTrue(manager.updateStagedGoal(new Translation2d(2.0, 4.0), List.of()));
+    assertEquals(requested.getX(), manager.getGoalTranslation().getX(), EPS);
+  }
+
+  @Test
+  void namedPolicyProfileCanSwitchConfigAndStrategyAtRuntime() {
+    FieldPlannerGoalManager manager =
+        new FieldPlannerGoalManager(
+            List.of(),
+            Constants.FIELD_LENGTH,
+            Constants.FIELD_WIDTH,
+            FieldPlannerWaypointConfig.defaults().withOccludingGateStagingEnabled(false),
+            context -> FieldPlannerWaypointDecision.direct());
+
+    FieldPlannerWaypointPolicyProfile profile =
+        FieldPlannerWaypointPolicyProfile.fromRules(
+            "score-route",
+            FieldPlannerWaypointConfig.defaults().withCenterBandMeters(2.0),
+            List.of(
+                FieldPlannerWaypointRule.stageBetweenZones(
+                    "score-stage",
+                    FieldPlannerWaypointObjectiveRole.SCORE,
+                    null,
+                    null,
+                    List.of(
+                        FieldPlannerWaypointCandidate.single(
+                            "preferred", new Translation2d(4.0, 6.0))))));
+    manager.setWaypointPolicyProfile(profile);
+
+    Pose2d requested = new Pose2d(new Translation2d(12.0, 4.0), Rotation2d.kZero);
+    manager.setRequestedGoal(requested);
+
+    assertEquals(2.0, manager.getWaypointConfig().centerBandMeters(), EPS);
+    assertFalse(
+        manager.updateStagedGoal(
+            new Translation2d(2.0, 4.0), List.of(), FieldPlannerWaypointObjectiveRole.SCORE));
+    assertEquals(4.0, manager.getGoalTranslation().getX(), EPS);
+    assertEquals(6.0, manager.getGoalTranslation().getY(), EPS);
+  }
+
+  @Test
   void strategyChainAllowsHigherPriorityModesToOverrideDefaultRules() {
     FieldPlannerWaypointStrategy directOverride = context -> FieldPlannerWaypointDecision.direct();
     FieldPlannerWaypointStrategy stageRule =
