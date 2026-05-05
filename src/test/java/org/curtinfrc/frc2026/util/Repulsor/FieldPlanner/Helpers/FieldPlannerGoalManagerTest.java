@@ -443,6 +443,101 @@ class FieldPlannerGoalManagerTest {
     assertEquals(requested.getY(), manager.getGoalTranslation().getY(), EPS);
   }
 
+  @Test
+  void ruleStrategyStagesByObjectiveAndZoneUsingBestCandidate() {
+    FieldPlannerWaypointZone sourceZone =
+        new FieldPlannerWaypointZone("source", 0.0, 4.0, 0.0, 8.0);
+    FieldPlannerWaypointZone scoreZone =
+        new FieldPlannerWaypointZone("score", 10.0, 16.5, 0.0, 8.0);
+    FieldPlannerWaypointRule rule =
+        FieldPlannerWaypointRule.stageBetweenZones(
+            "score-crossing",
+            FieldPlannerWaypointObjectiveRole.SCORE,
+            sourceZone,
+            scoreZone,
+            List.of(
+                new FieldPlannerWaypointCandidate(
+                    "low", new Translation2d(5.0, 2.0), null, null, 0.0, true),
+                new FieldPlannerWaypointCandidate(
+                    "preferred", new Translation2d(5.0, 6.0), null, null, 10.0, true)));
+    FieldPlannerGoalManager manager =
+        new FieldPlannerGoalManager(
+            List.of(),
+            Constants.FIELD_LENGTH,
+            Constants.FIELD_WIDTH,
+            FieldPlannerWaypointConfig.defaults(),
+            new FieldPlannerWaypointRuleStrategy(List.of(rule)));
+
+    Pose2d requested = new Pose2d(new Translation2d(12.0, 4.0), Rotation2d.kZero);
+    manager.setRequestedGoal(requested);
+
+    assertFalse(
+        manager.updateStagedGoal(
+            new Translation2d(2.0, 4.0), List.of(), FieldPlannerWaypointObjectiveRole.SCORE));
+    assertEquals(5.0, manager.getGoalTranslation().getX(), EPS);
+    assertEquals(6.0, manager.getGoalTranslation().getY(), EPS);
+    assertEquals(
+        FieldPlannerWaypointObjectiveRole.SCORE, manager.getWaypointStatus().lastObjectiveRole());
+  }
+
+  @Test
+  void ruleStrategyDoesNotStageForDifferentObjective() {
+    FieldPlannerWaypointZone left = new FieldPlannerWaypointZone("left", 0.0, 4.0, 0.0, 8.0);
+    FieldPlannerWaypointZone right = new FieldPlannerWaypointZone("right", 10.0, 16.5, 0.0, 8.0);
+    FieldPlannerWaypointRule rule =
+        FieldPlannerWaypointRule.stageBetweenZones(
+            "score-only",
+            FieldPlannerWaypointObjectiveRole.SCORE,
+            left,
+            right,
+            List.of(FieldPlannerWaypointCandidate.single("mid", new Translation2d(6.0, 4.0))));
+    FieldPlannerGoalManager manager =
+        new FieldPlannerGoalManager(
+            List.of(),
+            Constants.FIELD_LENGTH,
+            Constants.FIELD_WIDTH,
+            FieldPlannerWaypointConfig.defaults(),
+            new FieldPlannerWaypointRuleStrategy(List.of(rule)));
+
+    Pose2d requested = new Pose2d(new Translation2d(12.0, 4.0), Rotation2d.kZero);
+    manager.setRequestedGoal(requested);
+
+    assertTrue(
+        manager.updateStagedGoal(
+            new Translation2d(2.0, 4.0), List.of(), FieldPlannerWaypointObjectiveRole.COLLECT));
+    assertEquals(requested.getX(), manager.getGoalTranslation().getX(), EPS);
+  }
+
+  @Test
+  void strategyChainAllowsHigherPriorityModesToOverrideDefaultRules() {
+    FieldPlannerWaypointStrategy directOverride = context -> FieldPlannerWaypointDecision.direct();
+    FieldPlannerWaypointStrategy stageRule =
+        FieldPlannerWaypointRuleStrategy.of(
+            FieldPlannerWaypointRule.stageBetweenZones(
+                "fallback-stage",
+                FieldPlannerWaypointObjectiveRole.ANY,
+                null,
+                null,
+                List.of(
+                    FieldPlannerWaypointCandidate.single("stage", new Translation2d(4.0, 6.0)))));
+    FieldPlannerGoalManager manager =
+        new FieldPlannerGoalManager(
+            List.of(),
+            Constants.FIELD_LENGTH,
+            Constants.FIELD_WIDTH,
+            FieldPlannerWaypointConfig.defaults(),
+            FieldPlannerWaypointStrategyChain.of(directOverride, stageRule));
+
+    Pose2d requested = new Pose2d(new Translation2d(12.0, 2.0), Rotation2d.kZero);
+    manager.setRequestedGoal(requested);
+
+    assertTrue(manager.updateStagedGoal(new Translation2d(2.0, 2.0), List.of()));
+    assertEquals(requested.getX(), manager.getGoalTranslation().getX(), EPS);
+    assertEquals(
+        FieldPlannerWaypointDecision.Mode.DIRECT,
+        manager.getWaypointStatus().lastStrategyDecision().mode());
+  }
+
   private static GatedAttractorObstacle gate(Translation2d center, Translation2d bypassPoint) {
     Translation2d[] gatePoly =
         new Translation2d[] {

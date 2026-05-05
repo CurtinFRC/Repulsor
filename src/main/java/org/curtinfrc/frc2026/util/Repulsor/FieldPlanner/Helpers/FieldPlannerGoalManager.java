@@ -78,7 +78,7 @@ public final class FieldPlannerGoalManager {
       new FieldGeometry(16.540988, 8.211236);
 
   private final FieldPlannerWaypointConfig waypointConfig;
-  private final FieldPlannerWaypointStrategy waypointStrategy;
+  private FieldPlannerWaypointStrategy waypointStrategy;
 
   private Pose2d goal = Pose2d.kZero;
   private Pose2d requestedGoal = Pose2d.kZero;
@@ -98,6 +98,8 @@ public final class FieldPlannerGoalManager {
   private Translation2d stagedExitPoint = null;
   private FieldPlannerWaypointDecision lastStrategyDecision =
       FieldPlannerWaypointDecision.useDefault();
+  private FieldPlannerWaypointObjectiveRole lastObjectiveRole =
+      FieldPlannerWaypointObjectiveRole.ANY;
 
   private final List<GatedAttractorObstacle> gatedAttractors;
   private final double fieldLengthMeters;
@@ -226,6 +228,7 @@ public final class FieldPlannerGoalManager {
         requestedGoal,
         goal,
         lastStrategyDecision,
+        lastObjectiveRole,
         stagedAttractor != null,
         stagedAttractor,
         stagedExitPoint,
@@ -235,6 +238,11 @@ public final class FieldPlannerGoalManager {
         stagedUsingBypass,
         stagedCenterReturn,
         stagedModeTicks);
+  }
+
+  public void setWaypointStrategy(FieldPlannerWaypointStrategy waypointStrategy) {
+    this.waypointStrategy =
+        waypointStrategy == null ? FieldPlannerWaypointStrategy.defaults() : waypointStrategy;
   }
 
   /**
@@ -282,6 +290,15 @@ public final class FieldPlannerGoalManager {
    * @return value produced by this operation.
    */
   public boolean updateStagedGoal(Translation2d curPos, List<? extends Obstacle> obstacles) {
+    return updateStagedGoal(curPos, obstacles, FieldPlannerWaypointObjectiveRole.ANY);
+  }
+
+  public boolean updateStagedGoal(
+      Translation2d curPos,
+      List<? extends Obstacle> obstacles,
+      FieldPlannerWaypointObjectiveRole objectiveRole) {
+    if (objectiveRole == null) objectiveRole = FieldPlannerWaypointObjectiveRole.ANY;
+    lastObjectiveRole = objectiveRole;
     Translation2d reqT = requestedGoal.getTranslation();
     var context =
         new FieldPlannerWaypointContext(
@@ -291,6 +308,7 @@ public final class FieldPlannerGoalManager {
             obstacles == null ? List.of() : obstacles,
             fieldLengthMeters,
             fieldWidthMeters,
+            objectiveRole,
             waypointConfig,
             stagedComplete,
             lastStagedPoint,

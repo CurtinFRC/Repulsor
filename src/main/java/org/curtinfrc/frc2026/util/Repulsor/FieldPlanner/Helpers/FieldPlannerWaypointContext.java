@@ -14,9 +14,14 @@ public record FieldPlannerWaypointContext(
     List<? extends Obstacle> obstacles,
     double fieldLengthMeters,
     double fieldWidthMeters,
+    FieldPlannerWaypointObjectiveRole objectiveRole,
     FieldPlannerWaypointConfig config,
     boolean previousStageComplete,
     Translation2d previousStagePoint,
     boolean currentlyStaging,
     Translation2d activeWaypoint,
-    boolean exitPhase) {}
+    boolean exitPhase) {
+  public FieldPlannerWaypointContext {
+    if (objectiveRole == null) objectiveRole = FieldPlannerWaypointObjectiveRole.ANY;
+  }
+}

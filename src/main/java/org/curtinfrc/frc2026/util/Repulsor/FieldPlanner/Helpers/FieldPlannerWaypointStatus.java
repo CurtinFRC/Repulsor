@@ -8,6 +8,7 @@ public record FieldPlannerWaypointStatus(
     Pose2d requestedGoal,
     Pose2d activeGoal,
     FieldPlannerWaypointDecision lastStrategyDecision,
+    FieldPlannerWaypointObjectiveRole lastObjectiveRole,
     boolean activeStage,
     Translation2d stagedAttractor,
     Translation2d stagedExitPoint,
@@ -20,5 +21,6 @@ public record FieldPlannerWaypointStatus(
   public FieldPlannerWaypointStatus {
     if (lastStrategyDecision == null)
       lastStrategyDecision = FieldPlannerWaypointDecision.useDefault();
+    if (lastObjectiveRole == null) lastObjectiveRole = FieldPlannerWaypointObjectiveRole.ANY;
   }
 }

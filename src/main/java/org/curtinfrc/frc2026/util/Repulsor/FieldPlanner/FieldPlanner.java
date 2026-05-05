@@ -41,6 +41,7 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerForc
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerGoalManager;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointConfig;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointObjectiveRole;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointStatus;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointStrategy;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.GatedAttractorObstacle;
@@ -381,6 +382,10 @@ public class FieldPlanner {
     return goalManager.getWaypointStatus();
   }
 
+  public void setWaypointStrategy(FieldPlannerWaypointStrategy waypointStrategy) {
+    goalManager.setWaypointStrategy(waypointStrategy);
+  }
+
   /**
    * Returns the get requested goal pose value maintained by this Repulsor component.
    *
@@ -620,7 +625,9 @@ public class FieldPlanner {
       ds.forcedGoalPose("main").ifPresent(this::setRequestedGoal);
     }
 
-    boolean slowDown = goalManager.updateStagedGoal(curTrans, dynamicObstacles);
+    boolean slowDown =
+        goalManager.updateStagedGoal(
+            curTrans, dynamicObstacles, FieldPlannerWaypointObjectiveRole.fromCategory(cat));
     distToGoal = curTrans.getDistance(goalManager.getGoalTranslation());
     Pose2d calculationGoal = goalManager.getGoalPose();
     Translation2d calculationGoalTranslation = calculationGoal.getTranslation();
