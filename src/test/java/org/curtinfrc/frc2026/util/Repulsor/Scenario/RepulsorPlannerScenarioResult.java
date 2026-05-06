@@ -15,6 +15,8 @@ public record RepulsorPlannerScenarioResult(
     double minDistanceMeters,
     int pathBlockedCycles,
     int globalFallbackCycles,
+    int waypointStageCycles,
+    int waypointBypassCycles,
     int reactiveBypassCycles,
     int robotIntersectingCycles,
     int stuckAbortCycles,

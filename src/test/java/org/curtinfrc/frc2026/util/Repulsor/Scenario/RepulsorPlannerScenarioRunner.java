@@ -23,6 +23,8 @@ public final class RepulsorPlannerScenarioRunner {
     RepulsorPlanningResult lastResult = RepulsorPlanningResult.empty();
     int pathBlockedCycles = 0;
     int globalFallbackCycles = 0;
+    int waypointStageCycles = 0;
+    int waypointBypassCycles = 0;
     int reactiveBypassCycles = 0;
     int robotIntersectingCycles = 0;
     int stuckAbortCycles = 0;
@@ -39,6 +41,12 @@ public final class RepulsorPlannerScenarioRunner {
       RepulsorDiagnosticsSnapshot diagnostics = lastResult.diagnostics();
       if (diagnostics.pathBlocked()) pathBlockedCycles++;
       if (diagnostics.globalFallbackActive()) globalFallbackCycles++;
+      if (diagnostics.waypointStatus() != null && diagnostics.waypointStatus().activeStage()) {
+        waypointStageCycles++;
+      }
+      if (diagnostics.waypointStatus() != null && diagnostics.waypointStatus().usingBypass()) {
+        waypointBypassCycles++;
+      }
       if (diagnostics.reactiveBypassActive()) reactiveBypassCycles++;
       if (diagnostics.robotIntersecting()) robotIntersectingCycles++;
       if (diagnostics.stuckAbort()) stuckAbortCycles++;
@@ -64,6 +72,8 @@ public final class RepulsorPlannerScenarioRunner {
         minDistance,
         pathBlockedCycles,
         globalFallbackCycles,
+        waypointStageCycles,
+        waypointBypassCycles,
         reactiveBypassCycles,
         robotIntersectingCycles,
         stuckAbortCycles,
