@@ -99,6 +99,7 @@ public final class FieldProfileValidator {
     validateRanking(cfg.predictiveRanking, errors);
     validateObjectiveSelection(cfg.objectiveSelection, errors);
     validateWaypointing(cfg.waypointing, errors);
+    validateAutoPath(cfg.autoPath, errors);
 
     if (cfg.shuttleShot != null && Boolean.TRUE.equals(cfg.shuttleShot.enabled)) {
       validateProjectileShot("legacyShuttleShot", cfg.shuttleShot, errors);
@@ -174,6 +175,50 @@ public final class FieldProfileValidator {
         && waypointing.centerReturnExitMaxMeters != null
         && waypointing.centerReturnExitMaxMeters < waypointing.centerReturnExitMinMeters) {
       errors.add(prefix + ".centerReturnExitMaxMeters must be >= centerReturnExitMinMeters");
+    }
+  }
+
+  private static void validateAutoPath(
+      FieldProfileConfig.AutoPathConfig autoPath, List<String> errors) {
+    if (autoPath == null) return;
+    String prefix = "autoPath";
+    requireOptionalNonNegative(
+        autoPath.episodeCooldownSeconds, prefix + ".episodeCooldownSeconds", errors);
+    requireOptionalNonNegative(autoPath.pinnedFailSeconds, prefix + ".pinnedFailSeconds", errors);
+    requireOptionalNonNegative(autoPath.stuckFailSeconds, prefix + ".stuckFailSeconds", errors);
+    requireOptionalNonNegative(
+        autoPath.progressEpsilonMeters, prefix + ".progressEpsilonMeters", errors);
+    requireOptionalNonNegative(
+        autoPath.pinnedProgressMinMeters, prefix + ".pinnedProgressMinMeters", errors);
+    requireOptionalNonNegative(
+        autoPath.stuckDistanceMinMeters, prefix + ".stuckDistanceMinMeters", errors);
+    requireOptionalNonNegative(
+        autoPath.successNearDistanceMeters, prefix + ".successNearDistanceMeters", errors);
+    requireOptionalPositive(autoPath.collectGoalUnits, prefix + ".collectGoalUnits", errors);
+    requireOptionalNonNegative(
+        autoPath.shootLockEnterMeters, prefix + ".shootLockEnterMeters", errors);
+    requireOptionalNonNegative(
+        autoPath.shootLockExitMeters, prefix + ".shootLockExitMeters", errors);
+    requireOptionalNonNegative(
+        autoPath.shootLockMinRotationDegrees, prefix + ".shootLockMinRotationDegrees", errors);
+    requireOptionalNonNegative(
+        autoPath.shootReadyPositionToleranceMeters,
+        prefix + ".shootReadyPositionToleranceMeters",
+        errors);
+    requireOptionalNonNegative(
+        autoPath.shootReadyRotationToleranceDegrees,
+        prefix + ".shootReadyRotationToleranceDegrees",
+        errors);
+    requireOptionalNonNegative(
+        autoPath.collectHoldGoalNearMeters, prefix + ".collectHoldGoalNearMeters", errors);
+    requireOptionalNonNegative(
+        autoPath.collectFarResourceMinDistanceMeters,
+        prefix + ".collectFarResourceMinDistanceMeters",
+        errors);
+    if (autoPath.shootLockEnterMeters != null
+        && autoPath.shootLockExitMeters != null
+        && autoPath.shootLockExitMeters < autoPath.shootLockEnterMeters) {
+      errors.add(prefix + ".shootLockExitMeters must be >= shootLockEnterMeters");
     }
   }
 

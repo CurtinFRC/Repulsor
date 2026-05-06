@@ -21,6 +21,7 @@ package org.curtinfrc.frc2026.util.Repulsor.Fields;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.curtinfrc.frc2026.util.Repulsor.Behaviours.AutoPathRuntimeConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.CoarseGlobalPlannerConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlannerRuntimeConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointConfig;
@@ -60,6 +61,7 @@ public class FieldProfileConfig {
   public ObjectiveSelectionProfileConfig objectiveSelection = new ObjectiveSelectionProfileConfig();
   public WaypointingConfig waypointing = new WaypointingConfig();
   public PlannerRuntimeConfig plannerRuntime = new PlannerRuntimeConfig();
+  public AutoPathConfig autoPath = new AutoPathConfig();
 
   /** Compatibility input for older 2026-specific YAML. Prefer projectileShots. */
   @Deprecated(forRemoval = false)
@@ -126,6 +128,7 @@ public class FieldProfileConfig {
     mergeObjectiveSelection(base.objectiveSelection, overlay.objectiveSelection);
     mergeWaypointing(base.waypointing, overlay.waypointing);
     mergePlannerRuntime(base.plannerRuntime, overlay.plannerRuntime);
+    mergeAutoPath(base.autoPath, overlay.autoPath);
 
     mergeProjectileShot(base.shuttleShot, overlay.shuttleShot);
     mergeCorridor(base.rebuiltCorridor, overlay.rebuiltCorridor);
@@ -224,6 +227,47 @@ public class FieldProfileConfig {
     }
     if (overlay.forceThroughWallDistanceMeters != null) {
       base.forceThroughWallDistanceMeters = overlay.forceThroughWallDistanceMeters;
+    }
+  }
+
+  private static void mergeAutoPath(AutoPathConfig base, AutoPathConfig overlay) {
+    if (base == null || overlay == null) return;
+    if (overlay.episodeCooldownSeconds != null) {
+      base.episodeCooldownSeconds = overlay.episodeCooldownSeconds;
+    }
+    if (overlay.pinnedFailSeconds != null) base.pinnedFailSeconds = overlay.pinnedFailSeconds;
+    if (overlay.stuckFailSeconds != null) base.stuckFailSeconds = overlay.stuckFailSeconds;
+    if (overlay.progressEpsilonMeters != null) {
+      base.progressEpsilonMeters = overlay.progressEpsilonMeters;
+    }
+    if (overlay.pinnedProgressMinMeters != null) {
+      base.pinnedProgressMinMeters = overlay.pinnedProgressMinMeters;
+    }
+    if (overlay.stuckDistanceMinMeters != null) {
+      base.stuckDistanceMinMeters = overlay.stuckDistanceMinMeters;
+    }
+    if (overlay.successNearDistanceMeters != null) {
+      base.successNearDistanceMeters = overlay.successNearDistanceMeters;
+    }
+    if (overlay.collectGoalUnits != null) base.collectGoalUnits = overlay.collectGoalUnits;
+    if (overlay.shootLockEnterMeters != null) {
+      base.shootLockEnterMeters = overlay.shootLockEnterMeters;
+    }
+    if (overlay.shootLockExitMeters != null) base.shootLockExitMeters = overlay.shootLockExitMeters;
+    if (overlay.shootLockMinRotationDegrees != null) {
+      base.shootLockMinRotationDegrees = overlay.shootLockMinRotationDegrees;
+    }
+    if (overlay.shootReadyPositionToleranceMeters != null) {
+      base.shootReadyPositionToleranceMeters = overlay.shootReadyPositionToleranceMeters;
+    }
+    if (overlay.shootReadyRotationToleranceDegrees != null) {
+      base.shootReadyRotationToleranceDegrees = overlay.shootReadyRotationToleranceDegrees;
+    }
+    if (overlay.collectHoldGoalNearMeters != null) {
+      base.collectHoldGoalNearMeters = overlay.collectHoldGoalNearMeters;
+    }
+    if (overlay.collectFarResourceMinDistanceMeters != null) {
+      base.collectFarResourceMinDistanceMeters = overlay.collectFarResourceMinDistanceMeters;
     }
   }
 
@@ -497,6 +541,47 @@ public class FieldProfileConfig {
           finiteNonNegative(
               centerReturnGateMinOffsetMeters, defaults.centerReturnGateMinOffsetMeters()),
           finiteNonNegative(fieldEdgeMarginMeters, defaults.fieldEdgeMarginMeters()));
+    }
+  }
+
+  public static class AutoPathConfig {
+    public Double episodeCooldownSeconds;
+    public Double pinnedFailSeconds;
+    public Double stuckFailSeconds;
+    public Double progressEpsilonMeters;
+    public Double pinnedProgressMinMeters;
+    public Double stuckDistanceMinMeters;
+    public Double successNearDistanceMeters;
+    public Integer collectGoalUnits;
+    public Double shootLockEnterMeters;
+    public Double shootLockExitMeters;
+    public Double shootLockMinRotationDegrees;
+    public Double shootReadyPositionToleranceMeters;
+    public Double shootReadyRotationToleranceDegrees;
+    public Double collectHoldGoalNearMeters;
+    public Double collectFarResourceMinDistanceMeters;
+
+    public AutoPathRuntimeConfig toAutoPathRuntimeConfig() {
+      AutoPathRuntimeConfig defaults = AutoPathRuntimeConfig.defaults();
+      return new AutoPathRuntimeConfig(
+          finiteNonNegative(episodeCooldownSeconds, defaults.episodeCooldownSeconds()),
+          finiteNonNegative(pinnedFailSeconds, defaults.pinnedFailSeconds()),
+          finiteNonNegative(stuckFailSeconds, defaults.stuckFailSeconds()),
+          finiteNonNegative(progressEpsilonMeters, defaults.progressEpsilonMeters()),
+          finiteNonNegative(pinnedProgressMinMeters, defaults.pinnedProgressMinMeters()),
+          finiteNonNegative(stuckDistanceMinMeters, defaults.stuckDistanceMinMeters()),
+          finiteNonNegative(successNearDistanceMeters, defaults.successNearDistanceMeters()),
+          positive(collectGoalUnits, defaults.collectGoalUnits()),
+          finiteNonNegative(shootLockEnterMeters, defaults.shootLockEnterMeters()),
+          finiteNonNegative(shootLockExitMeters, defaults.shootLockExitMeters()),
+          finiteNonNegative(shootLockMinRotationDegrees, defaults.shootLockMinRotationDegrees()),
+          finiteNonNegative(
+              shootReadyPositionToleranceMeters, defaults.shootReadyPositionToleranceMeters()),
+          finiteNonNegative(
+              shootReadyRotationToleranceDegrees, defaults.shootReadyRotationToleranceDegrees()),
+          finiteNonNegative(collectHoldGoalNearMeters, defaults.collectHoldGoalNearMeters()),
+          finiteNonNegative(
+              collectFarResourceMinDistanceMeters, defaults.collectFarResourceMinDistanceMeters()));
     }
   }
 

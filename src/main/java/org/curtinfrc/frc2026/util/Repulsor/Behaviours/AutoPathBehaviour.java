@@ -265,11 +265,21 @@ public class AutoPathBehaviour extends Behaviour {
   }
 
   private boolean isReadyToShoot(
-      Pose2d robotPose, Pose2d goalPose, boolean piece, CategorySpec cat) {
+      Pose2d robotPose,
+      Pose2d goalPose,
+      boolean piece,
+      CategorySpec cat,
+      AutoPathRuntimeConfig config) {
     if (!piece) return false;
     if (cat != CategorySpec.kScore) return false;
     if (goalPose == null) return false;
-    boolean near = nearPose(robotPose, goalPose, 0.28, 10.0);
+    AutoPathRuntimeConfig safeConfig = config == null ? AutoPathRuntimeConfig.defaults() : config;
+    boolean near =
+        nearPose(
+            robotPose,
+            goalPose,
+            safeConfig.shootReadyPositionToleranceMeters(),
+            safeConfig.shootReadyRotationToleranceDegrees());
     if (!near) return false;
     return true;
   }
@@ -293,6 +303,11 @@ public class AutoPathBehaviour extends Behaviour {
    */
   @Override
   public Command build(BehaviourContext ctx) {
+    AutoPathRuntimeConfig autoPathConfig =
+        ctx.repulsor.getFieldDefinition() == null
+            ? AutoPathRuntimeConfig.defaults()
+            : ctx.repulsor.getFieldDefinition().autoPathRuntimeConfig();
+
     AtomicReference<RepulsorSetpoint> lastActive = new AtomicReference<>(null);
     AtomicReference<CategorySpec> lastCat = new AtomicReference<>(null);
 
@@ -302,63 +317,17 @@ public class AutoPathBehaviour extends Behaviour {
     AtomicReference<RepulsorSetpoint> lastEpisodeGoal = new AtomicReference<>(null);
     AtomicLong lastEpisodeFinalizeNs = new AtomicLong(0L);
 
-    /**
-     * Configuration value for ep cooldown ns. The valid range and tuning source are defined by the
-     * owning subsystem or field profile.
-     */
-    final long EP_COOLDOWN_NS = 1_000_000_000L;
-    /**
-     * Configuration value for pinned fail ns. The valid range and tuning source are defined by the
-     * owning subsystem or field profile.
-     */
-    final long PINNED_FAIL_NS = 2_000_000_000L;
-    /**
-     * Configuration value for stuck fail ns. The valid range and tuning source are defined by the
-     * owning subsystem or field profile.
-     */
-    final long STUCK_FAIL_NS = 3_000_000_000L;
-    /**
-     * Configuration value for progress eps meters. Distances use meters in WPILib field coordinates
-     * and should be treated as tunable when sourced from profiles.
-     */
-    final double PROGRESS_EPS_METERS = 0.03;
-    /**
-     * Configuration value for pinned progress min meters. Distances use meters in WPILib field
-     * coordinates and should be treated as tunable when sourced from profiles.
-     */
-    final double PINNED_PROGRESS_MIN_METERS = 0.15;
-    /**
-     * Configuration value for stuck dist min meters. Distances use meters in WPILib field
-     * coordinates and should be treated as tunable when sourced from profiles.
-     */
-    final double STUCK_DIST_MIN_METERS = 0.5;
-    /**
-     * Configuration value for success near dist meters. Distances use meters in WPILib field
-     * coordinates and should be treated as tunable when sourced from profiles.
-     */
-    final double SUCCESS_NEAR_DIST_METERS = 0.40;
-
-    /**
-     * Configuration value for collect goal units. The valid range and tuning source are defined by
-     * the owning subsystem or field profile.
-     */
-    final int COLLECT_GOAL_UNITS = 3;
-
-    /**
-     * Configuration value for shoot lock enter m. The valid range and tuning source are defined by
-     * the owning subsystem or field profile.
-     */
-    final double SHOOT_LOCK_ENTER_M = 3.0;
-    /**
-     * Configuration value for shoot lock exit m. The valid range and tuning source are defined by
-     * the owning subsystem or field profile.
-     */
-    final double SHOOT_LOCK_EXIT_M = 3.6;
-    /**
-     * Configuration value for shoot lock min rot deg. Angles use WPILib rotation conventions; names
-     * ending in degrees are degrees, otherwise radians are assumed by the API.
-     */
-    final double SHOOT_LOCK_MIN_ROT_DEG = 8.0;
+    final long EP_COOLDOWN_NS = autoPathConfig.episodeCooldownNanos();
+    final long PINNED_FAIL_NS = autoPathConfig.pinnedFailNanos();
+    final long STUCK_FAIL_NS = autoPathConfig.stuckFailNanos();
+    final double PROGRESS_EPS_METERS = autoPathConfig.progressEpsilonMeters();
+    final double PINNED_PROGRESS_MIN_METERS = autoPathConfig.pinnedProgressMinMeters();
+    final double STUCK_DIST_MIN_METERS = autoPathConfig.stuckDistanceMinMeters();
+    final double SUCCESS_NEAR_DIST_METERS = autoPathConfig.successNearDistanceMeters();
+    final int COLLECT_GOAL_UNITS = autoPathConfig.collectGoalUnits();
+    final double SHOOT_LOCK_ENTER_M = autoPathConfig.shootLockEnterMeters();
+    final double SHOOT_LOCK_EXIT_M = autoPathConfig.shootLockExitMeters();
+    final double SHOOT_LOCK_MIN_ROT_DEG = autoPathConfig.shootLockMinRotationDegrees();
 
     AtomicBoolean shootGoalLocked = new AtomicBoolean(false);
     AtomicReference<Pose2d> lockedShootPose = new AtomicReference<>(null);
@@ -468,7 +437,13 @@ public class AutoPathBehaviour extends Behaviour {
 
                 RepulsorSetpoint hp =
                     chooseCollect(
-                        ctx, robotPose, cap, COLLECT_GOAL_UNITS, collectBluePoseRef, collectRoute);
+                        ctx,
+                        robotPose,
+                        cap,
+                        COLLECT_GOAL_UNITS,
+                        collectBluePoseRef,
+                        collectRoute,
+                        autoPathConfig);
 
                 desired = (hp != null) ? hp : collectRoute;
               }
@@ -563,7 +538,8 @@ public class AutoPathBehaviour extends Behaviour {
                 episodeEverNearGoal.set(true);
               }
 
-              boolean readyToShoot = isReadyToShoot(robotPose, goalPose, piece, cat);
+              boolean readyToShoot =
+                  isReadyToShoot(robotPose, goalPose, piece, cat, autoPathConfig);
               if (readyToShoot) {
                 if (!shootLatched.get()) {
                   shootLatched.set(true);
@@ -710,7 +686,45 @@ public class AutoPathBehaviour extends Behaviour {
             CategorySpec.kScore,
             current,
             null);
+    logObjectiveSelection(decision);
     return decision.hasSelection() ? decision.selected().setpoint : null;
+  }
+
+  private void logObjectiveSelection(ObjectiveSelectionDecision decision) {
+    ObjectiveSelectionDecision safeDecision =
+        decision == null ? ObjectiveSelectionDecision.none("null_decision") : decision;
+    Logger.recordOutput("Repulsor/AutoPath/ObjectiveSelection/Mode", safeDecision.mode().name());
+    Logger.recordOutput("Repulsor/AutoPath/ObjectiveSelection/Reason", safeDecision.reason());
+    Logger.recordOutput("Repulsor/AutoPath/ObjectiveSelection/Switched", safeDecision.switched());
+    Logger.recordOutput(
+        "Repulsor/AutoPath/ObjectiveSelection/ScoreDelta", safeDecision.scoreDelta());
+    logCandidate("Repulsor/AutoPath/ObjectiveSelection/Selected", safeDecision.selected());
+    logCandidate("Repulsor/AutoPath/ObjectiveSelection/Current", safeDecision.currentCandidate());
+    logCandidate("Repulsor/AutoPath/ObjectiveSelection/Best", safeDecision.bestCandidate());
+  }
+
+  private void logCandidate(
+      String prefix, org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.Candidate candidate) {
+    Logger.recordOutput(prefix + "/Present", candidate != null);
+    if (candidate == null) {
+      Logger.recordOutput(prefix + "/Score", 0.0);
+      Logger.recordOutput(prefix + "/OurEtaS", 0.0);
+      return;
+    }
+    Logger.recordOutput(prefix + "/Score", candidate.score);
+    Logger.recordOutput(prefix + "/OurEtaS", candidate.ourEtaS);
+    Logger.recordOutput(prefix + "/EnemyEtaS", candidate.enemyEtaS);
+    Logger.recordOutput(prefix + "/AllyEtaS", candidate.allyEtaS);
+    Logger.recordOutput(prefix + "/Pressure", candidate.pressure);
+    Logger.recordOutput(prefix + "/Congestion", candidate.congestion);
+    if (candidate.targetXY != null) {
+      Logger.recordOutput(prefix + "/Target", candidate.targetXY);
+    }
+    if (candidate.setpoint != null) {
+      Logger.recordOutput(prefix + "/Level", candidate.setpoint.levelId());
+      Logger.recordOutput(prefix + "/Height", candidate.setpoint.height().name());
+      Logger.recordOutput(prefix + "/Point", candidate.setpoint.point().name());
+    }
   }
 
   private RepulsorSetpoint currentScoreObjective(BehaviourContext ctx) {
@@ -727,7 +741,8 @@ public class AutoPathBehaviour extends Behaviour {
       double cap,
       int goalUnits,
       AtomicReference<Pose2d> collectBluePoseRef,
-      RepulsorSetpoint collectRoute) {
+      RepulsorSetpoint collectRoute,
+      AutoPathRuntimeConfig autoPathConfig) {
     FieldTrackerCore tracker = FieldTrackerCore.getInstance();
     Pose2d nextBlue = tracker.nextCollectionGoalBlue(robotPose, cap, goalUnits);
 
@@ -739,7 +754,7 @@ public class AutoPathBehaviour extends Behaviour {
               robotPose.getRotation());
     }
 
-    nextBlue = recoverFromCollectHold(ctx, tracker, robotPose, nextBlue);
+    nextBlue = recoverFromCollectHold(ctx, tracker, robotPose, nextBlue, autoPathConfig);
     nextBlue = new Pose2d(nextBlue.getTranslation(), nextBlue.getRotation());
 
     Logger.recordOutput("FinalCollect", nextBlue);
@@ -749,19 +764,16 @@ public class AutoPathBehaviour extends Behaviour {
   }
 
   private Pose2d recoverFromCollectHold(
-      BehaviourContext ctx, FieldTrackerCore tracker, Pose2d robotPose, Pose2d currentCandidate) {
+      BehaviourContext ctx,
+      FieldTrackerCore tracker,
+      Pose2d robotPose,
+      Pose2d currentCandidate,
+      AutoPathRuntimeConfig config) {
     if (tracker == null || robotPose == null || currentCandidate == null) return currentCandidate;
 
-    /**
-     * Configuration value for hold goal near m. The valid range and tuning source are defined by
-     * the owning subsystem or field profile.
-     */
-    final double HOLD_GOAL_NEAR_M = 0.25;
-    /**
-     * Configuration value for far fuel min dist m. The valid range and tuning source are defined by
-     * the owning subsystem or field profile.
-     */
-    final double FAR_FUEL_MIN_DIST_M = 1.10;
+    AutoPathRuntimeConfig safeConfig = config == null ? AutoPathRuntimeConfig.defaults() : config;
+    final double HOLD_GOAL_NEAR_M = safeConfig.collectHoldGoalNearMeters();
+    final double FAR_FUEL_MIN_DIST_M = safeConfig.collectFarResourceMinDistanceMeters();
 
     double candidateDist =
         robotPose.getTranslation().getDistance(currentCandidate.getTranslation());

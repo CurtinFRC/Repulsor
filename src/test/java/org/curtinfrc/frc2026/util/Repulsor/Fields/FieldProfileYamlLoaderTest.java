@@ -262,6 +262,22 @@ class FieldProfileYamlLoaderTest {
           globalFallbackMaxRuntimeSeconds: 0.02
           forceThroughGoalDistanceMeters: 1.8
           forceThroughWallDistanceMeters: 0.5
+        autoPath:
+          episodeCooldownSeconds: 0.75
+          pinnedFailSeconds: 1.25
+          stuckFailSeconds: 2.25
+          progressEpsilonMeters: 0.04
+          pinnedProgressMinMeters: 0.16
+          stuckDistanceMinMeters: 0.55
+          successNearDistanceMeters: 0.35
+          collectGoalUnits: 4
+          shootLockEnterMeters: 2.6
+          shootLockExitMeters: 3.2
+          shootLockMinRotationDegrees: 7.0
+          shootReadyPositionToleranceMeters: 0.22
+          shootReadyRotationToleranceDegrees: 6.0
+          collectHoldGoalNearMeters: 0.3
+          collectFarResourceMinDistanceMeters: 1.4
         """);
 
     String previous = System.getProperty("repulsor.profile.path");
@@ -296,6 +312,10 @@ class FieldProfileYamlLoaderTest {
       assertEquals(
           1.7, planner.getRuntimeConfig().globalFallbackConfig().waypointLookaheadMeters(), 1e-9);
       assertEquals(1.8, planner.getRuntimeConfig().forceThroughGoalDistanceMeters(), 1e-9);
+      assertEquals(0.75, field.autoPathRuntimeConfig().episodeCooldownSeconds(), 1e-9);
+      assertEquals(750_000_000L, field.autoPathRuntimeConfig().episodeCooldownNanos());
+      assertEquals(4, field.autoPathRuntimeConfig().collectGoalUnits());
+      assertEquals(0.22, field.autoPathRuntimeConfig().shootReadyPositionToleranceMeters(), 1e-9);
     } finally {
       if (previous == null) {
         System.clearProperty("repulsor.profile.path");

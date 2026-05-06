@@ -21,6 +21,7 @@ package org.curtinfrc.frc2026.util.Repulsor.Fields;
 
 import java.util.List;
 import java.util.Optional;
+import org.curtinfrc.frc2026.util.Repulsor.Behaviours.AutoPathRuntimeConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.Heatmap.HeatmapProvider;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
@@ -58,6 +59,10 @@ public interface FieldDefinition
    */
   default FieldActionProfile actionProfile() {
     return FieldActionProfile.none();
+  }
+
+  default AutoPathRuntimeConfig autoPathRuntimeConfig() {
+    return AutoPathRuntimeConfig.defaults();
   }
 
   /**
