@@ -17,6 +17,27 @@ public final class FieldPlannerCalculateResultDTO {
   private double activeGoalX;
   private double activeGoalY;
   private double activeGoalThetaRadians;
+  private boolean pathBlocked;
+  private boolean globalFallbackActive;
+  private boolean reactiveBypassActive;
+  private boolean reactiveBypassPinned;
+  private boolean forceThroughActive;
+  private boolean robotIntersecting;
+  private boolean stuckAbort;
+  private boolean waypointActiveStage;
+  private boolean waypointUsingBypass;
+  private int waypointStagedModeTicks;
+  private boolean hasGlobalFallbackWaypoint;
+  private double globalFallbackWaypointX;
+  private double globalFallbackWaypointY;
+  private double globalFallbackWaypointThetaRadians;
+  private boolean globalFallbackFound;
+  private boolean globalFallbackTimedOut;
+  private boolean globalFallbackExhaustedNodeBudget;
+  private int globalFallbackExpandedNodes;
+  private int globalFallbackGeneratedNodes;
+  private int globalFallbackPathNodes;
+  private long globalFallbackElapsedNanos;
 
   /**
    * Returns the get goal x value maintained by this Repulsor component.
@@ -216,5 +237,173 @@ public final class FieldPlannerCalculateResultDTO {
    */
   public void setActiveGoalThetaRadians(double activeGoalThetaRadians) {
     this.activeGoalThetaRadians = activeGoalThetaRadians;
+  }
+
+  public boolean isPathBlocked() {
+    return pathBlocked;
+  }
+
+  public void setPathBlocked(boolean pathBlocked) {
+    this.pathBlocked = pathBlocked;
+  }
+
+  public boolean isGlobalFallbackActive() {
+    return globalFallbackActive;
+  }
+
+  public void setGlobalFallbackActive(boolean globalFallbackActive) {
+    this.globalFallbackActive = globalFallbackActive;
+  }
+
+  public boolean isReactiveBypassActive() {
+    return reactiveBypassActive;
+  }
+
+  public void setReactiveBypassActive(boolean reactiveBypassActive) {
+    this.reactiveBypassActive = reactiveBypassActive;
+  }
+
+  public boolean isReactiveBypassPinned() {
+    return reactiveBypassPinned;
+  }
+
+  public void setReactiveBypassPinned(boolean reactiveBypassPinned) {
+    this.reactiveBypassPinned = reactiveBypassPinned;
+  }
+
+  public boolean isForceThroughActive() {
+    return forceThroughActive;
+  }
+
+  public void setForceThroughActive(boolean forceThroughActive) {
+    this.forceThroughActive = forceThroughActive;
+  }
+
+  public boolean isRobotIntersecting() {
+    return robotIntersecting;
+  }
+
+  public void setRobotIntersecting(boolean robotIntersecting) {
+    this.robotIntersecting = robotIntersecting;
+  }
+
+  public boolean isStuckAbort() {
+    return stuckAbort;
+  }
+
+  public void setStuckAbort(boolean stuckAbort) {
+    this.stuckAbort = stuckAbort;
+  }
+
+  public boolean isWaypointActiveStage() {
+    return waypointActiveStage;
+  }
+
+  public void setWaypointActiveStage(boolean waypointActiveStage) {
+    this.waypointActiveStage = waypointActiveStage;
+  }
+
+  public boolean isWaypointUsingBypass() {
+    return waypointUsingBypass;
+  }
+
+  public void setWaypointUsingBypass(boolean waypointUsingBypass) {
+    this.waypointUsingBypass = waypointUsingBypass;
+  }
+
+  public int getWaypointStagedModeTicks() {
+    return waypointStagedModeTicks;
+  }
+
+  public void setWaypointStagedModeTicks(int waypointStagedModeTicks) {
+    this.waypointStagedModeTicks = waypointStagedModeTicks;
+  }
+
+  public boolean isHasGlobalFallbackWaypoint() {
+    return hasGlobalFallbackWaypoint;
+  }
+
+  public void setHasGlobalFallbackWaypoint(boolean hasGlobalFallbackWaypoint) {
+    this.hasGlobalFallbackWaypoint = hasGlobalFallbackWaypoint;
+  }
+
+  public double getGlobalFallbackWaypointX() {
+    return globalFallbackWaypointX;
+  }
+
+  public void setGlobalFallbackWaypointX(double globalFallbackWaypointX) {
+    this.globalFallbackWaypointX = globalFallbackWaypointX;
+  }
+
+  public double getGlobalFallbackWaypointY() {
+    return globalFallbackWaypointY;
+  }
+
+  public void setGlobalFallbackWaypointY(double globalFallbackWaypointY) {
+    this.globalFallbackWaypointY = globalFallbackWaypointY;
+  }
+
+  public double getGlobalFallbackWaypointThetaRadians() {
+    return globalFallbackWaypointThetaRadians;
+  }
+
+  public void setGlobalFallbackWaypointThetaRadians(double globalFallbackWaypointThetaRadians) {
+    this.globalFallbackWaypointThetaRadians = globalFallbackWaypointThetaRadians;
+  }
+
+  public boolean isGlobalFallbackFound() {
+    return globalFallbackFound;
+  }
+
+  public void setGlobalFallbackFound(boolean globalFallbackFound) {
+    this.globalFallbackFound = globalFallbackFound;
+  }
+
+  public boolean isGlobalFallbackTimedOut() {
+    return globalFallbackTimedOut;
+  }
+
+  public void setGlobalFallbackTimedOut(boolean globalFallbackTimedOut) {
+    this.globalFallbackTimedOut = globalFallbackTimedOut;
+  }
+
+  public boolean isGlobalFallbackExhaustedNodeBudget() {
+    return globalFallbackExhaustedNodeBudget;
+  }
+
+  public void setGlobalFallbackExhaustedNodeBudget(boolean globalFallbackExhaustedNodeBudget) {
+    this.globalFallbackExhaustedNodeBudget = globalFallbackExhaustedNodeBudget;
+  }
+
+  public int getGlobalFallbackExpandedNodes() {
+    return globalFallbackExpandedNodes;
+  }
+
+  public void setGlobalFallbackExpandedNodes(int globalFallbackExpandedNodes) {
+    this.globalFallbackExpandedNodes = globalFallbackExpandedNodes;
+  }
+
+  public int getGlobalFallbackGeneratedNodes() {
+    return globalFallbackGeneratedNodes;
+  }
+
+  public void setGlobalFallbackGeneratedNodes(int globalFallbackGeneratedNodes) {
+    this.globalFallbackGeneratedNodes = globalFallbackGeneratedNodes;
+  }
+
+  public int getGlobalFallbackPathNodes() {
+    return globalFallbackPathNodes;
+  }
+
+  public void setGlobalFallbackPathNodes(int globalFallbackPathNodes) {
+    this.globalFallbackPathNodes = globalFallbackPathNodes;
+  }
+
+  public long getGlobalFallbackElapsedNanos() {
+    return globalFallbackElapsedNanos;
+  }
+
+  public void setGlobalFallbackElapsedNanos(long globalFallbackElapsedNanos) {
+    this.globalFallbackElapsedNanos = globalFallbackElapsedNanos;
   }
 }

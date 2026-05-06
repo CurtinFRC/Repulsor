@@ -179,6 +179,7 @@ public class FieldPlanner {
   private Optional<Distance> currentErr = Optional.empty();
   private Optional<PlannerFallback> fallback = Optional.empty();
   private volatile RepulsorPlanningResult lastPlanningResult = RepulsorPlanningResult.empty();
+  private volatile FieldPlannerCalculateResultDTO lastOffloadedCalculateResult;
   private Alliance fallbackAllianceOverride = null;
 
   /**
@@ -685,17 +686,7 @@ public class FieldPlanner {
                 cat,
                 suppressFallback,
                 shooterReleaseHeightMeters);
-        return finishPlanningResult(
-            planningRequest,
-            sample,
-            false,
-            bypass.isPinnedMode(),
-            false,
-            Optional.empty(),
-            false,
-            false,
-            false,
-            true);
+        return finishOffloadedPlanningResult(planningRequest, sample, lastOffloadedCalculateResult);
       } catch (RuntimeException ex) {
         RepulsorDiagnostics.warnThrottled(
             "FieldPlanner/offloadCalculateFallback",
@@ -1042,6 +1033,85 @@ public class FieldPlanner {
         false);
   }
 
+  private RepulsorSample finishOffloadedPlanningResult(
+      RepulsorPlanningRequest request,
+      RepulsorSample sample,
+      FieldPlannerCalculateResultDTO remote) {
+    if (remote == null) {
+      return finishPlanningResult(
+          request,
+          sample,
+          false,
+          bypass.isPinnedMode(),
+          false,
+          Optional.empty(),
+          false,
+          false,
+          false,
+          true);
+    }
+
+    Pose2d requestedGoal = goalManager.getRequestedGoalPose();
+    Pose2d activeGoal = goalManager.getGoalPose();
+    FieldPlannerWaypointStatus waypointStatus =
+        new FieldPlannerWaypointStatus(
+            requestedGoal,
+            activeGoal,
+            null,
+            null,
+            remote.isWaypointActiveStage(),
+            null,
+            null,
+            null,
+            false,
+            false,
+            remote.isWaypointUsingBypass(),
+            false,
+            remote.getWaypointStagedModeTicks());
+    CoarseGlobalPlannerStats globalStats =
+        new CoarseGlobalPlannerStats(
+            remote.isGlobalFallbackFound(),
+            remote.isGlobalFallbackTimedOut(),
+            remote.isGlobalFallbackExhaustedNodeBudget(),
+            remote.getGlobalFallbackExpandedNodes(),
+            remote.getGlobalFallbackGeneratedNodes(),
+            remote.getGlobalFallbackPathNodes(),
+            remote.getGlobalFallbackElapsedNanos());
+    Optional<Pose2d> globalWaypoint =
+        remote.isHasGlobalFallbackWaypoint()
+            ? Optional.of(
+                new Pose2d(
+                    remote.getGlobalFallbackWaypointX(),
+                    remote.getGlobalFallbackWaypointY(),
+                    Rotation2d.fromRadians(remote.getGlobalFallbackWaypointThetaRadians())))
+            : Optional.empty();
+    RepulsorDiagnosticsSnapshot diagnostics =
+        new RepulsorDiagnosticsSnapshot(
+            requestedGoal,
+            activeGoal,
+            waypointStatus,
+            globalStats,
+            remote.isGlobalFallbackActive(),
+            globalWaypoint,
+            remote.isReactiveBypassActive(),
+            remote.isReactiveBypassPinned(),
+            remote.isForceThroughActive(),
+            remote.isPathBlocked(),
+            remote.isRobotIntersecting(),
+            remote.isStuckAbort(),
+            true,
+            currentErr.map(distance -> distance.in(Meters)).orElse(Double.NaN));
+    lastPlanningResult = new RepulsorPlanningResult(request, sample, diagnostics);
+    Logger.recordOutput("Repulsor/Diagnostics/PathBlocked", remote.isPathBlocked());
+    Logger.recordOutput(
+        "Repulsor/Diagnostics/ReactiveBypassActive", remote.isReactiveBypassActive());
+    Logger.recordOutput("Repulsor/Diagnostics/ForceThrough", remote.isForceThroughActive());
+    Logger.recordOutput("Repulsor/Diagnostics/RobotIntersecting", remote.isRobotIntersecting());
+    Logger.recordOutput("Repulsor/Diagnostics/StuckAbort", remote.isStuckAbort());
+    Logger.recordOutput("Repulsor/Diagnostics/Offloaded", true);
+    return sample;
+  }
+
   private void recordGlobalFallbackTelemetry(boolean active, Optional<Pose2d> waypoint) {
     CoarseGlobalPlannerStats stats = globalPlanner.lastStats();
     Logger.recordOutput("Repulsor/GlobalFallback/Active", active);
@@ -1150,6 +1220,7 @@ public class FieldPlanner {
     if (remote == null) {
       throw new IllegalStateException("Null field planner offload result");
     }
+    lastOffloadedCalculateResult = remote;
 
     setActiveGoal(
         new Pose2d(

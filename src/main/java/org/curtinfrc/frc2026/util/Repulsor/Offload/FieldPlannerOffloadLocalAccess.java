@@ -5,8 +5,10 @@ import static edu.wpi.first.units.Units.Meters;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.List;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.CoarseGlobalPlannerStats;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.RepulsorDiagnosticsSnapshot;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.RepulsorSample;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
@@ -88,7 +90,44 @@ public final class FieldPlannerOffloadLocalAccess {
       out.setActiveGoalX(activeGoal.getX());
       out.setActiveGoalY(activeGoal.getY());
       out.setActiveGoalThetaRadians(activeGoal.getRotation().getRadians());
+      populateDiagnostics(out, localPlanner.lastPlanningResult().diagnostics());
       return out;
+    }
+  }
+
+  private static void populateDiagnostics(
+      FieldPlannerCalculateResultDTO out, RepulsorDiagnosticsSnapshot diagnostics) {
+    if (out == null || diagnostics == null) return;
+    out.setPathBlocked(diagnostics.pathBlocked());
+    out.setGlobalFallbackActive(diagnostics.globalFallbackActive());
+    out.setReactiveBypassActive(diagnostics.reactiveBypassActive());
+    out.setReactiveBypassPinned(diagnostics.reactiveBypassPinned());
+    out.setForceThroughActive(diagnostics.forceThroughActive());
+    out.setRobotIntersecting(diagnostics.robotIntersecting());
+    out.setStuckAbort(diagnostics.stuckAbort());
+    if (diagnostics.waypointStatus() != null) {
+      out.setWaypointActiveStage(diagnostics.waypointStatus().activeStage());
+      out.setWaypointUsingBypass(diagnostics.waypointStatus().usingBypass());
+      out.setWaypointStagedModeTicks(diagnostics.waypointStatus().stagedModeTicks());
+    }
+    diagnostics
+        .globalFallbackWaypoint()
+        .ifPresent(
+            waypoint -> {
+              out.setHasGlobalFallbackWaypoint(true);
+              out.setGlobalFallbackWaypointX(waypoint.getX());
+              out.setGlobalFallbackWaypointY(waypoint.getY());
+              out.setGlobalFallbackWaypointThetaRadians(waypoint.getRotation().getRadians());
+            });
+    CoarseGlobalPlannerStats stats = diagnostics.globalFallbackStats();
+    if (stats != null) {
+      out.setGlobalFallbackFound(stats.found());
+      out.setGlobalFallbackTimedOut(stats.timedOut());
+      out.setGlobalFallbackExhaustedNodeBudget(stats.exhaustedNodeBudget());
+      out.setGlobalFallbackExpandedNodes(stats.expandedNodes());
+      out.setGlobalFallbackGeneratedNodes(stats.generatedNodes());
+      out.setGlobalFallbackPathNodes(stats.pathNodes());
+      out.setGlobalFallbackElapsedNanos(stats.elapsedNanos());
     }
   }
 

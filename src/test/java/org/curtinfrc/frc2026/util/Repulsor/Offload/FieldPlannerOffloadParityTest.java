@@ -9,6 +9,7 @@ import java.util.List;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.RectangleObstacle;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.RepulsorDiagnosticsSnapshot;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.RepulsorSample;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
@@ -82,5 +83,35 @@ class FieldPlannerOffloadParityTest {
         localPlanner.getErr().orElseThrow().baseUnitMagnitude(), offloaded.getErrMeters(), 1e-9);
     assertEquals(localPlanner.getGoalPose().getX(), offloaded.getActiveGoalX(), 1e-9);
     assertEquals(localPlanner.getGoalPose().getY(), offloaded.getActiveGoalY(), 1e-9);
+    assertDiagnosticsParity(localPlanner.lastPlanningResult().diagnostics(), offloaded);
+  }
+
+  private static void assertDiagnosticsParity(
+      RepulsorDiagnosticsSnapshot local, FieldPlannerCalculateResultDTO offloaded) {
+    assertEquals(local.pathBlocked(), offloaded.isPathBlocked());
+    assertEquals(local.globalFallbackActive(), offloaded.isGlobalFallbackActive());
+    assertEquals(local.reactiveBypassActive(), offloaded.isReactiveBypassActive());
+    assertEquals(local.reactiveBypassPinned(), offloaded.isReactiveBypassPinned());
+    assertEquals(local.forceThroughActive(), offloaded.isForceThroughActive());
+    assertEquals(local.robotIntersecting(), offloaded.isRobotIntersecting());
+    assertEquals(local.stuckAbort(), offloaded.isStuckAbort());
+    assertEquals(
+        local.globalFallbackWaypoint().isPresent(), offloaded.isHasGlobalFallbackWaypoint());
+    assertEquals(local.globalFallbackStats().found(), offloaded.isGlobalFallbackFound());
+    assertEquals(local.globalFallbackStats().timedOut(), offloaded.isGlobalFallbackTimedOut());
+    assertEquals(
+        local.globalFallbackStats().exhaustedNodeBudget(),
+        offloaded.isGlobalFallbackExhaustedNodeBudget());
+    assertEquals(
+        local.globalFallbackStats().expandedNodes(), offloaded.getGlobalFallbackExpandedNodes());
+    assertEquals(
+        local.globalFallbackStats().generatedNodes(), offloaded.getGlobalFallbackGeneratedNodes());
+    assertEquals(local.globalFallbackStats().pathNodes(), offloaded.getGlobalFallbackPathNodes());
+    if (local.waypointStatus() != null) {
+      assertEquals(local.waypointStatus().activeStage(), offloaded.isWaypointActiveStage());
+      assertEquals(local.waypointStatus().usingBypass(), offloaded.isWaypointUsingBypass());
+      assertEquals(
+          local.waypointStatus().stagedModeTicks(), offloaded.getWaypointStagedModeTicks());
+    }
   }
 }
