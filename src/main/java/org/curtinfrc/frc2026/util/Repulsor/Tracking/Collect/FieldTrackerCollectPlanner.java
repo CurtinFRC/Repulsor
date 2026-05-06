@@ -63,6 +63,14 @@ public final class FieldTrackerCollectPlanner {
     engine.resetAll();
   }
 
+  public void configureTuning(CollectPlannerTuning tuning) {
+    engine.configureCollectPlannerTuning(tuning);
+  }
+
+  public CollectPlannerTuning tuning() {
+    return engine.collectPlannerTuning();
+  }
+
   /**
    * Returns the next objective goal blue value maintained by this Repulsor component.
    *

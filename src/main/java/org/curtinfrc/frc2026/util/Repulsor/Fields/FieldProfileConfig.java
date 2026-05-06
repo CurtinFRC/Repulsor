@@ -28,6 +28,8 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWayp
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PredictiveRankingConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Objective.ObjectiveSelectionConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.MovingShotSolver;
+import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.CollectObjectiveSelectionConfig;
+import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.CollectPlannerTuning;
 
 /**
  * Provides field profile config functionality for the Repulsor field/profile definition layer used
@@ -59,6 +61,7 @@ public class FieldProfileConfig {
   public Map<String, ProjectileShotConfig> projectileShots = new LinkedHashMap<>();
   public RankingConfig predictiveRanking = new RankingConfig();
   public ObjectiveSelectionProfileConfig objectiveSelection = new ObjectiveSelectionProfileConfig();
+  public CollectPlannerConfig collectPlanner = new CollectPlannerConfig();
   public WaypointingConfig waypointing = new WaypointingConfig();
   public PlannerRuntimeConfig plannerRuntime = new PlannerRuntimeConfig();
   public AutoPathConfig autoPath = new AutoPathConfig();
@@ -126,6 +129,7 @@ public class FieldProfileConfig {
 
     mergeRanking(base.predictiveRanking, overlay.predictiveRanking);
     mergeObjectiveSelection(base.objectiveSelection, overlay.objectiveSelection);
+    mergeCollectPlanner(base.collectPlanner, overlay.collectPlanner);
     mergeWaypointing(base.waypointing, overlay.waypointing);
     mergePlannerRuntime(base.plannerRuntime, overlay.plannerRuntime);
     mergeAutoPath(base.autoPath, overlay.autoPath);
@@ -202,6 +206,65 @@ public class FieldProfileConfig {
     if (overlay.switchScoreMargin != null) base.switchScoreMargin = overlay.switchScoreMargin;
     if (overlay.holdCurrentWhenRanked != null) {
       base.holdCurrentWhenRanked = overlay.holdCurrentWhenRanked;
+    }
+  }
+
+  private static void mergeCollectPlanner(CollectPlannerConfig base, CollectPlannerConfig overlay) {
+    if (base == null || overlay == null) return;
+    if (overlay.groupCellMeters != null) base.groupCellMeters = overlay.groupCellMeters;
+    if (overlay.nearbyRadiusMeters != null) base.nearbyRadiusMeters = overlay.nearbyRadiusMeters;
+    if (overlay.liveObservationMaxAgeSeconds != null) {
+      base.liveObservationMaxAgeSeconds = overlay.liveObservationMaxAgeSeconds;
+    }
+    if (overlay.predictorObservationMaxAgeSeconds != null) {
+      base.predictorObservationMaxAgeSeconds = overlay.predictorObservationMaxAgeSeconds;
+    }
+    if (overlay.stickyNoProgressSeconds != null) {
+      base.stickyNoProgressSeconds = overlay.stickyNoProgressSeconds;
+    }
+    if (overlay.switchCooldownSeconds != null) {
+      base.switchCooldownSeconds = overlay.switchCooldownSeconds;
+    }
+    if (overlay.collectCellMeters != null) base.collectCellMeters = overlay.collectCellMeters;
+    if (overlay.resourceUnitGain != null) base.resourceUnitGain = overlay.resourceUnitGain;
+    if (overlay.etaCost != null) base.etaCost = overlay.etaCost;
+    if (overlay.hubFrontTrapPenalty != null) base.hubFrontTrapPenalty = overlay.hubFrontTrapPenalty;
+    if (overlay.canonicalScoreDropLimit != null) {
+      base.canonicalScoreDropLimit = overlay.canonicalScoreDropLimit;
+    }
+    if (overlay.richerUnitsAbsGain != null) base.richerUnitsAbsGain = overlay.richerUnitsAbsGain;
+    if (overlay.richerUnitsRelGain != null) base.richerUnitsRelGain = overlay.richerUnitsRelGain;
+    if (overlay.richerEtaDeltaMaxSeconds != null) {
+      base.richerEtaDeltaMaxSeconds = overlay.richerEtaDeltaMaxSeconds;
+    }
+    if (overlay.richerScoreDropLimit != null)
+      base.richerScoreDropLimit = overlay.richerScoreDropLimit;
+    if (overlay.liveFuelPreferScoreMargin != null) {
+      base.liveFuelPreferScoreMargin = overlay.liveFuelPreferScoreMargin;
+    }
+    if (overlay.hubFrontTrapEscapeScoreAllowDrop != null) {
+      base.hubFrontTrapEscapeScoreAllowDrop = overlay.hubFrontTrapEscapeScoreAllowDrop;
+    }
+    if (overlay.nearbyCentroidScoreDropLimit != null) {
+      base.nearbyCentroidScoreDropLimit = overlay.nearbyCentroidScoreDropLimit;
+    }
+    if (overlay.liveRelockScoreDropLimit != null) {
+      base.liveRelockScoreDropLimit = overlay.liveRelockScoreDropLimit;
+    }
+    if (overlay.stickyPreferRankedScoreMargin != null) {
+      base.stickyPreferRankedScoreMargin = overlay.stickyPreferRankedScoreMargin;
+    }
+    if (overlay.farSwitchLockDistanceMeters != null) {
+      base.farSwitchLockDistanceMeters = overlay.farSwitchLockDistanceMeters;
+    }
+    if (overlay.farSwitchForceMultiplier != null) {
+      base.farSwitchForceMultiplier = overlay.farSwitchForceMultiplier;
+    }
+    if (overlay.closeSwitchEasyDistanceMeters != null) {
+      base.closeSwitchEasyDistanceMeters = overlay.closeSwitchEasyDistanceMeters;
+    }
+    if (overlay.closeSwitchMarginScale != null) {
+      base.closeSwitchMarginScale = overlay.closeSwitchMarginScale;
     }
   }
 
@@ -497,6 +560,79 @@ public class FieldProfileConfig {
           positive(candidateLimit, defaults.candidateLimit()),
           finiteNonNegative(switchScoreMargin, defaults.switchScoreMargin()),
           boolOrDefault(holdCurrentWhenRanked, defaults.holdCurrentWhenRanked()));
+    }
+  }
+
+  public static class CollectPlannerConfig {
+    public Double groupCellMeters;
+    public Double nearbyRadiusMeters;
+    public Double liveObservationMaxAgeSeconds;
+    public Double predictorObservationMaxAgeSeconds;
+    public Double stickyNoProgressSeconds;
+    public Double switchCooldownSeconds;
+    public Double collectCellMeters;
+    public Double resourceUnitGain;
+    public Double etaCost;
+    public Double hubFrontTrapPenalty;
+    public Double canonicalScoreDropLimit;
+    public Double richerUnitsAbsGain;
+    public Double richerUnitsRelGain;
+    public Double richerEtaDeltaMaxSeconds;
+    public Double richerScoreDropLimit;
+    public Double liveFuelPreferScoreMargin;
+    public Double hubFrontTrapEscapeScoreAllowDrop;
+    public Double nearbyCentroidScoreDropLimit;
+    public Double liveRelockScoreDropLimit;
+    public Double stickyPreferRankedScoreMargin;
+    public Double farSwitchLockDistanceMeters;
+    public Double farSwitchForceMultiplier;
+    public Double closeSwitchEasyDistanceMeters;
+    public Double closeSwitchMarginScale;
+
+    public CollectPlannerTuning toCollectPlannerTuning() {
+      CollectPlannerTuning defaults = CollectPlannerTuning.defaults();
+      CollectObjectiveSelectionConfig selectionDefaults = defaults.selection();
+      CollectObjectiveSelectionConfig selection =
+          new CollectObjectiveSelectionConfig(
+              finiteNonNegative(resourceUnitGain, selectionDefaults.resourceUnitGain()),
+              finiteNonNegative(etaCost, selectionDefaults.etaCost()),
+              finiteNonNegative(hubFrontTrapPenalty, selectionDefaults.hubFrontTrapPenalty()),
+              finiteNonNegative(
+                  canonicalScoreDropLimit, selectionDefaults.canonicalScoreDropLimit()),
+              finiteNonNegative(richerUnitsAbsGain, selectionDefaults.richerUnitsAbsGain()),
+              finiteNonNegative(richerUnitsRelGain, selectionDefaults.richerUnitsRelGain()),
+              finiteNonNegative(
+                  richerEtaDeltaMaxSeconds, selectionDefaults.richerEtaDeltaMaxSeconds()),
+              finiteNonNegative(richerScoreDropLimit, selectionDefaults.richerScoreDropLimit()),
+              finiteNonNegative(
+                  liveFuelPreferScoreMargin, selectionDefaults.liveFuelPreferScoreMargin()),
+              finiteNonNegative(
+                  hubFrontTrapEscapeScoreAllowDrop,
+                  selectionDefaults.hubFrontTrapEscapeScoreAllowDrop()),
+              finiteNonNegative(
+                  nearbyCentroidScoreDropLimit, selectionDefaults.nearbyCentroidScoreDropLimit()),
+              finiteNonNegative(
+                  liveRelockScoreDropLimit, selectionDefaults.liveRelockScoreDropLimit()),
+              finiteNonNegative(
+                  stickyPreferRankedScoreMargin, selectionDefaults.stickyPreferRankedScoreMargin()),
+              finiteNonNegative(
+                  farSwitchLockDistanceMeters, selectionDefaults.farSwitchLockDistanceMeters()),
+              finiteNonNegative(
+                  farSwitchForceMultiplier, selectionDefaults.farSwitchForceMultiplier()),
+              finiteNonNegative(
+                  closeSwitchEasyDistanceMeters, selectionDefaults.closeSwitchEasyDistanceMeters()),
+              finiteNonNegative(
+                  closeSwitchMarginScale, selectionDefaults.closeSwitchMarginScale()));
+      return new CollectPlannerTuning(
+          finitePositive(groupCellMeters, defaults.groupCellMeters()),
+          finitePositive(nearbyRadiusMeters, defaults.nearbyRadiusMeters()),
+          finiteNonNegative(liveObservationMaxAgeSeconds, defaults.liveObservationMaxAgeSeconds()),
+          finiteNonNegative(
+              predictorObservationMaxAgeSeconds, defaults.predictorObservationMaxAgeSeconds()),
+          finiteNonNegative(stickyNoProgressSeconds, defaults.stickyNoProgressSeconds()),
+          finiteNonNegative(switchCooldownSeconds, defaults.switchCooldownSeconds()),
+          finitePositive(collectCellMeters, defaults.collectCellMeters()),
+          selection);
     }
   }
 

@@ -26,6 +26,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.CollectProbe;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PointCandidate;
+import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.CollectObjectiveSelectionConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerCollectObjectiveLoop;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerCollectObjectiveMath;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Internal.NearestPoint;
@@ -39,68 +40,6 @@ import org.littletonrobotics.junction.Logger;
  */
 public final class FieldTrackerCollectPassCandidateStep {
   private FieldTrackerCollectPassCandidateStep() {}
-
-  /**
-   * Configuration value for canonical score drop limit. The valid range and tuning source are
-   * defined by the owning subsystem or field profile.
-   */
-  static final double CANONICAL_SCORE_DROP_LIMIT = 0.12;
-
-  /**
-   * Configuration value for richer units abs gain. The valid range and tuning source are defined by
-   * the owning subsystem or field profile.
-   */
-  static final double RICHER_UNITS_ABS_GAIN = 0.07;
-
-  /**
-   * Configuration value for richer units rel gain. The valid range and tuning source are defined by
-   * the owning subsystem or field profile.
-   */
-  static final double RICHER_UNITS_REL_GAIN = 1.45;
-
-  /**
-   * Configuration value for richer eta delta max s. The valid range and tuning source are defined
-   * by the owning subsystem or field profile.
-   */
-  static final double RICHER_ETA_DELTA_MAX_S = 0.95;
-
-  /**
-   * Configuration value for richer score drop limit. The valid range and tuning source are defined
-   * by the owning subsystem or field profile.
-   */
-  static final double RICHER_SCORE_DROP_LIMIT = 0.30;
-
-  /**
-   * Configuration value for live fuel prefer score margin. Distances use meters in WPILib field
-   * coordinates and should be treated as tunable when sourced from profiles.
-   */
-  static final double LIVE_FUEL_PREFER_SCORE_MARGIN = 0.02;
-
-  /**
-   * Configuration value for hub front trap score penalty. The valid range and tuning source are
-   * defined by the owning subsystem or field profile.
-   */
-  static final double HUB_FRONT_TRAP_SCORE_PENALTY = 0.52;
-
-  /**
-   * Configuration value for hub front trap escape score allow drop. The valid range and tuning
-   * source are defined by the owning subsystem or field profile.
-   */
-  static final double HUB_FRONT_TRAP_ESCAPE_SCORE_ALLOW_DROP = 0.16;
-
-  /**
-   * Configuration value for live fuel require near r m. The valid range and tuning source are
-   * defined by the owning subsystem or field profile.
-   */
-  static final double LIVE_FUEL_REQUIRE_NEAR_R_M =
-      FieldTrackerCollectObjectiveLoop.COLLECT_NEARBY_RADIUS_M + 0.35;
-
-  /**
-   * Configuration value for live fuel require relaxed near r m. The valid range and tuning source
-   * are defined by the owning subsystem or field profile.
-   */
-  static final double LIVE_FUEL_REQUIRE_RELAXED_NEAR_R_M =
-      FieldTrackerCollectObjectiveLoop.COLLECT_NEARBY_RADIUS_M + 1.0;
 
   /**
    * Configuration value for direct fuel lock strict r m. The valid range and tuning source are
@@ -128,7 +67,22 @@ public final class FieldTrackerCollectPassCandidateStep {
       Translation2d[] usePts,
       Predicate<Translation2d> collectValid,
       Function<Translation2d, Double> scoreResource) {
+    return maybeCanonicalizeCandidate(
+        bestCandidate,
+        usePts,
+        collectValid,
+        scoreResource,
+        CollectObjectiveSelectionConfig.defaults());
+  }
+
+  static Translation2d maybeCanonicalizeCandidate(
+      Translation2d bestCandidate,
+      Translation2d[] usePts,
+      Predicate<Translation2d> collectValid,
+      Function<Translation2d, Double> scoreResource,
+      CollectObjectiveSelectionConfig selection) {
     if (bestCandidate == null) return null;
+    CollectObjectiveSelectionConfig config = normalized(selection);
     Translation2d canonicalized =
         FieldTrackerCollectObjectiveMath.canonicalizeCollectPoint(bestCandidate, usePts);
     if (canonicalized == null) return bestCandidate;
@@ -137,7 +91,7 @@ public final class FieldTrackerCollectPassCandidateStep {
 
     double baseScore = scoreResource.apply(bestCandidate);
     double canonicalScore = scoreResource.apply(canonicalized);
-    if (canonicalScore < baseScore - CANONICAL_SCORE_DROP_LIMIT) return bestCandidate;
+    if (canonicalScore < baseScore - config.canonicalScoreDropLimit()) return bestCandidate;
     return canonicalized;
   }
 
@@ -161,9 +115,30 @@ public final class FieldTrackerCollectPassCandidateStep {
       Predicate<Translation2d> collectValid,
       Function<Translation2d, Double> collectUnits,
       Function<Translation2d, Double> scoreResource) {
+    return preferRicherCandidate(
+        bestCandidate,
+        usePts,
+        robotPos,
+        cap,
+        collectValid,
+        collectUnits,
+        scoreResource,
+        CollectObjectiveSelectionConfig.defaults());
+  }
+
+  static Translation2d preferRicherCandidate(
+      Translation2d bestCandidate,
+      Translation2d[] usePts,
+      Translation2d robotPos,
+      double cap,
+      Predicate<Translation2d> collectValid,
+      Function<Translation2d, Double> collectUnits,
+      Function<Translation2d, Double> scoreResource,
+      CollectObjectiveSelectionConfig selection) {
     if (bestCandidate == null || usePts == null || usePts.length == 0 || robotPos == null) {
       return bestCandidate;
     }
+    CollectObjectiveSelectionConfig config = normalized(selection);
     if (!collectValid.test(bestCandidate)) return bestCandidate;
 
     double safeCap = Math.max(0.2, cap);
@@ -196,10 +171,10 @@ public final class FieldTrackerCollectPassCandidateStep {
     if (richest.getDistance(bestCandidate) <= 1e-6) return bestCandidate;
 
     boolean significantlyRicher =
-        richestUnits >= baseUnits + RICHER_UNITS_ABS_GAIN
-            || richestUnits >= baseUnits * RICHER_UNITS_REL_GAIN;
-    boolean etaAcceptable = richestEta <= baseEta + RICHER_ETA_DELTA_MAX_S;
-    boolean scoreAcceptable = richestScore >= baseScore - RICHER_SCORE_DROP_LIMIT;
+        richestUnits >= baseUnits + config.richerUnitsAbsGain()
+            || richestUnits >= baseUnits * config.richerUnitsRelGain();
+    boolean etaAcceptable = richestEta <= baseEta + config.richerEtaDeltaMaxSeconds();
+    boolean scoreAcceptable = richestScore >= baseScore - config.richerScoreDropLimit();
     if (significantlyRicher && etaAcceptable && scoreAcceptable) return richest;
     return bestCandidate;
   }
@@ -220,10 +195,27 @@ public final class FieldTrackerCollectPassCandidateStep {
       Predicate<Translation2d> collectValid,
       Predicate<Translation2d> hasLiveFuelNear,
       Function<Translation2d, Double> scoreResource) {
+    return preferLiveFuelCandidate(
+        currentCandidate,
+        usePts,
+        collectValid,
+        hasLiveFuelNear,
+        scoreResource,
+        CollectObjectiveSelectionConfig.defaults());
+  }
+
+  static Translation2d preferLiveFuelCandidate(
+      Translation2d currentCandidate,
+      Translation2d[] usePts,
+      Predicate<Translation2d> collectValid,
+      Predicate<Translation2d> hasLiveFuelNear,
+      Function<Translation2d, Double> scoreResource,
+      CollectObjectiveSelectionConfig selection) {
     if (usePts == null || usePts.length == 0) return currentCandidate;
     if (collectValid == null || hasLiveFuelNear == null || scoreResource == null) {
       return currentCandidate;
     }
+    CollectObjectiveSelectionConfig config = normalized(selection);
 
     boolean currentLive =
         currentCandidate != null
@@ -247,7 +239,7 @@ public final class FieldTrackerCollectPassCandidateStep {
     if (!currentLive) return bestLive;
 
     double curScore = scoreResource.apply(currentCandidate);
-    if (bestLiveScore > curScore + LIVE_FUEL_PREFER_SCORE_MARGIN) return bestLive;
+    if (bestLiveScore > curScore + config.liveFuelPreferScoreMargin()) return bestLive;
     return currentCandidate;
   }
 
@@ -267,10 +259,27 @@ public final class FieldTrackerCollectPassCandidateStep {
       Predicate<Translation2d> collectValid,
       Predicate<Translation2d> isHubFrontTrap,
       Function<Translation2d, Double> scoreResource) {
+    return preferOutsideHubFrontTrap(
+        currentCandidate,
+        usePts,
+        collectValid,
+        isHubFrontTrap,
+        scoreResource,
+        CollectObjectiveSelectionConfig.defaults());
+  }
+
+  static Translation2d preferOutsideHubFrontTrap(
+      Translation2d currentCandidate,
+      Translation2d[] usePts,
+      Predicate<Translation2d> collectValid,
+      Predicate<Translation2d> isHubFrontTrap,
+      Function<Translation2d, Double> scoreResource,
+      CollectObjectiveSelectionConfig selection) {
     if (currentCandidate == null || usePts == null || usePts.length == 0) return currentCandidate;
     if (collectValid == null || isHubFrontTrap == null || scoreResource == null) {
       return currentCandidate;
     }
+    CollectObjectiveSelectionConfig config = normalized(selection);
     if (!isHubFrontTrap.test(currentCandidate)) return currentCandidate;
     if (!collectValid.test(currentCandidate)) return currentCandidate;
 
@@ -288,8 +297,15 @@ public final class FieldTrackerCollectPassCandidateStep {
 
     if (bestOutside == null) return currentCandidate;
     double curScore = scoreResource.apply(currentCandidate);
-    if (bestOutsideScore >= curScore - HUB_FRONT_TRAP_ESCAPE_SCORE_ALLOW_DROP) return bestOutside;
+    if (bestOutsideScore >= curScore - config.hubFrontTrapEscapeScoreAllowDrop()) {
+      return bestOutside;
+    }
     return currentCandidate;
+  }
+
+  private static CollectObjectiveSelectionConfig normalized(
+      CollectObjectiveSelectionConfig config) {
+    return config == null ? CollectObjectiveSelectionConfig.defaults() : config;
   }
 
   /**
@@ -322,6 +338,7 @@ public final class FieldTrackerCollectPassCandidateStep {
    */
   public static FieldTrackerCollectPassCandidateResult choose(
       FieldTrackerCollectObjectiveLoop loop, FieldTrackerCollectPassContext ctx, int goalUnits) {
+    CollectObjectiveSelectionConfig selection = loop.collectPlannerTuning().selection();
     HashMap<Long, CollectProbe> probeCache = new HashMap<>(512);
     HashMap<Long, Boolean> footprintCache = new HashMap<>(512);
     HashMap<Long, Boolean> nearFuelCache = new HashMap<>(512);
@@ -714,9 +731,7 @@ public final class FieldTrackerCollectPassCandidateStep {
           if (ctx.inForbidden().test(d) || ctx.violatesWall().test(d)) return -1e18;
 
           double eta = ctx.robotPos().getDistance(d) / Math.max(0.2, ctx.cap());
-          double trapPenalty = isHubFrontTrap.test(p) ? HUB_FRONT_TRAP_SCORE_PENALTY : 0.0;
-
-          double scoreV = (u * 1.0) - (0.55 * eta) - trapPenalty;
+          double scoreV = selection.score(u, eta, isHubFrontTrap.test(p));
           scoreCache.put(key, scoreV);
           return scoreV;
         };
@@ -736,7 +751,7 @@ public final class FieldTrackerCollectPassCandidateStep {
       if (!ctx.inForbidden().test(c) && !ctx.violatesWall().test(c) && collectValid.test(c)) {
         double sc = scoreResource.apply(c);
         double sb = scoreResource.apply(bestCandidate);
-        if (sc >= sb - 0.08) bestCandidate = c;
+        if (sc >= sb - selection.nearbyCentroidScoreDropLimit()) bestCandidate = c;
       }
     }
 
@@ -751,7 +766,7 @@ public final class FieldTrackerCollectPassCandidateStep {
     if (relockCand != null && collectValid.test(relockCand)) {
       double sr = scoreResource.apply(relockCand);
       double sb = scoreResource.apply(bestCandidate);
-      if (sr >= sb - 0.04) bestCandidate = relockCand;
+      if (sr >= sb - selection.liveRelockScoreDropLimit()) bestCandidate = relockCand;
     }
 
     bestCandidate =
@@ -762,20 +777,27 @@ public final class FieldTrackerCollectPassCandidateStep {
             ctx.cap(),
             collectValid,
             collectUnits,
-            scoreResource);
+            scoreResource,
+            selection);
 
     bestCandidate =
-        maybeCanonicalizeCandidate(bestCandidate, ctx.usePts(), collectValid, scoreResource);
+        maybeCanonicalizeCandidate(
+            bestCandidate, ctx.usePts(), collectValid, scoreResource, selection);
 
     if (hasLiveCollectDynamicsFinal) {
       bestCandidate =
           preferLiveFuelCandidate(
-              bestCandidate, ctx.usePts(), collectValid, hasLiveFuelNearStrict, scoreResource);
+              bestCandidate,
+              ctx.usePts(),
+              collectValid,
+              hasLiveFuelNearStrict,
+              scoreResource,
+              selection);
     }
 
     bestCandidate =
         preferOutsideHubFrontTrap(
-            bestCandidate, ctx.usePts(), collectValid, isHubFrontTrap, scoreResource);
+            bestCandidate, ctx.usePts(), collectValid, isHubFrontTrap, scoreResource, selection);
 
     return new FieldTrackerCollectPassCandidateResult(
         best, bestCandidate, collectValid, footprintHasFuel, scoreResource, null);

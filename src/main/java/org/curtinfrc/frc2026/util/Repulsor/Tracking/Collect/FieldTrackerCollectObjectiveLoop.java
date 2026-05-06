@@ -71,7 +71,7 @@ public final class FieldTrackerCollectObjectiveLoop {
    */
   final Predicate<String> collectTypePredicate;
 
-  public final CollectPlannerTuning tuning;
+  private volatile CollectPlannerTuning tuning;
 
   /**
    * Creates a field tracker collect objective loop instance with the dependencies and tuning values
@@ -130,6 +130,10 @@ public final class FieldTrackerCollectObjectiveLoop {
 
   public CollectPlannerTuning collectPlannerTuning() {
     return tuning;
+  }
+
+  public void configureCollectPlannerTuning(CollectPlannerTuning tuning) {
+    this.tuning = tuning == null ? CollectPlannerTuning.defaults() : tuning;
   }
 
   public CollectObjectiveStateSnapshot stateSnapshot() {

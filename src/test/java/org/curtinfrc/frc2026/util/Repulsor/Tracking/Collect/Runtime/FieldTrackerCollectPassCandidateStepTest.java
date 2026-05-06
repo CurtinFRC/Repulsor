@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.CollectObjectiveSelectionConfig;
 import org.junit.jupiter.api.Test;
 
 class FieldTrackerCollectPassCandidateStepTest {
@@ -62,6 +63,22 @@ class FieldTrackerCollectPassCandidateStepTest {
   }
 
   @Test
+  void maybeCanonicalizeCandidateUsesConfiguredDropLimit() {
+    Translation2d best = new Translation2d(2.00, 1.00);
+    Translation2d canonical = new Translation2d(2.25, 1.00);
+
+    Predicate<Translation2d> collectValid = p -> true;
+    Function<Translation2d, Double> score =
+        p -> Math.abs(p.getX() - canonical.getX()) < 1e-9 ? 9.95 : 10.0;
+
+    Translation2d out =
+        FieldTrackerCollectPassCandidateStep.maybeCanonicalizeCandidate(
+            best, new Translation2d[] {canonical}, collectValid, score, strictCanonicalConfig());
+
+    assertSame(best, out);
+  }
+
+  @Test
   void preferRicherCandidatePromotesHigherFuelWhenTravelIsComparable() {
     Translation2d robot = new Translation2d(1.0, 1.0);
     Translation2d base = new Translation2d(2.0, 1.0);
@@ -96,6 +113,32 @@ class FieldTrackerCollectPassCandidateStepTest {
     Translation2d out =
         FieldTrackerCollectPassCandidateStep.preferRicherCandidate(
             base, new Translation2d[] {farRich}, robot, 3.0, collectValid, units, score);
+
+    assertSame(base, out);
+  }
+
+  @Test
+  void preferRicherCandidateUsesConfiguredEtaWindow() {
+    Translation2d robot = new Translation2d(1.0, 1.0);
+    Translation2d base = new Translation2d(2.0, 1.0);
+    Translation2d rich = new Translation2d(2.3, 1.0);
+
+    Predicate<Translation2d> collectValid = p -> true;
+    Function<Translation2d, Double> units =
+        p -> Math.abs(p.getX() - rich.getX()) < 1e-9 ? 0.28 : 0.10;
+    Function<Translation2d, Double> score =
+        p -> Math.abs(p.getX() - rich.getX()) < 1e-9 ? 1.85 : 1.90;
+
+    Translation2d out =
+        FieldTrackerCollectPassCandidateStep.preferRicherCandidate(
+            base,
+            new Translation2d[] {rich},
+            robot,
+            3.0,
+            collectValid,
+            units,
+            score,
+            strictRicherEtaConfig());
 
     assertSame(base, out);
   }
@@ -186,5 +229,49 @@ class FieldTrackerCollectPassCandidateStepTest {
     assertTrue(nearReq);
     assertFalse(farReq);
     assertFalse(noLiveReq);
+  }
+
+  private static CollectObjectiveSelectionConfig strictCanonicalConfig() {
+    CollectObjectiveSelectionConfig d = CollectObjectiveSelectionConfig.defaults();
+    return new CollectObjectiveSelectionConfig(
+        d.resourceUnitGain(),
+        d.etaCost(),
+        d.hubFrontTrapPenalty(),
+        0.01,
+        d.richerUnitsAbsGain(),
+        d.richerUnitsRelGain(),
+        d.richerEtaDeltaMaxSeconds(),
+        d.richerScoreDropLimit(),
+        d.liveFuelPreferScoreMargin(),
+        d.hubFrontTrapEscapeScoreAllowDrop(),
+        d.nearbyCentroidScoreDropLimit(),
+        d.liveRelockScoreDropLimit(),
+        d.stickyPreferRankedScoreMargin(),
+        d.farSwitchLockDistanceMeters(),
+        d.farSwitchForceMultiplier(),
+        d.closeSwitchEasyDistanceMeters(),
+        d.closeSwitchMarginScale());
+  }
+
+  private static CollectObjectiveSelectionConfig strictRicherEtaConfig() {
+    CollectObjectiveSelectionConfig d = CollectObjectiveSelectionConfig.defaults();
+    return new CollectObjectiveSelectionConfig(
+        d.resourceUnitGain(),
+        d.etaCost(),
+        d.hubFrontTrapPenalty(),
+        d.canonicalScoreDropLimit(),
+        d.richerUnitsAbsGain(),
+        d.richerUnitsRelGain(),
+        0.02,
+        d.richerScoreDropLimit(),
+        d.liveFuelPreferScoreMargin(),
+        d.hubFrontTrapEscapeScoreAllowDrop(),
+        d.nearbyCentroidScoreDropLimit(),
+        d.liveRelockScoreDropLimit(),
+        d.stickyPreferRankedScoreMargin(),
+        d.farSwitchLockDistanceMeters(),
+        d.farSwitchForceMultiplier(),
+        d.closeSwitchEasyDistanceMeters(),
+        d.closeSwitchMarginScale());
   }
 }

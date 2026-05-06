@@ -416,6 +416,8 @@ public final class Reefscape2025 implements FieldDefinition {
         profile.objectiveSelection == null
             ? null
             : profile.objectiveSelection.toObjectiveSelectionConfig());
+    ft.configureCollectPlanner(
+        profile.collectPlanner == null ? null : profile.collectPlanner.toCollectPlannerTuning());
     ft.setCollectResourceTypes(profile.resources.keySet());
     for (var entry : profile.resources.entrySet()) {
       FieldProfileConfig.ResourceConfig resource = entry.getValue();

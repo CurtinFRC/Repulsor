@@ -324,4 +324,78 @@ class FieldProfileYamlLoaderTest {
       }
     }
   }
+
+  @Test
+  void loadsCollectPlannerTuningFromYamlAndTrackerUsesFieldProfile() throws Exception {
+    Path profile = tempDir.resolve("collect-planner.yaml");
+    Files.writeString(
+        profile,
+        """
+        id: collect-planner
+        gameName: CUSTOM
+        gameYear: 2099
+        geometry:
+          lengthMeters: 12.5
+          widthMeters: 6.25
+        resources:
+          fuel:
+            radiusMeters: 0.2
+            unitValue: 1.0
+            sigmaMeters: 0.5
+        projectileShots: {}
+        collectPlanner:
+          groupCellMeters: 0.55
+          nearbyRadiusMeters: 2.75
+          liveObservationMaxAgeSeconds: 0.45
+          predictorObservationMaxAgeSeconds: 0.35
+          stickyNoProgressSeconds: 0.65
+          switchCooldownSeconds: 0.95
+          collectCellMeters: 0.18
+          resourceUnitGain: 1.4
+          etaCost: 0.7
+          hubFrontTrapPenalty: 0.9
+          canonicalScoreDropLimit: 0.05
+          richerUnitsAbsGain: 0.11
+          richerUnitsRelGain: 1.8
+          richerEtaDeltaMaxSeconds: 0.35
+          richerScoreDropLimit: 0.22
+          liveFuelPreferScoreMargin: 0.06
+          hubFrontTrapEscapeScoreAllowDrop: 0.25
+          nearbyCentroidScoreDropLimit: 0.12
+          liveRelockScoreDropLimit: 0.07
+          stickyPreferRankedScoreMargin: 0.09
+          farSwitchLockDistanceMeters: 3.6
+          farSwitchForceMultiplier: 2.5
+          closeSwitchEasyDistanceMeters: 1.6
+          closeSwitchMarginScale: 0.35
+        """);
+
+    String previous = System.getProperty("repulsor.profile.path");
+    try {
+      System.setProperty("repulsor.profile.path", profile.toString());
+      FieldProfileConfig cfg =
+          FieldProfileYamlLoader.loadOrDefault("collect-planner", new FieldProfileConfig());
+
+      assertEquals(0.55, cfg.collectPlanner.toCollectPlannerTuning().groupCellMeters(), 1e-9);
+      assertEquals(
+          0.05,
+          cfg.collectPlanner.toCollectPlannerTuning().selection().canonicalScoreDropLimit(),
+          1e-9);
+      assertEquals(
+          3.6,
+          cfg.collectPlanner.toCollectPlannerTuning().selection().farSwitchLockDistanceMeters(),
+          1e-9);
+
+      FieldTrackerCore tracker = new FieldTrackerCore(new Rebuilt2026(cfg));
+      assertEquals(0.95, tracker.collectPlannerTuning().switchCooldownSeconds(), 1e-9);
+      assertEquals(1.4, tracker.collectPlannerTuning().selection().resourceUnitGain(), 1e-9);
+      assertEquals(0.35, tracker.collectPlannerTuning().selection().closeSwitchMarginScale(), 1e-9);
+    } finally {
+      if (previous == null) {
+        System.clearProperty("repulsor.profile.path");
+      } else {
+        System.setProperty("repulsor.profile.path", previous);
+      }
+    }
+  }
 }

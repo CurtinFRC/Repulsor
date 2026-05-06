@@ -64,6 +64,14 @@ public final class FieldTrackerCollectObjectiveRuntime {
     loop.resetAll();
   }
 
+  void configureCollectPlannerTuning(CollectPlannerTuning tuning) {
+    loop.configureCollectPlannerTuning(tuning);
+  }
+
+  CollectPlannerTuning collectPlannerTuning() {
+    return loop.collectPlannerTuning();
+  }
+
   /**
    * Returns the next objective goal blue value maintained by this Repulsor component.
    *

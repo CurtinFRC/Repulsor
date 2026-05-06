@@ -13,6 +13,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import org.curtinfrc.frc2026.util.Repulsor.Constants;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PointCandidate;
+import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.CollectObjectiveSelectionConfig;
 import org.junit.jupiter.api.Test;
 
 class FieldTrackerCollectPassStickyStepTest {
@@ -127,6 +128,30 @@ class FieldTrackerCollectPassStickyStepTest {
   }
 
   @Test
+  void shouldBlockFarSwitchUsesConfiguredDistanceGate() {
+    boolean blockedWithDefaultGate =
+        FieldTrackerCollectPassStickyStep.shouldBlockFarSwitch(
+            3.4, 1.00, 1.18, 0.12, false, false, true, true, 0.0, 0.5, 0.2);
+    boolean releasedWithLongGate =
+        FieldTrackerCollectPassStickyStep.shouldBlockFarSwitch(
+            3.4,
+            1.00,
+            1.18,
+            0.12,
+            false,
+            false,
+            true,
+            true,
+            0.0,
+            0.5,
+            0.2,
+            longFarSwitchGateConfig());
+
+    assertTrue(blockedWithDefaultGate);
+    assertFalse(releasedWithLongGate);
+  }
+
+  @Test
   void shouldBlockFarSwitchAllowsTrapEscapeAndBigUpgrade() {
     boolean trapEscape =
         FieldTrackerCollectPassStickyStep.shouldBlockFarSwitch(
@@ -159,9 +184,61 @@ class FieldTrackerCollectPassStickyStepTest {
   }
 
   @Test
+  void adaptSwitchMarginForDistanceUsesConfiguredScale() {
+    double out =
+        FieldTrackerCollectPassStickyStep.adaptSwitchMarginForDistance(
+            0.20, 1.0, closeSwitchScaleConfig());
+    assertEquals(0.04, out, EPS);
+  }
+
+  @Test
   void shouldHoldPreviousForTooSoonDoesNotHoldWhenClose() {
     boolean hold =
         FieldTrackerCollectPassStickyStep.shouldHoldPreviousForTooSoon(true, 0.01, false, 1.0);
     assertFalse(hold);
+  }
+
+  private static CollectObjectiveSelectionConfig longFarSwitchGateConfig() {
+    CollectObjectiveSelectionConfig d = CollectObjectiveSelectionConfig.defaults();
+    return new CollectObjectiveSelectionConfig(
+        d.resourceUnitGain(),
+        d.etaCost(),
+        d.hubFrontTrapPenalty(),
+        d.canonicalScoreDropLimit(),
+        d.richerUnitsAbsGain(),
+        d.richerUnitsRelGain(),
+        d.richerEtaDeltaMaxSeconds(),
+        d.richerScoreDropLimit(),
+        d.liveFuelPreferScoreMargin(),
+        d.hubFrontTrapEscapeScoreAllowDrop(),
+        d.nearbyCentroidScoreDropLimit(),
+        d.liveRelockScoreDropLimit(),
+        d.stickyPreferRankedScoreMargin(),
+        4.0,
+        d.farSwitchForceMultiplier(),
+        d.closeSwitchEasyDistanceMeters(),
+        d.closeSwitchMarginScale());
+  }
+
+  private static CollectObjectiveSelectionConfig closeSwitchScaleConfig() {
+    CollectObjectiveSelectionConfig d = CollectObjectiveSelectionConfig.defaults();
+    return new CollectObjectiveSelectionConfig(
+        d.resourceUnitGain(),
+        d.etaCost(),
+        d.hubFrontTrapPenalty(),
+        d.canonicalScoreDropLimit(),
+        d.richerUnitsAbsGain(),
+        d.richerUnitsRelGain(),
+        d.richerEtaDeltaMaxSeconds(),
+        d.richerScoreDropLimit(),
+        d.liveFuelPreferScoreMargin(),
+        d.hubFrontTrapEscapeScoreAllowDrop(),
+        d.nearbyCentroidScoreDropLimit(),
+        d.liveRelockScoreDropLimit(),
+        d.stickyPreferRankedScoreMargin(),
+        d.farSwitchLockDistanceMeters(),
+        d.farSwitchForceMultiplier(),
+        d.closeSwitchEasyDistanceMeters(),
+        0.20);
   }
 }

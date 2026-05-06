@@ -45,6 +45,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.Objective.ObjectiveSelecti
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateRuntime;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Strategy.ResourceRegionSummary;
+import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.CollectPlannerTuning;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerCollectPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Internal.ObjectiveCache;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
@@ -208,6 +209,14 @@ public class FieldTrackerCore {
 
   public ObjectiveSelectionConfig objectiveSelectionConfig() {
     return objectiveSelectionConfig;
+  }
+
+  public void configureCollectPlanner(CollectPlannerTuning tuning) {
+    collectPlanner.configureTuning(tuning);
+  }
+
+  public CollectPlannerTuning collectPlannerTuning() {
+    return collectPlanner.tuning();
   }
 
   private boolean isCollectResourceType(String type) {

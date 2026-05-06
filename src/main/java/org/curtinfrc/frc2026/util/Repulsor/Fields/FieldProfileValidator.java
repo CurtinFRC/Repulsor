@@ -98,6 +98,7 @@ public final class FieldProfileValidator {
 
     validateRanking(cfg.predictiveRanking, errors);
     validateObjectiveSelection(cfg.objectiveSelection, errors);
+    validateCollectPlanner(cfg.collectPlanner, errors);
     validateWaypointing(cfg.waypointing, errors);
     validateAutoPath(cfg.autoPath, errors);
 
@@ -130,6 +131,72 @@ public final class FieldProfileValidator {
     requireOptionalPositive(objectiveSelection.candidateLimit, prefix + ".candidateLimit", errors);
     requireOptionalNonNegative(
         objectiveSelection.switchScoreMargin, prefix + ".switchScoreMargin", errors);
+  }
+
+  private static void validateCollectPlanner(
+      FieldProfileConfig.CollectPlannerConfig collectPlanner, List<String> errors) {
+    if (collectPlanner == null) return;
+    String prefix = "collectPlanner";
+    requireOptionalNonNegative(collectPlanner.groupCellMeters, prefix + ".groupCellMeters", errors);
+    requireOptionalNonNegative(
+        collectPlanner.nearbyRadiusMeters, prefix + ".nearbyRadiusMeters", errors);
+    requireOptionalNonNegative(
+        collectPlanner.liveObservationMaxAgeSeconds,
+        prefix + ".liveObservationMaxAgeSeconds",
+        errors);
+    requireOptionalNonNegative(
+        collectPlanner.predictorObservationMaxAgeSeconds,
+        prefix + ".predictorObservationMaxAgeSeconds",
+        errors);
+    requireOptionalNonNegative(
+        collectPlanner.stickyNoProgressSeconds, prefix + ".stickyNoProgressSeconds", errors);
+    requireOptionalNonNegative(
+        collectPlanner.switchCooldownSeconds, prefix + ".switchCooldownSeconds", errors);
+    requireOptionalNonNegative(
+        collectPlanner.collectCellMeters, prefix + ".collectCellMeters", errors);
+    requireOptionalNonNegative(
+        collectPlanner.resourceUnitGain, prefix + ".resourceUnitGain", errors);
+    requireOptionalNonNegative(collectPlanner.etaCost, prefix + ".etaCost", errors);
+    requireOptionalNonNegative(
+        collectPlanner.hubFrontTrapPenalty, prefix + ".hubFrontTrapPenalty", errors);
+    requireOptionalNonNegative(
+        collectPlanner.canonicalScoreDropLimit, prefix + ".canonicalScoreDropLimit", errors);
+    requireOptionalNonNegative(
+        collectPlanner.richerUnitsAbsGain, prefix + ".richerUnitsAbsGain", errors);
+    requireOptionalNonNegative(
+        collectPlanner.richerUnitsRelGain, prefix + ".richerUnitsRelGain", errors);
+    requireOptionalNonNegative(
+        collectPlanner.richerEtaDeltaMaxSeconds, prefix + ".richerEtaDeltaMaxSeconds", errors);
+    requireOptionalNonNegative(
+        collectPlanner.richerScoreDropLimit, prefix + ".richerScoreDropLimit", errors);
+    requireOptionalNonNegative(
+        collectPlanner.liveFuelPreferScoreMargin, prefix + ".liveFuelPreferScoreMargin", errors);
+    requireOptionalNonNegative(
+        collectPlanner.hubFrontTrapEscapeScoreAllowDrop,
+        prefix + ".hubFrontTrapEscapeScoreAllowDrop",
+        errors);
+    requireOptionalNonNegative(
+        collectPlanner.nearbyCentroidScoreDropLimit,
+        prefix + ".nearbyCentroidScoreDropLimit",
+        errors);
+    requireOptionalNonNegative(
+        collectPlanner.liveRelockScoreDropLimit, prefix + ".liveRelockScoreDropLimit", errors);
+    requireOptionalNonNegative(
+        collectPlanner.stickyPreferRankedScoreMargin,
+        prefix + ".stickyPreferRankedScoreMargin",
+        errors);
+    requireOptionalNonNegative(
+        collectPlanner.farSwitchLockDistanceMeters,
+        prefix + ".farSwitchLockDistanceMeters",
+        errors);
+    requireOptionalNonNegative(
+        collectPlanner.farSwitchForceMultiplier, prefix + ".farSwitchForceMultiplier", errors);
+    requireOptionalNonNegative(
+        collectPlanner.closeSwitchEasyDistanceMeters,
+        prefix + ".closeSwitchEasyDistanceMeters",
+        errors);
+    requireOptionalNonNegative(
+        collectPlanner.closeSwitchMarginScale, prefix + ".closeSwitchMarginScale", errors);
   }
 
   private static void validateWaypointing(
