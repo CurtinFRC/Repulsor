@@ -34,6 +34,7 @@ import java.util.function.Predicate;
 import org.curtinfrc.frc2026.util.Repulsor.Constants;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldLayoutProvider;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.SemanticRegion;
 import org.curtinfrc.frc2026.util.Repulsor.Offload.FieldTrackerOffloadEntrypoints_Offloaded;
 import org.curtinfrc.frc2026.util.Repulsor.Offload.ShuttleRecoveryDynamicObjectDTO;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.Candidate;
@@ -46,6 +47,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateRuntim
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Strategy.ResourceRegionSummary;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.CollectPlannerTuning;
+import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.CollectSelectionDecision;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerCollectPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Internal.ObjectiveCache;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
@@ -215,8 +217,16 @@ public class FieldTrackerCore {
     collectPlanner.configureTuning(tuning);
   }
 
+  public void configureCollectSemanticRegions(List<SemanticRegion> semanticRegions) {
+    collectPlanner.configureSemanticRegions(semanticRegions);
+  }
+
   public CollectPlannerTuning collectPlannerTuning() {
     return collectPlanner.tuning();
+  }
+
+  public CollectSelectionDecision lastCollectSelectionDecision() {
+    return collectPlanner.lastSelectionDecision();
   }
 
   private boolean isCollectResourceType(String type) {

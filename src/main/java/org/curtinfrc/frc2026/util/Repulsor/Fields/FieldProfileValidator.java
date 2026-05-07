@@ -89,6 +89,13 @@ public final class FieldProfileValidator {
       }
     }
 
+    if (cfg.semanticRegions != null) {
+      for (Map.Entry<String, FieldProfileConfig.SemanticRegionConfig> entry :
+          cfg.semanticRegions.entrySet()) {
+        validateSemanticRegion(entry.getKey(), entry.getValue(), errors);
+      }
+    }
+
     if (cfg.projectileShots != null) {
       for (Map.Entry<String, FieldProfileConfig.ProjectileShotConfig> entry :
           cfg.projectileShots.entrySet()) {
@@ -344,6 +351,37 @@ public final class FieldProfileValidator {
       validateWaypointing(preset.waypointing, errors);
       validatePlannerRuntime(preset.plannerRuntime, errors);
       validateAutoPath(preset.autoPath, errors);
+    }
+  }
+
+  private static void validateSemanticRegion(
+      String id, FieldProfileConfig.SemanticRegionConfig region, List<String> errors) {
+    String prefix = "semanticRegions." + id;
+    if (id == null || id.isBlank()) errors.add("semantic region key must be non-empty");
+    if (region == null) {
+      errors.add(prefix + " is null");
+      return;
+    }
+    if (region.shape != null
+        && !region.shape.isBlank()
+        && !"rectangle".equalsIgnoreCase(region.shape)) {
+      errors.add(prefix + ".shape must be rectangle when provided");
+    }
+    requireOptionalNonNegative(region.minXMeters, prefix + ".minXMeters", errors);
+    requireOptionalNonNegative(region.maxXMeters, prefix + ".maxXMeters", errors);
+    requireOptionalNonNegative(region.minYMeters, prefix + ".minYMeters", errors);
+    requireOptionalNonNegative(region.maxYMeters, prefix + ".maxYMeters", errors);
+    requireOptionalNonNegative(region.collectPenalty, prefix + ".collectPenalty", errors);
+    requireOptionalNonNegative(region.collectPreference, prefix + ".collectPreference", errors);
+    if (region.minXMeters != null
+        && region.maxXMeters != null
+        && region.maxXMeters < region.minXMeters) {
+      errors.add(prefix + ".maxXMeters must be >= minXMeters");
+    }
+    if (region.minYMeters != null
+        && region.maxYMeters != null
+        && region.maxYMeters < region.minYMeters) {
+      errors.add(prefix + ".maxYMeters must be >= minYMeters");
     }
   }
 

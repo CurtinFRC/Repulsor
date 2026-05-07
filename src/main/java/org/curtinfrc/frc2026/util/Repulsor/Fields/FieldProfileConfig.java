@@ -19,7 +19,9 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Fields;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.curtinfrc.frc2026.util.Repulsor.Behaviours.AutoPathRuntimeConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.CoarseGlobalPlannerConfig;
@@ -60,6 +62,7 @@ public class FieldProfileConfig {
 
   public GeometryConfig geometry = new GeometryConfig();
   public Map<String, ResourceConfig> resources = new LinkedHashMap<>();
+  public Map<String, SemanticRegionConfig> semanticRegions = new LinkedHashMap<>();
   public Map<String, ProjectileShotConfig> projectileShots = new LinkedHashMap<>();
   public RankingConfig predictiveRanking = new RankingConfig();
   public ObjectiveSelectionProfileConfig objectiveSelection = new ObjectiveSelectionProfileConfig();
@@ -122,6 +125,16 @@ public class FieldProfileConfig {
           });
     }
 
+    if (overlay.semanticRegions != null && !overlay.semanticRegions.isEmpty()) {
+      overlay.semanticRegions.forEach(
+          (id, region) -> {
+            if (id == null || id.isBlank() || region == null) return;
+            SemanticRegionConfig target =
+                base.semanticRegions.computeIfAbsent(id, ignored -> new SemanticRegionConfig());
+            mergeSemanticRegion(target, region);
+          });
+    }
+
     if (overlay.projectileShots != null && !overlay.projectileShots.isEmpty()) {
       overlay.projectileShots.forEach(
           (id, shot) -> {
@@ -144,6 +157,30 @@ public class FieldProfileConfig {
     mergeProjectileShot(base.shuttleShot, overlay.shuttleShot);
     mergeCorridor(base.rebuiltCorridor, overlay.rebuiltCorridor);
     return base;
+  }
+
+  private static void mergeSemanticRegion(SemanticRegionConfig base, SemanticRegionConfig overlay) {
+    if (base == null || overlay == null) return;
+    if (overlay.shape != null) base.shape = overlay.shape;
+    if (overlay.minXMeters != null) base.minXMeters = overlay.minXMeters;
+    if (overlay.maxXMeters != null) base.maxXMeters = overlay.maxXMeters;
+    if (overlay.minYMeters != null) base.minYMeters = overlay.minYMeters;
+    if (overlay.maxYMeters != null) base.maxYMeters = overlay.maxYMeters;
+    if (overlay.penaltyTags != null) base.penaltyTags = overlay.penaltyTags;
+    if (overlay.preferenceTags != null) base.preferenceTags = overlay.preferenceTags;
+    if (overlay.collectPenalty != null) base.collectPenalty = overlay.collectPenalty;
+    if (overlay.collectPreference != null) base.collectPreference = overlay.collectPreference;
+  }
+
+  public List<SemanticRegion> toSemanticRegions() {
+    if (semanticRegions == null || semanticRegions.isEmpty()) return List.of();
+    ArrayList<SemanticRegion> out = new ArrayList<>();
+    semanticRegions.forEach(
+        (id, region) -> {
+          if (id == null || id.isBlank() || region == null) return;
+          out.add(region.toSemanticRegion(id));
+        });
+    return List.copyOf(out);
   }
 
   private static void mergeStrategyPresets(
@@ -558,6 +595,33 @@ public class FieldProfileConfig {
      * should be treated as tunable when sourced from profiles.
      */
     public Double sigmaMeters;
+  }
+
+  public static class SemanticRegionConfig {
+    /** Currently supports rectangle. Other shapes can be added without changing callers. */
+    public String shape;
+
+    public Double minXMeters;
+    public Double maxXMeters;
+    public Double minYMeters;
+    public Double maxYMeters;
+    public List<String> penaltyTags;
+    public List<String> preferenceTags;
+    public Double collectPenalty;
+    public Double collectPreference;
+
+    public SemanticRegion toSemanticRegion(String id) {
+      return new SemanticRegion(
+          id,
+          finiteNonNegative(minXMeters, 0.0),
+          finiteNonNegative(maxXMeters, 0.0),
+          finiteNonNegative(minYMeters, 0.0),
+          finiteNonNegative(maxYMeters, 0.0),
+          penaltyTags,
+          preferenceTags,
+          finiteNonNegative(collectPenalty, 0.0),
+          finiteNonNegative(collectPreference, 0.0));
+    }
   }
 
   public static class RankingConfig {

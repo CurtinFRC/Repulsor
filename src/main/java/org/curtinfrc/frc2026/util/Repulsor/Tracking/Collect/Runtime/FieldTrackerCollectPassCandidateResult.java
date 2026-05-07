@@ -23,6 +23,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PointCandidate;
+import org.curtinfrc.frc2026.util.Repulsor.Scoring.WeightedScoreBreakdown;
 
 /**
  * Immutable data record for field tracker collect pass candidate result values passed through the
@@ -45,4 +46,41 @@ public record FieldTrackerCollectPassCandidateResult(
     Predicate<Translation2d> collectValid,
     Predicate<Translation2d> footprintHasFuel,
     Function<Translation2d, Double> scoreResource,
-    Pose2d immediatePose) {}
+    Pose2d immediatePose,
+    Function<Translation2d, WeightedScoreBreakdown> scoreBreakdown,
+    boolean liveEvidenceRequired,
+    boolean liveEvidenceFound,
+    boolean staleObservationPresent,
+    boolean canonicalized,
+    boolean relockedToLiveEvidence,
+    boolean trapPenaltyApplied,
+    String selectionReason) {
+  public FieldTrackerCollectPassCandidateResult(
+      PointCandidate best,
+      Translation2d bestCandidate,
+      Predicate<Translation2d> collectValid,
+      Predicate<Translation2d> footprintHasFuel,
+      Function<Translation2d, Double> scoreResource,
+      Pose2d immediatePose) {
+    this(
+        best,
+        bestCandidate,
+        collectValid,
+        footprintHasFuel,
+        scoreResource,
+        immediatePose,
+        ignored -> WeightedScoreBreakdown.empty(),
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        "legacy");
+  }
+
+  public FieldTrackerCollectPassCandidateResult {
+    if (scoreBreakdown == null) scoreBreakdown = ignored -> WeightedScoreBreakdown.empty();
+    if (selectionReason == null || selectionReason.isBlank()) selectionReason = "unspecified";
+  }
+}

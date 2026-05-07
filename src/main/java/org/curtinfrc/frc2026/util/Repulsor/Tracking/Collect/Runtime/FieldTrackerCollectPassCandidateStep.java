@@ -25,7 +25,9 @@ import java.util.HashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.CollectProbe;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PointCandidate;
+import org.curtinfrc.frc2026.util.Repulsor.Scoring.WeightedScoreBreakdown;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.CollectObjectiveSelectionConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerCollectObjectiveLoop;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerCollectObjectiveMath;
@@ -361,12 +363,14 @@ public final class FieldTrackerCollectPassCandidateStep {
     final double LIVE_FUEL_RELAXED_R_M = 0.55;
 
     boolean hasLiveCollectDynamics = false;
+    boolean staleCollectObservationPresent = false;
     if (ctx.dynUse() != null && !ctx.dynUse().isEmpty()) {
       for (int i = 0; i < ctx.dynUse().size(); i++) {
-        var o = ctx.dynUse().get(i);
+        DynamicObject o = ctx.dynUse().get(i);
         if (loop.isFreshCollectObservation(o)) {
           hasLiveCollectDynamics = true;
-          break;
+        } else if (o != null && o.type != null && loop.isCollectType(o.type)) {
+          staleCollectObservationPresent = true;
         }
       }
     }
@@ -552,6 +556,7 @@ public final class FieldTrackerCollectPassCandidateStep {
         };
 
     PointCandidate best = null;
+    String selectionReason = "ranked_candidate";
 
     for (int attempt = 0; attempt < 5; attempt++) {
       best =
@@ -565,12 +570,14 @@ public final class FieldTrackerCollectPassCandidateStep {
 
       if (best != null && collectValid.test(best.point)) {
         loop.lastBest = best;
+        selectionReason = "rank_collect_nearest";
         Logger.recordOutput("Repulsor/Collect/Selection/Method", "CollectNearest");
         break;
       }
 
       if (best == null && loop.lastBest != null) {
         best = loop.lastBest;
+        selectionReason = "last_best_fallback";
         break;
       }
 
@@ -585,6 +592,7 @@ public final class FieldTrackerCollectPassCandidateStep {
               FieldTrackerCollectObjectiveLoop.COLLECT_REFINE_GRID);
 
       if (best != null && collectValid.test(best.point)) {
+        selectionReason = "rank_collect_hierarchical";
         Logger.recordOutput("Repulsor/Collect/Selection/Method", "CollectHierarchical");
         break;
       }
@@ -598,6 +606,7 @@ public final class FieldTrackerCollectPassCandidateStep {
               Math.max(24, ctx.usePts().length));
 
       if (best != null && collectValid.test(best.point)) {
+        selectionReason = "rank_collect_points";
         Logger.recordOutput("Repulsor/Collect/Selection/Method", "CollectPoints");
         break;
       }
@@ -622,6 +631,7 @@ public final class FieldTrackerCollectPassCandidateStep {
                   0.0,
                   -1e9);
           Logger.recordOutput("Repulsor/Collect/Selection/Method", "CollectHotspot");
+          selectionReason = "collect_hotspot";
           break;
         }
       }
@@ -703,9 +713,18 @@ public final class FieldTrackerCollectPassCandidateStep {
             collectValid,
             footprintHasFuel,
             p -> -1e18,
-            new Pose2d(ctx.robotPos(), ctx.robotPoseBlue().getRotation()));
+            new Pose2d(ctx.robotPos(), ctx.robotPoseBlue().getRotation()),
+            ignored -> WeightedScoreBreakdown.empty(),
+            hasLiveCollectDynamicsFinal,
+            false,
+            staleCollectObservationPresent,
+            false,
+            false,
+            false,
+            "no_valid_candidate");
       }
       rawCandidate = fallback;
+      selectionReason = "fallback_candidate";
     }
 
     Function<Translation2d, Double> scoreResource =
@@ -731,9 +750,30 @@ public final class FieldTrackerCollectPassCandidateStep {
           if (ctx.inForbidden().test(d) || ctx.violatesWall().test(d)) return -1e18;
 
           double eta = ctx.robotPos().getDistance(d) / Math.max(0.2, ctx.cap());
-          double scoreV = selection.score(u, eta, isHubFrontTrap.test(p));
+          double scoreV =
+              selection
+                  .scoreBreakdown(u, eta, isHubFrontTrap.test(p))
+                  .plus(loop.semanticRegionBreakdown(p))
+                  .total();
           scoreCache.put(key, scoreV);
           return scoreV;
+        };
+    Function<Translation2d, WeightedScoreBreakdown> scoreBreakdown =
+        p -> {
+          if (p == null || !collectValid.test(p)) return WeightedScoreBreakdown.empty();
+          double u = collectUnits.apply(p);
+          Translation2d d = ctx.safePushedFromRobot().apply(p);
+          if (d == null) d = p;
+          d = ctx.clampToFieldRobotSafe().apply(d);
+          if (ctx.inForbidden().test(d)) d = ctx.nudgeOutOfForbidden().apply(d);
+          d = ctx.clampToFieldRobotSafe().apply(d);
+          if (ctx.inForbidden().test(d) || ctx.violatesWall().test(d)) {
+            return WeightedScoreBreakdown.empty();
+          }
+          double eta = ctx.robotPos().getDistance(d) / Math.max(0.2, ctx.cap());
+          return selection
+              .scoreBreakdown(u, eta, isHubFrontTrap.test(p))
+              .plus(loop.semanticRegionBreakdown(p));
         };
 
     Translation2d bestCandidate = rawCandidate;
@@ -751,7 +791,10 @@ public final class FieldTrackerCollectPassCandidateStep {
       if (!ctx.inForbidden().test(c) && !ctx.violatesWall().test(c) && collectValid.test(c)) {
         double sc = scoreResource.apply(c);
         double sb = scoreResource.apply(bestCandidate);
-        if (sc >= sb - selection.nearbyCentroidScoreDropLimit()) bestCandidate = c;
+        if (sc >= sb - selection.nearbyCentroidScoreDropLimit()) {
+          bestCandidate = c;
+          selectionReason = "nearby_centroid";
+        }
       }
     }
 
@@ -766,8 +809,13 @@ public final class FieldTrackerCollectPassCandidateStep {
     if (relockCand != null && collectValid.test(relockCand)) {
       double sr = scoreResource.apply(relockCand);
       double sb = scoreResource.apply(bestCandidate);
-      if (sr >= sb - selection.liveRelockScoreDropLimit()) bestCandidate = relockCand;
+      if (sr >= sb - selection.liveRelockScoreDropLimit()) {
+        bestCandidate = relockCand;
+        selectionReason = "relocked_to_live_resource";
+      }
     }
+
+    Translation2d beforeRicher = bestCandidate;
 
     bestCandidate =
         preferRicherCandidate(
@@ -779,12 +827,19 @@ public final class FieldTrackerCollectPassCandidateStep {
             collectUnits,
             scoreResource,
             selection);
+    if (bestCandidate != beforeRicher && bestCandidate != null)
+      selectionReason = "richer_candidate";
+
+    Translation2d beforeCanonicalize = bestCandidate;
 
     bestCandidate =
         maybeCanonicalizeCandidate(
             bestCandidate, ctx.usePts(), collectValid, scoreResource, selection);
+    boolean canonicalized = bestCandidate != beforeCanonicalize && bestCandidate != null;
+    if (canonicalized) selectionReason = "canonicalized_candidate";
 
     if (hasLiveCollectDynamicsFinal) {
+      Translation2d beforeLive = bestCandidate;
       bestCandidate =
           preferLiveFuelCandidate(
               bestCandidate,
@@ -793,13 +848,31 @@ public final class FieldTrackerCollectPassCandidateStep {
               hasLiveFuelNearStrict,
               scoreResource,
               selection);
+      if (bestCandidate != beforeLive && bestCandidate != null)
+        selectionReason = "live_evidence_candidate";
     }
 
+    Translation2d beforeTrap = bestCandidate;
     bestCandidate =
         preferOutsideHubFrontTrap(
             bestCandidate, ctx.usePts(), collectValid, isHubFrontTrap, scoreResource, selection);
+    boolean trapPenaltyApplied = beforeTrap != null && isHubFrontTrap.test(beforeTrap);
+    if (bestCandidate != beforeTrap && bestCandidate != null) selectionReason = "avoid_trap_region";
 
     return new FieldTrackerCollectPassCandidateResult(
-        best, bestCandidate, collectValid, footprintHasFuel, scoreResource, null);
+        best,
+        bestCandidate,
+        collectValid,
+        footprintHasFuel,
+        scoreResource,
+        null,
+        scoreBreakdown,
+        hasLiveCollectDynamicsFinal,
+        bestCandidate != null && hasLiveFuelNearStrict.test(bestCandidate),
+        staleCollectObservationPresent,
+        canonicalized,
+        "relocked_to_live_resource".equals(selectionReason),
+        trapPenaltyApplied,
+        selectionReason);
   }
 }

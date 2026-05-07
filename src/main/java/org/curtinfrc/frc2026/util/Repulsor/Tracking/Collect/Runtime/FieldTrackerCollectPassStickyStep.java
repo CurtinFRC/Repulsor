@@ -30,8 +30,10 @@ import static org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerC
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.function.ToDoubleBiFunction;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.CollectObjectiveSelectionConfig;
+import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.CollectSelectionDecision;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerCollectObjectiveLoop;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerCollectObjectiveMath;
+import org.littletonrobotics.junction.Logger;
 
 /**
  * Provides field tracker collect pass sticky step functionality for the Repulsor runtime helper
@@ -348,6 +350,8 @@ public final class FieldTrackerCollectPassStickyStep {
     }
 
     boolean switched = stickySwitched(prevSticky, selectedResource);
+    boolean stickyHeld =
+        prevSticky != null && !switched && stickySame(prevSticky, selectedResource);
 
     if (switched && !forcedFuelReplacement && loop.collectStickyLastSwitchNs != 0L) {
       double sinceLastSwitchS = nowSFromNs(ctx.nowNs() - loop.collectStickyLastSwitchNs);
@@ -361,9 +365,39 @@ public final class FieldTrackerCollectPassStickyStep {
           selectedResource = prevSticky;
           loop.collectStickySelector.force(prevSticky);
           switched = false;
+          stickyHeld = true;
         }
       }
     }
+
+    String reason = cand.selectionReason();
+    if (forcedFuelReplacement) {
+      reason = "forced_replacement";
+    } else if (switched) {
+      reason = "switch_margin_met";
+    } else if (stickyHeld) {
+      reason = "sticky_hold";
+    }
+
+    loop.lastSelectionDecision =
+        new CollectSelectionDecision(
+            selectedResource,
+            prevSticky,
+            reason,
+            cand.scoreBreakdown().apply(selectedResource),
+            cand.liveEvidenceRequired(),
+            cand.liveEvidenceFound(),
+            cand.staleObservationPresent(),
+            cand.canonicalized(),
+            cand.relockedToLiveEvidence(),
+            cand.trapPenaltyApplied(),
+            stickyHeld,
+            switched);
+    Logger.recordOutput(
+        "Repulsor/DecisionTrace/CollectSelection",
+        loop.lastSelectionDecision.asDecisionEntry("CollectSelection").decision()
+            + ":"
+            + loop.lastSelectionDecision.reason());
 
     loop.collectStickyPoint = selectedResource;
     loop.collectStickyScore = cand.scoreResource().apply(selectedResource);

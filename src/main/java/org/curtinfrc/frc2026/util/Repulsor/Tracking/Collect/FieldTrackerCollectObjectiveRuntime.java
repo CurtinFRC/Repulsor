@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.SemanticRegion;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateRuntime;
 
@@ -68,8 +69,16 @@ public final class FieldTrackerCollectObjectiveRuntime {
     loop.configureCollectPlannerTuning(tuning);
   }
 
+  void configureSemanticRegions(List<SemanticRegion> semanticRegions) {
+    loop.configureSemanticRegions(semanticRegions);
+  }
+
   CollectPlannerTuning collectPlannerTuning() {
     return loop.collectPlannerTuning();
+  }
+
+  CollectSelectionDecision lastSelectionDecision() {
+    return loop.lastSelectionDecision();
   }
 
   /**

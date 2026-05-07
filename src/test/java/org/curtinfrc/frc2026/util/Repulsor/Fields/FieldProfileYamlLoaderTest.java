@@ -469,4 +469,61 @@ class FieldProfileYamlLoaderTest {
       }
     }
   }
+
+  @Test
+  void loadsSemanticRegionsFromYamlForStrategyScoring() throws Exception {
+    Path profile = tempDir.resolve("semantic-regions.yaml");
+    Files.writeString(
+        profile,
+        """
+        id: semantic-regions
+        gameName: CUSTOM
+        gameYear: 2099
+        geometry:
+          lengthMeters: 12.5
+          widthMeters: 6.25
+        resources: {}
+        projectileShots: {}
+        semanticRegions:
+          centerContested:
+            shape: rectangle
+            minXMeters: 4.0
+            maxXMeters: 8.0
+            minYMeters: 1.0
+            maxYMeters: 5.0
+            penaltyTags: [contested, risky]
+            collectPenalty: 0.75
+          loadingLane:
+            shape: rectangle
+            minXMeters: 0.5
+            maxXMeters: 2.0
+            minYMeters: 1.0
+            maxYMeters: 5.0
+            preferenceTags: [safeCollect]
+            collectPreference: 0.25
+        """);
+
+    String previous = System.getProperty("repulsor.profile.path");
+    try {
+      System.setProperty("repulsor.profile.path", profile.toString());
+      FieldProfileConfig cfg =
+          FieldProfileYamlLoader.loadOrDefault("semantic-regions", new FieldProfileConfig());
+
+      assertEquals(2, cfg.toSemanticRegions().size());
+      SemanticRegion contested =
+          cfg.toSemanticRegions().stream()
+              .filter(region -> region.id().equals("centerContested"))
+              .findFirst()
+              .orElseThrow();
+      assertTrue(contested.contains(new edu.wpi.first.math.geometry.Translation2d(6.0, 3.0)));
+      assertEquals(-0.75, contested.collectAdjustment(), 1e-9);
+      assertTrue(contested.penaltyTags().contains("risky"));
+    } finally {
+      if (previous == null) {
+        System.clearProperty("repulsor.profile.path");
+      } else {
+        System.setProperty("repulsor.profile.path", previous);
+      }
+    }
+  }
 }

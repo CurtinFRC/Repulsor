@@ -26,10 +26,13 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
+import org.curtinfrc.frc2026.util.Repulsor.Fields.SemanticRegion;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.CollectProbe;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PointCandidate;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateRuntime;
+import org.curtinfrc.frc2026.util.Repulsor.Scoring.WeightedScoreBreakdown;
+import org.curtinfrc.frc2026.util.Repulsor.Scoring.WeightedScoreTerm;
 import org.curtinfrc.frc2026.util.Repulsor.Target.StickyTarget;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.Runtime.FieldTrackerCollectPassCandidateResult;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.Runtime.FieldTrackerCollectPassCandidateStep;
@@ -72,6 +75,7 @@ public final class FieldTrackerCollectObjectiveLoop {
   final Predicate<String> collectTypePredicate;
 
   private volatile CollectPlannerTuning tuning;
+  private volatile List<SemanticRegion> semanticRegions = List.of();
 
   /**
    * Creates a field tracker collect objective loop instance with the dependencies and tuning values
@@ -134,6 +138,28 @@ public final class FieldTrackerCollectObjectiveLoop {
 
   public void configureCollectPlannerTuning(CollectPlannerTuning tuning) {
     this.tuning = tuning == null ? CollectPlannerTuning.defaults() : tuning;
+  }
+
+  public void configureSemanticRegions(List<SemanticRegion> semanticRegions) {
+    this.semanticRegions = semanticRegions == null ? List.of() : List.copyOf(semanticRegions);
+  }
+
+  public WeightedScoreBreakdown semanticRegionBreakdown(Translation2d point) {
+    if (point == null || semanticRegions.isEmpty()) return WeightedScoreBreakdown.empty();
+    ArrayList<WeightedScoreTerm> terms = new ArrayList<>();
+    for (SemanticRegion region : semanticRegions) {
+      if (region == null || !region.contains(point)) continue;
+      if (region.collectPenalty() > 0.0) {
+        terms.add(
+            WeightedScoreTerm.cost("regionPenalty:" + region.id(), 1.0, region.collectPenalty()));
+      }
+      if (region.collectPreference() > 0.0) {
+        terms.add(
+            WeightedScoreTerm.gain(
+                "regionPreference:" + region.id(), 1.0, region.collectPreference()));
+      }
+    }
+    return new WeightedScoreBreakdown(terms);
   }
 
   public CollectObjectiveStateSnapshot stateSnapshot() {
@@ -647,6 +673,8 @@ public final class FieldTrackerCollectObjectiveLoop {
    */
   public volatile Translation2d collectStickyPoint = null;
 
+  public volatile CollectSelectionDecision lastSelectionDecision = CollectSelectionDecision.empty();
+
   /**
    * Configuration value for collect sticky score. The valid range and tuning source are defined by
    * the owning subsystem or field profile.
@@ -658,6 +686,10 @@ public final class FieldTrackerCollectObjectiveLoop {
    * the owning subsystem or field profile.
    */
   public volatile long collectStickyTsNs = 0L;
+
+  public CollectSelectionDecision lastSelectionDecision() {
+    return lastSelectionDecision == null ? CollectSelectionDecision.empty() : lastSelectionDecision;
+  }
 
   /**
    * Configuration value for collect empty space max dist to fuel m. The valid range and tuning
@@ -740,6 +772,7 @@ public final class FieldTrackerCollectObjectiveLoop {
     collectStickyInvalidSec = 0.0;
     collectDriveLastTarget = null;
     collectDriveLastTargetNs = 0L;
+    lastSelectionDecision = CollectSelectionDecision.empty();
   }
 
   /**
