@@ -53,6 +53,12 @@ class FieldPlannerPlanningResultTest {
     assertFalse(result.diagnostics().stuckAbort());
     assertFalse(result.diagnostics().offloaded());
     assertTrue(Double.isFinite(result.diagnostics().errorMeters()));
+    assertFalse(result.decisionTrace().entries().isEmpty());
+    assertTrue(result.decisionTrace().hasLayer("WaypointPolicy"));
+    assertTrue(result.decisionTrace().hasLayer("GlobalFallback"));
+    assertTrue(result.decisionTrace().hasLayer("ReactiveBypass"));
+    assertTrue(result.decisionTrace().hasLayer("ForceThrough"));
+    assertTrue(result.decisionTrace().hasLayer("FieldPlanner"));
   }
 
   @Test
@@ -96,6 +102,13 @@ class FieldPlannerPlanningResultTest {
     assertTrue(result.diagnostics().globalFallbackStats().found());
     assertFalse(result.diagnostics().pathBlocked());
     assertEquals(activeGoalBeforeFallback, planner.getGoalPose());
+    assertTrue(
+        result.decisionTrace().entries().stream()
+            .anyMatch(
+                entry ->
+                    entry.layer().equals("GlobalFallback")
+                        && entry.decision().equals("temporary_waypoint")
+                        && entry.reason().equals("search_found_waypoint")));
   }
 
   @Test
@@ -134,6 +147,12 @@ class FieldPlannerPlanningResultTest {
     assertTrue(result.diagnostics().pathBlocked());
     assertFalse(result.diagnostics().reactiveBypassActive());
     assertEquals(runtimeConfig, planner.getRuntimeConfig());
+    assertTrue(
+        result.decisionTrace().entries().stream()
+            .anyMatch(
+                entry ->
+                    entry.layer().equals("FieldPlanner")
+                        && entry.decision().equals("path_blocked")));
   }
 
   @Test

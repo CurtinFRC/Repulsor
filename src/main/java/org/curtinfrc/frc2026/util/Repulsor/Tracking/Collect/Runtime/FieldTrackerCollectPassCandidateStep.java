@@ -565,7 +565,7 @@ public final class FieldTrackerCollectPassCandidateStep {
 
       if (best != null && collectValid.test(best.point)) {
         loop.lastBest = best;
-        Logger.recordOutput("Method", "CollectNearest");
+        Logger.recordOutput("Repulsor/Collect/Selection/Method", "CollectNearest");
         break;
       }
 
@@ -585,7 +585,7 @@ public final class FieldTrackerCollectPassCandidateStep {
               FieldTrackerCollectObjectiveLoop.COLLECT_REFINE_GRID);
 
       if (best != null && collectValid.test(best.point)) {
-        Logger.recordOutput("Method", "CollectHierarchical");
+        Logger.recordOutput("Repulsor/Collect/Selection/Method", "CollectHierarchical");
         break;
       }
 
@@ -598,7 +598,7 @@ public final class FieldTrackerCollectPassCandidateStep {
               Math.max(24, ctx.usePts().length));
 
       if (best != null && collectValid.test(best.point)) {
-        Logger.recordOutput("Method", "CollectPoints");
+        Logger.recordOutput("Repulsor/Collect/Selection/Method", "CollectPoints");
         break;
       }
 
@@ -621,7 +621,7 @@ public final class FieldTrackerCollectPassCandidateStep {
                   0.0,
                   0.0,
                   -1e9);
-          Logger.recordOutput("Method", "CollectHotspot");
+          Logger.recordOutput("Repulsor/Collect/Selection/Method", "CollectHotspot");
           break;
         }
       }

@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import org.curtinfrc.frc2026.util.Repulsor.Diagnostics.RepulsorDecisionEntry;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.RepulsorSample;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
 import org.curtinfrc.frc2026.util.Repulsor.Metrics.HPStationMetrics;
@@ -701,6 +702,10 @@ public class AutoPathBehaviour extends Behaviour {
     logCandidate("Repulsor/AutoPath/ObjectiveSelection/Selected", safeDecision.selected());
     logCandidate("Repulsor/AutoPath/ObjectiveSelection/Current", safeDecision.currentCandidate());
     logCandidate("Repulsor/AutoPath/ObjectiveSelection/Best", safeDecision.bestCandidate());
+    RepulsorDecisionEntry entry = safeDecision.asDecisionEntry("AutoPath");
+    Logger.recordOutput(
+        "Repulsor/DecisionTrace/AutoPathObjective",
+        entry.layer() + ":" + entry.decision() + "(" + entry.reason() + ")");
   }
 
   private void logCandidate(

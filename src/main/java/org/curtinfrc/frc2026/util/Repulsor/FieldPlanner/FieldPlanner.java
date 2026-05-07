@@ -31,8 +31,11 @@ import edu.wpi.first.wpilibj.RobotBase;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.curtinfrc.frc2026.util.Repulsor.Constants;
+import org.curtinfrc.frc2026.util.Repulsor.Diagnostics.RepulsorDecisionEntry;
+import org.curtinfrc.frc2026.util.Repulsor.Diagnostics.RepulsorDecisionTrace;
 import org.curtinfrc.frc2026.util.Repulsor.DriverStation.NtRepulsorDriverStation;
 import org.curtinfrc.frc2026.util.Repulsor.DriverStation.RepulsorDriverStation;
 import org.curtinfrc.frc2026.util.Repulsor.ExtraPathing;
@@ -630,7 +633,11 @@ public class FieldPlanner {
               safeRequest.suppressFallback(),
               safeRequest.shooterReleaseHeightMeters());
       lastPlanningResult =
-          new RepulsorPlanningResult(safeRequest, sample, lastPlanningResult.diagnostics());
+          new RepulsorPlanningResult(
+              safeRequest,
+              sample,
+              lastPlanningResult.diagnostics(),
+              lastPlanningResult.decisionTrace());
       return lastPlanningResult;
     } finally {
       fallbackAllianceOverride = previousOverride;
@@ -1101,7 +1108,8 @@ public class FieldPlanner {
             remote.isStuckAbort(),
             true,
             currentErr.map(distance -> distance.in(Meters)).orElse(Double.NaN));
-    lastPlanningResult = new RepulsorPlanningResult(request, sample, diagnostics);
+    RepulsorDecisionTrace trace = buildDecisionTrace(diagnostics);
+    lastPlanningResult = new RepulsorPlanningResult(request, sample, diagnostics, trace);
     Logger.recordOutput("Repulsor/Diagnostics/PathBlocked", remote.isPathBlocked());
     Logger.recordOutput(
         "Repulsor/Diagnostics/ReactiveBypassActive", remote.isReactiveBypassActive());
@@ -1109,6 +1117,7 @@ public class FieldPlanner {
     Logger.recordOutput("Repulsor/Diagnostics/RobotIntersecting", remote.isRobotIntersecting());
     Logger.recordOutput("Repulsor/Diagnostics/StuckAbort", remote.isStuckAbort());
     Logger.recordOutput("Repulsor/Diagnostics/Offloaded", true);
+    recordDecisionTraceTelemetry(trace);
     return sample;
   }
 
@@ -1152,14 +1161,163 @@ public class FieldPlanner {
             stuckAbort,
             offloaded,
             currentErr.map(distance -> distance.in(Meters)).orElse(Double.NaN));
-    lastPlanningResult = new RepulsorPlanningResult(request, sample, diagnostics);
+    RepulsorDecisionTrace trace = buildDecisionTrace(diagnostics);
+    lastPlanningResult = new RepulsorPlanningResult(request, sample, diagnostics, trace);
     Logger.recordOutput("Repulsor/Diagnostics/PathBlocked", pathBlocked);
     Logger.recordOutput("Repulsor/Diagnostics/ReactiveBypassActive", reactiveBypassActive);
     Logger.recordOutput("Repulsor/Diagnostics/ForceThrough", forceThrough);
     Logger.recordOutput("Repulsor/Diagnostics/RobotIntersecting", robotIntersecting);
     Logger.recordOutput("Repulsor/Diagnostics/StuckAbort", stuckAbort);
     Logger.recordOutput("Repulsor/Diagnostics/Offloaded", offloaded);
+    recordDecisionTraceTelemetry(trace);
     return sample;
+  }
+
+  private RepulsorDecisionTrace buildDecisionTrace(RepulsorDiagnosticsSnapshot diagnostics) {
+    if (diagnostics == null) return RepulsorDecisionTrace.empty();
+    ArrayList<RepulsorDecisionEntry> entries = new ArrayList<>();
+
+    FieldPlannerWaypointStatus waypoint = diagnostics.waypointStatus();
+    String waypointDecision = "direct";
+    String waypointReason = "using_active_goal";
+    Map<String, String> waypointMetadata = Map.of();
+    if (waypoint != null) {
+      if (waypoint.usingBypass()) {
+        waypointDecision = "bypass";
+        waypointReason = "waypoint_policy_using_bypass";
+      } else if (waypoint.activeStage()) {
+        waypointDecision = "stage";
+        waypointReason = "waypoint_stage_active";
+      } else if (waypoint.stagedComplete()) {
+        waypointDecision = "complete";
+        waypointReason = "waypoint_stage_complete";
+      }
+      waypointMetadata =
+          Map.of(
+              "objectiveRole",
+              waypoint.lastObjectiveRole().name(),
+              "strategyMode",
+              waypoint.lastStrategyDecision().mode().name(),
+              "exitPhase",
+              Boolean.toString(waypoint.exitPhase()),
+              "centerReturn",
+              Boolean.toString(waypoint.centerReturn()),
+              "stagedModeTicks",
+              Integer.toString(waypoint.stagedModeTicks()));
+    }
+    entries.add(
+        new RepulsorDecisionEntry(
+            "WaypointPolicy",
+            waypointDecision,
+            waypointReason,
+            formatPose(diagnostics.activeGoal()),
+            formatPose(diagnostics.requestedGoal()),
+            0.0,
+            0.0,
+            waypointMetadata));
+
+    CoarseGlobalPlannerStats stats = diagnostics.globalFallbackStats();
+    String fallbackDecision = diagnostics.globalFallbackActive() ? "active" : "not_used";
+    String fallbackReason = "clear_or_disabled";
+    if (diagnostics.globalFallbackActive()) {
+      if (diagnostics.globalFallbackWaypoint().isPresent()) {
+        fallbackDecision = "temporary_waypoint";
+        fallbackReason = stats.found() ? "search_found_waypoint" : "fallback_waypoint_supplied";
+      } else if (stats.timedOut()) {
+        fallbackDecision = "timeout";
+        fallbackReason = "search_timed_out";
+      } else if (stats.exhaustedNodeBudget()) {
+        fallbackDecision = "node_budget";
+        fallbackReason = "search_exhausted_node_budget";
+      } else {
+        fallbackDecision = "active_no_waypoint";
+        fallbackReason = "search_failed";
+      }
+    }
+    entries.add(
+        new RepulsorDecisionEntry(
+            "GlobalFallback",
+            fallbackDecision,
+            fallbackReason,
+            diagnostics.globalFallbackWaypoint().map(this::formatPose).orElse(""),
+            formatPose(diagnostics.requestedGoal()),
+            0.0,
+            0.0,
+            Map.of(
+                "found",
+                Boolean.toString(stats.found()),
+                "timedOut",
+                Boolean.toString(stats.timedOut()),
+                "exhaustedNodeBudget",
+                Boolean.toString(stats.exhaustedNodeBudget()),
+                "expandedNodes",
+                Integer.toString(stats.expandedNodes()),
+                "pathNodes",
+                Integer.toString(stats.pathNodes()))));
+
+    String bypassDecision = diagnostics.reactiveBypassActive() ? "active" : "inactive";
+    String bypassReason = diagnostics.reactiveBypassActive() ? "local_path_blocked" : "not_needed";
+    if (diagnostics.reactiveBypassPinned()) {
+      bypassDecision = "pinned";
+      bypassReason = "bypass_pinned_mode";
+    }
+    entries.add(
+        new RepulsorDecisionEntry(
+            "ReactiveBypass",
+            bypassDecision,
+            bypassReason,
+            formatPose(diagnostics.activeGoal()),
+            formatPose(diagnostics.requestedGoal()),
+            0.0,
+            0.0,
+            Map.of(
+                "pathBlocked",
+                Boolean.toString(diagnostics.pathBlocked()),
+                "robotIntersecting",
+                Boolean.toString(diagnostics.robotIntersecting()))));
+
+    entries.add(
+        RepulsorDecisionEntry.of(
+                "ForceThrough",
+                diagnostics.forceThroughActive() ? "active" : "inactive",
+                diagnostics.forceThroughActive() ? "near_goal_or_wall" : "not_needed")
+            .withSelection(
+                formatPose(diagnostics.activeGoal()), formatPose(diagnostics.requestedGoal())));
+
+    String plannerDecision = diagnostics.offloaded() ? "offloaded" : "local";
+    String plannerReason =
+        diagnostics.offloaded() ? "offload_calculation_result" : "local_calculation";
+    if (diagnostics.stuckAbort()) {
+      plannerDecision = "stuck_abort";
+      plannerReason = "tiny_step_limit_exceeded";
+    } else if (diagnostics.pathBlocked()) {
+      plannerDecision = "path_blocked";
+      plannerReason = "no_clear_path_or_fallback";
+    }
+    entries.add(
+        new RepulsorDecisionEntry(
+            "FieldPlanner",
+            plannerDecision,
+            plannerReason,
+            formatPose(diagnostics.activeGoal()),
+            formatPose(diagnostics.requestedGoal()),
+            diagnostics.errorMeters(),
+            0.0,
+            Map.of("offloaded", Boolean.toString(diagnostics.offloaded()))));
+
+    return new RepulsorDecisionTrace(entries, "", "");
+  }
+
+  private void recordDecisionTraceTelemetry(RepulsorDecisionTrace trace) {
+    RepulsorDecisionTrace safeTrace = trace == null ? RepulsorDecisionTrace.empty() : trace;
+    Logger.recordOutput("Repulsor/DecisionTrace/Count", safeTrace.entries().size());
+    Logger.recordOutput("Repulsor/DecisionTrace/Summary", safeTrace.summary());
+  }
+
+  private String formatPose(Pose2d pose) {
+    if (pose == null) return "";
+    return String.format(
+        "%.3f,%.3f,%.3f", pose.getX(), pose.getY(), pose.getRotation().getRadians());
   }
 
   /**

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.List;
+import org.curtinfrc.frc2026.util.Repulsor.Diagnostics.RepulsorDecisionEntry;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.Candidate;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.HeightSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
@@ -69,6 +70,14 @@ class ObjectiveSelectorTest {
     assertSame(bestCandidate, decision.selected());
     assertTrue(decision.switched());
     assertEquals(0.30, decision.scoreDelta(), 1e-9);
+
+    RepulsorDecisionEntry entry = decision.asDecisionEntry("ObjectiveSelector");
+    assertEquals("ObjectiveSelector", entry.layer());
+    assertEquals("switch_to_best", entry.decision());
+    assertEquals("best_exceeds_margin", entry.reason());
+    assertEquals(10.30, entry.score(), 1e-9);
+    assertEquals(0.30, entry.scoreDelta(), 1e-9);
+    assertEquals("true", entry.metadata().get("switched"));
   }
 
   @Test
