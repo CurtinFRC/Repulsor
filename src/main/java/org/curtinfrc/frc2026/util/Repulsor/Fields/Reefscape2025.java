@@ -25,6 +25,7 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.curtinfrc.frc2026.util.Repulsor.Behaviours.AutoPathRuntimeConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlannerRuntimeConfig;
@@ -40,6 +41,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.HeightSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.Setpoints;
+import org.curtinfrc.frc2026.util.Repulsor.Strategy.RepulsorStrategyPreset;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
@@ -109,6 +111,21 @@ public final class Reefscape2025 implements FieldDefinition {
     coral.unitValue = 1.0;
     coral.sigmaMeters = 0.95;
     cfg.resources.put("coral", coral);
+    cfg.defaultStrategyPreset = "safeCycle";
+
+    FieldProfileConfig.StrategyPresetConfig fastCollect =
+        new FieldProfileConfig.StrategyPresetConfig();
+    fastCollect.collectPlanner.switchCooldownSeconds = 0.35;
+    fastCollect.objectiveSelection.switchScoreMargin = 0.15;
+    fastCollect.autoPath.collectGoalUnits = 2;
+    cfg.strategyPresets.put("fastCollect", fastCollect);
+
+    FieldProfileConfig.StrategyPresetConfig safeCycle =
+        new FieldProfileConfig.StrategyPresetConfig();
+    safeCycle.collectPlanner.switchCooldownSeconds = 0.85;
+    safeCycle.objectiveSelection.switchScoreMargin = 0.35;
+    safeCycle.waypointing.occludingGateStagingEnabled = true;
+    cfg.strategyPresets.put("safeCycle", safeCycle);
     return cfg;
   }
 
@@ -131,6 +148,16 @@ public final class Reefscape2025 implements FieldDefinition {
     return profile.autoPath == null
         ? AutoPathRuntimeConfig.defaults()
         : profile.autoPath.toAutoPathRuntimeConfig();
+  }
+
+  @Override
+  public Map<String, RepulsorStrategyPreset> strategyPresets() {
+    return profile.toStrategyPresets();
+  }
+
+  @Override
+  public String defaultStrategyPreset() {
+    return profile.defaultStrategyPreset == null ? "" : profile.defaultStrategyPreset;
   }
 
   /**

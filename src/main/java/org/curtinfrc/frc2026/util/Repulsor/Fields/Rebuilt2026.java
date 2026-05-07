@@ -27,6 +27,7 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import org.curtinfrc.frc2026.util.Repulsor.Behaviours.AutoPathRuntimeConfig;
@@ -51,6 +52,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Setpoints.Specific._Rebuilt2026;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.DragShotPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.GamePiecePhysics;
+import org.curtinfrc.frc2026.util.Repulsor.Strategy.RepulsorStrategyPreset;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
@@ -192,7 +194,57 @@ public final class Rebuilt2026 implements FieldDefinition {
     corridor.centerRailWindowScale = 0.45;
     corridor.outerRailXOffsetScale = 0.9;
     corridor.outerRailWindowMeters = 1.0;
+    cfg.defaultStrategyPreset = "safeCycle";
+    configureDefaultStrategyPresets(cfg);
     return cfg;
+  }
+
+  private static void configureDefaultStrategyPresets(FieldProfileConfig cfg) {
+    FieldProfileConfig.StrategyPresetConfig fastCollect =
+        new FieldProfileConfig.StrategyPresetConfig();
+    fastCollect.collectPlanner.switchCooldownSeconds = 0.30;
+    fastCollect.collectPlanner.etaCost = 0.75;
+    fastCollect.collectPlanner.hubFrontTrapPenalty = 0.35;
+    fastCollect.objectiveSelection.switchScoreMargin = 0.12;
+    fastCollect.waypointing.bandTransitionStagingEnabled = false;
+    fastCollect.autoPath.collectGoalUnits = 2;
+    cfg.strategyPresets.put("fastCollect", fastCollect);
+
+    FieldProfileConfig.StrategyPresetConfig safeCycle =
+        new FieldProfileConfig.StrategyPresetConfig();
+    safeCycle.collectPlanner.switchCooldownSeconds = 0.90;
+    safeCycle.collectPlanner.hubFrontTrapPenalty = 1.15;
+    safeCycle.objectiveSelection.switchScoreMargin = 0.35;
+    safeCycle.waypointing.occludingGateStagingEnabled = true;
+    safeCycle.plannerRuntime.globalFallbackEnabled = true;
+    cfg.strategyPresets.put("safeCycle", safeCycle);
+
+    FieldProfileConfig.StrategyPresetConfig centerRush =
+        new FieldProfileConfig.StrategyPresetConfig();
+    centerRush.collectPlanner.switchCooldownSeconds = 0.20;
+    centerRush.collectPlanner.nearbyRadiusMeters = 3.0;
+    centerRush.predictiveRanking.distanceCost = 0.85;
+    centerRush.waypointing.centerBandMeters = 1.2;
+    centerRush.autoPath.collectGoalUnits = 3;
+    cfg.strategyPresets.put("centerRush", centerRush);
+
+    FieldProfileConfig.StrategyPresetConfig defenseAvoid =
+        new FieldProfileConfig.StrategyPresetConfig();
+    defenseAvoid.collectPlanner.switchCooldownSeconds = 0.75;
+    defenseAvoid.collectPlanner.farSwitchForceMultiplier = 2.2;
+    defenseAvoid.predictiveRanking.pressureCost = 1.25;
+    defenseAvoid.waypointing.occludingGateStagingEnabled = true;
+    defenseAvoid.plannerRuntime.globalFallbackLookaheadMeters = 1.4;
+    cfg.strategyPresets.put("defenseAvoid", defenseAvoid);
+
+    FieldProfileConfig.StrategyPresetConfig endgameSafe =
+        new FieldProfileConfig.StrategyPresetConfig();
+    endgameSafe.collectPlanner.switchCooldownSeconds = 1.10;
+    endgameSafe.collectPlanner.etaCost = 1.15;
+    endgameSafe.objectiveSelection.switchScoreMargin = 0.50;
+    endgameSafe.waypointing.bandTransitionStagingEnabled = true;
+    endgameSafe.autoPath.successNearDistanceMeters = 0.45;
+    cfg.strategyPresets.put("endgameSafe", endgameSafe);
   }
 
   private static double positive(Double value, double fallback) {
@@ -218,6 +270,16 @@ public final class Rebuilt2026 implements FieldDefinition {
     return profile.autoPath == null
         ? AutoPathRuntimeConfig.defaults()
         : profile.autoPath.toAutoPathRuntimeConfig();
+  }
+
+  @Override
+  public Map<String, RepulsorStrategyPreset> strategyPresets() {
+    return profile.toStrategyPresets();
+  }
+
+  @Override
+  public String defaultStrategyPreset() {
+    return profile.defaultStrategyPreset == null ? "" : profile.defaultStrategyPreset;
   }
 
   /**

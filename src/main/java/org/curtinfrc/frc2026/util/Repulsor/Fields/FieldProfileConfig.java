@@ -25,9 +25,11 @@ import org.curtinfrc.frc2026.util.Repulsor.Behaviours.AutoPathRuntimeConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.CoarseGlobalPlannerConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlannerRuntimeConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointConfig;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointPolicyProfile;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PredictiveRankingConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Objective.ObjectiveSelectionConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.MovingShotSolver;
+import org.curtinfrc.frc2026.util.Repulsor.Strategy.RepulsorStrategyPreset;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.CollectObjectiveSelectionConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.CollectPlannerTuning;
 
@@ -65,6 +67,8 @@ public class FieldProfileConfig {
   public WaypointingConfig waypointing = new WaypointingConfig();
   public PlannerRuntimeConfig plannerRuntime = new PlannerRuntimeConfig();
   public AutoPathConfig autoPath = new AutoPathConfig();
+  public String defaultStrategyPreset;
+  public Map<String, StrategyPresetConfig> strategyPresets = new LinkedHashMap<>();
 
   /** Compatibility input for older 2026-specific YAML. Prefer projectileShots. */
   @Deprecated(forRemoval = false)
@@ -133,10 +137,41 @@ public class FieldProfileConfig {
     mergeWaypointing(base.waypointing, overlay.waypointing);
     mergePlannerRuntime(base.plannerRuntime, overlay.plannerRuntime);
     mergeAutoPath(base.autoPath, overlay.autoPath);
+    if (overlay.defaultStrategyPreset != null)
+      base.defaultStrategyPreset = overlay.defaultStrategyPreset;
+    mergeStrategyPresets(base.strategyPresets, overlay.strategyPresets);
 
     mergeProjectileShot(base.shuttleShot, overlay.shuttleShot);
     mergeCorridor(base.rebuiltCorridor, overlay.rebuiltCorridor);
     return base;
+  }
+
+  private static void mergeStrategyPresets(
+      Map<String, StrategyPresetConfig> base, Map<String, StrategyPresetConfig> overlay) {
+    if (base == null || overlay == null || overlay.isEmpty()) return;
+    overlay.forEach(
+        (name, preset) -> {
+          if (name == null || name.isBlank() || preset == null) return;
+          StrategyPresetConfig target =
+              base.computeIfAbsent(name, ignored -> new StrategyPresetConfig());
+          mergeRanking(target.predictiveRanking, preset.predictiveRanking);
+          mergeObjectiveSelection(target.objectiveSelection, preset.objectiveSelection);
+          mergeCollectPlanner(target.collectPlanner, preset.collectPlanner);
+          mergeWaypointing(target.waypointing, preset.waypointing);
+          mergePlannerRuntime(target.plannerRuntime, preset.plannerRuntime);
+          mergeAutoPath(target.autoPath, preset.autoPath);
+        });
+  }
+
+  public Map<String, RepulsorStrategyPreset> toStrategyPresets() {
+    if (strategyPresets == null || strategyPresets.isEmpty()) return Map.of();
+    LinkedHashMap<String, RepulsorStrategyPreset> presets = new LinkedHashMap<>();
+    strategyPresets.forEach(
+        (name, preset) -> {
+          if (name == null || name.isBlank() || preset == null) return;
+          presets.put(name, preset.toRepulsorStrategyPreset(name, this));
+        });
+    return Map.copyOf(presets);
   }
 
   private static void mergeWaypointing(WaypointingConfig base, WaypointingConfig overlay) {
@@ -747,6 +782,52 @@ public class FieldProfileConfig {
               forceThroughGoalDistanceMeters, defaults.forceThroughGoalDistanceMeters()),
           finiteNonNegative(
               forceThroughWallDistanceMeters, defaults.forceThroughWallDistanceMeters()));
+    }
+  }
+
+  public static class StrategyPresetConfig {
+    public RankingConfig predictiveRanking = new RankingConfig();
+    public ObjectiveSelectionProfileConfig objectiveSelection =
+        new ObjectiveSelectionProfileConfig();
+    public CollectPlannerConfig collectPlanner = new CollectPlannerConfig();
+    public WaypointingConfig waypointing = new WaypointingConfig();
+    public PlannerRuntimeConfig plannerRuntime = new PlannerRuntimeConfig();
+    public AutoPathConfig autoPath = new AutoPathConfig();
+
+    public RepulsorStrategyPreset toRepulsorStrategyPreset(String name, FieldProfileConfig base) {
+      RankingConfig ranking = new RankingConfig();
+      mergeRanking(ranking, base == null ? null : base.predictiveRanking);
+      mergeRanking(ranking, predictiveRanking);
+
+      ObjectiveSelectionProfileConfig objective = new ObjectiveSelectionProfileConfig();
+      mergeObjectiveSelection(objective, base == null ? null : base.objectiveSelection);
+      mergeObjectiveSelection(objective, objectiveSelection);
+
+      CollectPlannerConfig collect = new CollectPlannerConfig();
+      mergeCollectPlanner(collect, base == null ? null : base.collectPlanner);
+      mergeCollectPlanner(collect, collectPlanner);
+
+      WaypointingConfig waypoint = new WaypointingConfig();
+      mergeWaypointing(waypoint, base == null ? null : base.waypointing);
+      mergeWaypointing(waypoint, waypointing);
+
+      PlannerRuntimeConfig planner = new PlannerRuntimeConfig();
+      mergePlannerRuntime(planner, base == null ? null : base.plannerRuntime);
+      mergePlannerRuntime(planner, plannerRuntime);
+
+      AutoPathConfig auto = new AutoPathConfig();
+      mergeAutoPath(auto, base == null ? null : base.autoPath);
+      mergeAutoPath(auto, autoPath);
+
+      return new RepulsorStrategyPreset(
+          name,
+          collect.toCollectPlannerTuning(),
+          ranking.toPredictiveRankingConfig(),
+          objective.toObjectiveSelectionConfig(),
+          planner.toFieldPlannerRuntimeConfig(),
+          new FieldPlannerWaypointPolicyProfile(
+              name, waypoint.toFieldPlannerWaypointConfig(), null),
+          auto.toAutoPathRuntimeConfig());
     }
   }
 

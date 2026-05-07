@@ -20,11 +20,13 @@
 package org.curtinfrc.frc2026.util.Repulsor.Fields;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.curtinfrc.frc2026.util.Repulsor.Behaviours.AutoPathRuntimeConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.Heatmap.HeatmapProvider;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
+import org.curtinfrc.frc2026.util.Repulsor.Strategy.RepulsorStrategyPreset;
 
 /**
  * Contract for field definition implementations used by the Repulsor field/profile definition layer
@@ -63,6 +65,19 @@ public interface FieldDefinition
 
   default AutoPathRuntimeConfig autoPathRuntimeConfig() {
     return AutoPathRuntimeConfig.defaults();
+  }
+
+  default Map<String, RepulsorStrategyPreset> strategyPresets() {
+    return Map.of();
+  }
+
+  default Optional<RepulsorStrategyPreset> strategyPreset(String name) {
+    if (name == null || name.isBlank()) return Optional.empty();
+    return Optional.ofNullable(strategyPresets().get(name));
+  }
+
+  default String defaultStrategyPreset() {
+    return "";
   }
 
   /**

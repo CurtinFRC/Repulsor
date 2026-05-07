@@ -100,7 +100,9 @@ public final class FieldProfileValidator {
     validateObjectiveSelection(cfg.objectiveSelection, errors);
     validateCollectPlanner(cfg.collectPlanner, errors);
     validateWaypointing(cfg.waypointing, errors);
+    validatePlannerRuntime(cfg.plannerRuntime, errors);
     validateAutoPath(cfg.autoPath, errors);
+    validateStrategyPresets(cfg, errors);
 
     if (cfg.shuttleShot != null && Boolean.TRUE.equals(cfg.shuttleShot.enabled)) {
       validateProjectileShot("legacyShuttleShot", cfg.shuttleShot, errors);
@@ -289,6 +291,62 @@ public final class FieldProfileValidator {
     }
   }
 
+  private static void validatePlannerRuntime(
+      FieldProfileConfig.PlannerRuntimeConfig plannerRuntime, List<String> errors) {
+    if (plannerRuntime == null) return;
+    String prefix = "plannerRuntime";
+    requireOptionalPositive(
+        plannerRuntime.globalFallbackCellMeters, prefix + ".globalFallbackCellMeters", errors);
+    requireOptionalPositive(
+        plannerRuntime.globalFallbackLookaheadMeters,
+        prefix + ".globalFallbackLookaheadMeters",
+        errors);
+    requireOptionalPositive(
+        plannerRuntime.globalFallbackMaxExpandedNodes,
+        prefix + ".globalFallbackMaxExpandedNodes",
+        errors);
+    requireOptionalPositive(
+        plannerRuntime.globalFallbackMaxRuntimeSeconds,
+        prefix + ".globalFallbackMaxRuntimeSeconds",
+        errors);
+    requireOptionalNonNegative(
+        plannerRuntime.forceThroughGoalDistanceMeters,
+        prefix + ".forceThroughGoalDistanceMeters",
+        errors);
+    requireOptionalNonNegative(
+        plannerRuntime.forceThroughWallDistanceMeters,
+        prefix + ".forceThroughWallDistanceMeters",
+        errors);
+  }
+
+  private static void validateStrategyPresets(FieldProfileConfig cfg, List<String> errors) {
+    if (cfg.strategyPresets == null) return;
+    if (cfg.defaultStrategyPreset != null
+        && !cfg.defaultStrategyPreset.isBlank()
+        && !cfg.strategyPresets.containsKey(cfg.defaultStrategyPreset)) {
+      errors.add("defaultStrategyPreset must reference a defined strategyPresets entry");
+    }
+    for (Map.Entry<String, FieldProfileConfig.StrategyPresetConfig> entry :
+        cfg.strategyPresets.entrySet()) {
+      String name = entry.getKey();
+      if (name == null || name.isBlank()) {
+        errors.add("strategy preset key must be non-empty");
+        continue;
+      }
+      FieldProfileConfig.StrategyPresetConfig preset = entry.getValue();
+      if (preset == null) {
+        errors.add("strategyPresets." + name + " is null");
+        continue;
+      }
+      validateRanking(preset.predictiveRanking, errors);
+      validateObjectiveSelection(preset.objectiveSelection, errors);
+      validateCollectPlanner(preset.collectPlanner, errors);
+      validateWaypointing(preset.waypointing, errors);
+      validatePlannerRuntime(preset.plannerRuntime, errors);
+      validateAutoPath(preset.autoPath, errors);
+    }
+  }
+
   /**
    * Returns the validate value maintained by this Repulsor component.
    *
@@ -448,6 +506,12 @@ public final class FieldProfileValidator {
   private static void requireOptionalPositive(Integer value, String name, List<String> errors) {
     if (value != null && value <= 0) {
       errors.add(name + " must be > 0 when provided");
+    }
+  }
+
+  private static void requireOptionalPositive(Double value, String name, List<String> errors) {
+    if (value != null && (!Double.isFinite(value) || value <= 0.0)) {
+      errors.add(name + " must be finite and > 0 when provided");
     }
   }
 

@@ -29,13 +29,16 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import org.curtinfrc.frc2026.util.Repulsor.Behaviours.AutoPathRuntimeConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Behaviours.Behaviour;
 import org.curtinfrc.frc2026.util.Repulsor.Behaviours.BehaviourContext;
 import org.curtinfrc.frc2026.util.Repulsor.Behaviours.BehaviourFlag;
@@ -58,6 +61,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointContext;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointType;
 import org.curtinfrc.frc2026.util.Repulsor.State.SimMatchDriver;
 import org.curtinfrc.frc2026.util.Repulsor.State.StateManager;
+import org.curtinfrc.frc2026.util.Repulsor.Strategy.RepulsorStrategyPreset;
 import org.curtinfrc.frc2026.util.Repulsor.Strategy.StrategyDirective;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
@@ -65,6 +69,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Vision.FieldVision;
 import org.curtinfrc.frc2026.util.Repulsor.Tuning.DriveTuningHeat;
 import org.curtinfrc.frc2026.util.Repulsor.Vision.RepulsorVision;
+import org.littletonrobotics.junction.Logger;
 
 /**
  * Provides repulsor functionality for the Repulsor core Repulsor coordination layer. Use this type
@@ -107,6 +112,9 @@ public class Repulsor {
   private RepulsorSetpoint m_currentGoal;
 
   private RepulsorSetpoint m_nextScore;
+  private final AtomicReference<RepulsorStrategyPreset> m_strategyPresetSnapshot =
+      new AtomicReference<>();
+  private volatile String m_currentStrategyPreset = "";
   private volatile StrategyDirective m_strategyDirective = StrategyDirective.none();
 
   private final List<FieldVision> m_fieldVisions = new ArrayList<>();
@@ -361,6 +369,11 @@ public class Repulsor {
     FieldVision front = ft.createFieldVision("main");
     m_fieldVisions.add(front);
 
+    String defaultPreset = field.defaultStrategyPreset();
+    if (defaultPreset != null && !defaultPreset.isBlank()) {
+      applyStrategyPreset(defaultPreset);
+    }
+
     SimMatchDriver.simInit(false);
   }
 
@@ -494,6 +507,82 @@ public class Repulsor {
    */
   public FieldDefinition getFieldDefinition() {
     return m_fieldDefinition;
+  }
+
+  public List<String> availableStrategyPresets() {
+    Map<String, RepulsorStrategyPreset> presets =
+        m_fieldDefinition == null ? Map.of() : m_fieldDefinition.strategyPresets();
+    ArrayList<String> names = new ArrayList<>(presets.keySet());
+    Collections.sort(names);
+    return List.copyOf(names);
+  }
+
+  public Optional<RepulsorStrategyPreset> strategyPreset(String name) {
+    if (m_fieldDefinition == null || name == null || name.isBlank()) return Optional.empty();
+    return m_fieldDefinition.strategyPreset(name);
+  }
+
+  public String currentStrategyPreset() {
+    return m_currentStrategyPreset;
+  }
+
+  public Optional<RepulsorStrategyPreset> currentStrategyPresetSnapshot() {
+    return Optional.ofNullable(m_strategyPresetSnapshot.get());
+  }
+
+  public AutoPathRuntimeConfig autoPathRuntimeConfig() {
+    RepulsorStrategyPreset preset = m_strategyPresetSnapshot.get();
+    if (preset != null) return preset.autoPath();
+    return m_fieldDefinition == null
+        ? AutoPathRuntimeConfig.defaults()
+        : m_fieldDefinition.autoPathRuntimeConfig();
+  }
+
+  public boolean applyStrategyPreset(String name) {
+    if (m_fieldDefinition == null) return false;
+    String requested = name == null ? "" : name.trim();
+    Optional<RepulsorStrategyPreset> requestedPreset = m_fieldDefinition.strategyPreset(requested);
+    boolean fallbackUsed = false;
+    RepulsorStrategyPreset preset = requestedPreset.orElse(null);
+    if (preset == null) {
+      String fallback = m_fieldDefinition.defaultStrategyPreset();
+      if (fallback != null && !fallback.isBlank() && !fallback.equals(requested)) {
+        preset = m_fieldDefinition.strategyPreset(fallback).orElse(null);
+        fallbackUsed = preset != null;
+      }
+    }
+    if (preset == null) {
+      Logger.recordOutput("Repulsor/StrategyPreset/Requested", requested);
+      Logger.recordOutput("Repulsor/StrategyPreset/Applied", false);
+      Logger.recordOutput("Repulsor/StrategyPreset/FallbackUsed", false);
+      return false;
+    }
+
+    applyStrategyPresetSnapshot(preset, requested, fallbackUsed);
+    return requestedPreset.isPresent();
+  }
+
+  private void applyStrategyPresetSnapshot(
+      RepulsorStrategyPreset preset, String requested, boolean fallbackUsed) {
+    if (preset == null) return;
+
+    m_strategyPresetSnapshot.set(preset);
+    m_currentStrategyPreset = preset.name();
+
+    if (m_planner != null) {
+      m_planner.setRuntimeConfig(preset.plannerRuntime());
+      m_planner.setWaypointPolicyProfile(preset.waypointPolicy());
+    }
+
+    FieldTrackerCore tracker = FieldTrackerCore.getInstance();
+    tracker.configurePredictiveRanking(preset.predictiveRanking());
+    tracker.configureObjectiveSelection(preset.objectiveSelection());
+    tracker.configureCollectPlanner(preset.collectPlanner());
+
+    Logger.recordOutput("Repulsor/StrategyPreset/Requested", requested == null ? "" : requested);
+    Logger.recordOutput("Repulsor/StrategyPreset/Current", preset.name());
+    Logger.recordOutput("Repulsor/StrategyPreset/Applied", true);
+    Logger.recordOutput("Repulsor/StrategyPreset/FallbackUsed", fallbackUsed);
   }
 
   /**

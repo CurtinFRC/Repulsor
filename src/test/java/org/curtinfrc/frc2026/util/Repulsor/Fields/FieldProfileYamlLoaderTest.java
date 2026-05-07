@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
+import org.curtinfrc.frc2026.util.Repulsor.Strategy.RepulsorStrategyPreset;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
 import org.curtinfrc.frc2026.util.Repulsor.Tuning.DefaultDriveTuning;
 import org.curtinfrc.frc2026.util.Repulsor.Tuning.DefaultTurnTuning;
@@ -390,6 +391,76 @@ class FieldProfileYamlLoaderTest {
       assertEquals(0.95, tracker.collectPlannerTuning().switchCooldownSeconds(), 1e-9);
       assertEquals(1.4, tracker.collectPlannerTuning().selection().resourceUnitGain(), 1e-9);
       assertEquals(0.35, tracker.collectPlannerTuning().selection().closeSwitchMarginScale(), 1e-9);
+    } finally {
+      if (previous == null) {
+        System.clearProperty("repulsor.profile.path");
+      } else {
+        System.setProperty("repulsor.profile.path", previous);
+      }
+    }
+  }
+
+  @Test
+  void loadsStrategyPresetsFromYamlAsHighLevelRuntimeBundles() throws Exception {
+    Path profile = tempDir.resolve("strategy-presets.yaml");
+    Files.writeString(
+        profile,
+        """
+        id: strategy-presets
+        gameName: CUSTOM
+        gameYear: 2099
+        geometry:
+          lengthMeters: 12.5
+          widthMeters: 6.25
+        resources: {}
+        projectileShots: {}
+        collectPlanner:
+          switchCooldownSeconds: 0.80
+          etaCost: 1.20
+        defaultStrategyPreset: fastCollect
+        strategyPresets:
+          fastCollect:
+            collectPlanner:
+              switchCooldownSeconds: 0.25
+              etaCost: 0.60
+            predictiveRanking:
+              distanceCost: 0.40
+            objectiveSelection:
+              switchScoreMargin: 0.11
+            waypointing:
+              bandTransitionStagingEnabled: false
+            plannerRuntime:
+              globalFallbackEnabled: false
+            autoPath:
+              collectGoalUnits: 2
+          safeCycle:
+            collectPlanner:
+              switchCooldownSeconds: 1.10
+            waypointing:
+              occludingGateStagingEnabled: true
+        """);
+
+    String previous = System.getProperty("repulsor.profile.path");
+    try {
+      System.setProperty("repulsor.profile.path", profile.toString());
+      FieldProfileConfig cfg =
+          FieldProfileYamlLoader.loadOrDefault("strategy-presets", new FieldProfileConfig());
+
+      assertEquals("fastCollect", cfg.defaultStrategyPreset);
+      assertEquals(2, cfg.toStrategyPresets().size());
+      RepulsorStrategyPreset fastCollect = cfg.toStrategyPresets().get("fastCollect");
+      assertEquals(0.25, fastCollect.collectPlanner().switchCooldownSeconds(), 1e-9);
+      assertEquals(0.60, fastCollect.collectPlanner().selection().etaCost(), 1e-9);
+      assertEquals(0.40, fastCollect.predictiveRanking().distanceCost(), 1e-9);
+      assertEquals(0.11, fastCollect.objectiveSelection().switchScoreMargin(), 1e-9);
+      assertEquals(false, fastCollect.waypointPolicy().config().bandTransitionStagingEnabled());
+      assertEquals(false, fastCollect.plannerRuntime().globalFallbackEnabled());
+      assertEquals(2, fastCollect.autoPath().collectGoalUnits());
+
+      RepulsorStrategyPreset safeCycle = cfg.toStrategyPresets().get("safeCycle");
+      assertEquals(1.10, safeCycle.collectPlanner().switchCooldownSeconds(), 1e-9);
+      assertEquals(1.20, safeCycle.collectPlanner().selection().etaCost(), 1e-9);
+      assertEquals(true, safeCycle.waypointPolicy().config().occludingGateStagingEnabled());
     } finally {
       if (previous == null) {
         System.clearProperty("repulsor.profile.path");

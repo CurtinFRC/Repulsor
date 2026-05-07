@@ -176,8 +176,8 @@ public class FieldPlanner {
 
   private final FieldPlannerForceModel forceModel;
   private final FieldPlannerGoalManager goalManager;
-  private final FieldPlannerRuntimeConfig runtimeConfig;
-  private final CoarseGlobalPlanner globalPlanner;
+  private volatile FieldPlannerRuntimeConfig runtimeConfig;
+  private volatile CoarseGlobalPlanner globalPlanner;
 
   private Optional<Distance> currentErr = Optional.empty();
   private Optional<PlannerFallback> fallback = Optional.empty();
@@ -416,6 +416,13 @@ public class FieldPlanner {
 
   public FieldPlannerRuntimeConfig getRuntimeConfig() {
     return runtimeConfig;
+  }
+
+  public void setRuntimeConfig(FieldPlannerRuntimeConfig runtimeConfig) {
+    FieldPlannerRuntimeConfig safeConfig =
+        runtimeConfig == null ? FieldPlannerRuntimeConfig.defaults() : runtimeConfig;
+    this.runtimeConfig = safeConfig;
+    this.globalPlanner = new CoarseGlobalPlanner(safeConfig.globalFallbackConfig());
   }
 
   public FieldPlannerWaypointStatus getWaypointStatus() {

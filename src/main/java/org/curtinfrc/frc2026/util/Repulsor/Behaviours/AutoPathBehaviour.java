@@ -304,10 +304,7 @@ public class AutoPathBehaviour extends Behaviour {
    */
   @Override
   public Command build(BehaviourContext ctx) {
-    AutoPathRuntimeConfig autoPathConfig =
-        ctx.repulsor.getFieldDefinition() == null
-            ? AutoPathRuntimeConfig.defaults()
-            : ctx.repulsor.getFieldDefinition().autoPathRuntimeConfig();
+    Supplier<AutoPathRuntimeConfig> autoPathConfig = ctx.repulsor::autoPathRuntimeConfig;
 
     AtomicReference<RepulsorSetpoint> lastActive = new AtomicReference<>(null);
     AtomicReference<CategorySpec> lastCat = new AtomicReference<>(null);
@@ -317,18 +314,6 @@ public class AutoPathBehaviour extends Behaviour {
 
     AtomicReference<RepulsorSetpoint> lastEpisodeGoal = new AtomicReference<>(null);
     AtomicLong lastEpisodeFinalizeNs = new AtomicLong(0L);
-
-    final long EP_COOLDOWN_NS = autoPathConfig.episodeCooldownNanos();
-    final long PINNED_FAIL_NS = autoPathConfig.pinnedFailNanos();
-    final long STUCK_FAIL_NS = autoPathConfig.stuckFailNanos();
-    final double PROGRESS_EPS_METERS = autoPathConfig.progressEpsilonMeters();
-    final double PINNED_PROGRESS_MIN_METERS = autoPathConfig.pinnedProgressMinMeters();
-    final double STUCK_DIST_MIN_METERS = autoPathConfig.stuckDistanceMinMeters();
-    final double SUCCESS_NEAR_DIST_METERS = autoPathConfig.successNearDistanceMeters();
-    final int COLLECT_GOAL_UNITS = autoPathConfig.collectGoalUnits();
-    final double SHOOT_LOCK_ENTER_M = autoPathConfig.shootLockEnterMeters();
-    final double SHOOT_LOCK_EXIT_M = autoPathConfig.shootLockExitMeters();
-    final double SHOOT_LOCK_MIN_ROT_DEG = autoPathConfig.shootLockMinRotationDegrees();
 
     AtomicBoolean shootGoalLocked = new AtomicBoolean(false);
     AtomicReference<Pose2d> lockedShootPose = new AtomicReference<>(null);
@@ -364,7 +349,7 @@ public class AutoPathBehaviour extends Behaviour {
           }
           long now = System.nanoTime();
           long last = lastEpisodeFinalizeNs.get();
-          if (last != 0L && now - last < EP_COOLDOWN_NS) {
+          if (last != 0L && now - last < autoPathConfig.get().episodeCooldownNanos()) {
             return;
           }
           boolean success = forceSuccess;
@@ -441,10 +426,10 @@ public class AutoPathBehaviour extends Behaviour {
                         ctx,
                         robotPose,
                         cap,
-                        COLLECT_GOAL_UNITS,
+                        autoPathConfig.get().collectGoalUnits(),
                         collectBluePoseRef,
                         collectRoute,
-                        autoPathConfig);
+                        autoPathConfig.get());
 
                 desired = (hp != null) ? hp : collectRoute;
               }
@@ -485,7 +470,7 @@ public class AutoPathBehaviour extends Behaviour {
                 double d = robotPose.getTranslation().getDistance(goalPose.getTranslation());
 
                 if (!shootGoalLocked.get()) {
-                  if (d <= SHOOT_LOCK_ENTER_M) {
+                  if (d <= autoPathConfig.get().shootLockEnterMeters()) {
                     Pose2d lock = goalPose;
                     lockedShootPose.set(lock);
                     shootGoalLocked.set(true);
@@ -496,7 +481,7 @@ public class AutoPathBehaviour extends Behaviour {
                     shootGoalLocked.set(false);
                   } else {
                     double dLock = robotPose.getTranslation().getDistance(lock.getTranslation());
-                    if (dLock >= SHOOT_LOCK_EXIT_M) {
+                    if (dLock >= autoPathConfig.get().shootLockExitMeters()) {
                       shootGoalLocked.set(false);
                       lockedShootPose.set(null);
                     } else {
@@ -505,7 +490,8 @@ public class AutoPathBehaviour extends Behaviour {
                               shortestAngleRad(
                                   robotPose.getRotation().getRadians(),
                                   lock.getRotation().getRadians()));
-                      if (rotErr < Math.toRadians(SHOOT_LOCK_MIN_ROT_DEG)) {
+                      if (rotErr
+                          < Math.toRadians(autoPathConfig.get().shootLockMinRotationDegrees())) {
                         lockedShootPose.set(new Pose2d(lock.getTranslation(), lock.getRotation()));
                       }
                       goalPose = lock;
@@ -529,18 +515,19 @@ public class AutoPathBehaviour extends Behaviour {
                 lastProgressNs.set(nowNs);
               } else {
                 Double best = episodeBestDist.get();
-                if (best == null || distToGoal < best - PROGRESS_EPS_METERS) {
+                if (best == null
+                    || distToGoal < best - autoPathConfig.get().progressEpsilonMeters()) {
                   episodeBestDist.set(distToGoal);
                   lastProgressNs.set(nowNs);
                 }
               }
 
-              if (distToGoal <= SUCCESS_NEAR_DIST_METERS) {
+              if (distToGoal <= autoPathConfig.get().successNearDistanceMeters()) {
                 episodeEverNearGoal.set(true);
               }
 
               boolean readyToShoot =
-                  isReadyToShoot(robotPose, goalPose, piece, cat, autoPathConfig);
+                  isReadyToShoot(robotPose, goalPose, piece, cat, autoPathConfig.get());
               if (readyToShoot) {
                 if (!shootLatched.get()) {
                   shootLatched.set(true);
@@ -611,7 +598,8 @@ public class AutoPathBehaviour extends Behaviour {
                       && startBest != null
                       && bestSincePinned != null) {
                     double improvement = startBest - bestSincePinned;
-                    if (pinnedDur >= PINNED_FAIL_NS && improvement < PINNED_PROGRESS_MIN_METERS) {
+                    if (pinnedDur >= autoPathConfig.get().pinnedFailNanos()
+                        && improvement < autoPathConfig.get().pinnedProgressMinMeters()) {
                       episodeEverNearGoal.set(false);
                       finalizeEpisode.accept(false);
                       pinnedFailedThisLatch.set(true);
@@ -629,7 +617,8 @@ public class AutoPathBehaviour extends Behaviour {
                 long lastProg = lastProgressNs.get();
                 if (lastProg != 0L) {
                   long sinceProgressNs = nowNs - lastProg;
-                  if (sinceProgressNs >= STUCK_FAIL_NS && distToGoal > STUCK_DIST_MIN_METERS) {
+                  if (sinceProgressNs >= autoPathConfig.get().stuckFailNanos()
+                      && distToGoal > autoPathConfig.get().stuckDistanceMinMeters()) {
                     episodeEverNearGoal.set(false);
                     finalizeEpisode.accept(false);
                   }
