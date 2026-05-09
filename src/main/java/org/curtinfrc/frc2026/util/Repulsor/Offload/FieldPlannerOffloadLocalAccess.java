@@ -82,6 +82,9 @@ public final class FieldPlannerOffloadLocalAccess {
       Translation2d goal = sample.goal();
       out.setGoalX(goal.getX());
       out.setGoalY(goal.getY());
+      out.setHasSelectedCandidate(true);
+      out.setSelectedCandidateX(goal.getX());
+      out.setSelectedCandidateY(goal.getY());
       out.setVxMetersPerSecond(sample.vxMetersPerSecond());
       out.setVyMetersPerSecond(sample.vyMetersPerSecond());
       out.setOmegaRadians(sample.omegaRadians());
@@ -107,9 +110,6 @@ public final class FieldPlannerOffloadLocalAccess {
     out.setForceThroughActive(diagnostics.forceThroughActive());
     out.setRobotIntersecting(diagnostics.robotIntersecting());
     out.setStuckAbort(diagnostics.stuckAbort());
-    out.setHasSelectedCandidate(true);
-    out.setSelectedCandidateX(diagnostics.activeGoal().getX());
-    out.setSelectedCandidateY(diagnostics.activeGoal().getY());
     out.setSelectedCandidateReason(selectedCandidateReason(diagnostics));
     out.setTraceSummary(traceSummary(diagnostics));
     if (diagnostics.waypointStatus() != null) {

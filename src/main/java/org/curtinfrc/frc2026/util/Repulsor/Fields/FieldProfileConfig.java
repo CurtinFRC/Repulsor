@@ -790,7 +790,7 @@ public class FieldProfileConfig {
     public Double centerReturnGateMinOffsetMeters;
     public Double fieldEdgeMarginMeters;
     public Map<String, ZoneConfig> zones = new LinkedHashMap<>();
-    public List<WaypointRuleConfig> rules = new ArrayList<>();
+    public List<WaypointRuleConfig> rules;
 
     public FieldPlannerWaypointConfig toFieldPlannerWaypointConfig() {
       FieldPlannerWaypointConfig defaults = FieldPlannerWaypointConfig.defaults();

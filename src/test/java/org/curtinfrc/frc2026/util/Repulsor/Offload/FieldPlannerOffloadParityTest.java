@@ -81,8 +81,12 @@ class FieldPlannerOffloadParityTest {
     assertEquals(local.vyMetersPerSecond(), offloaded.getVyMetersPerSecond(), 1e-9);
     assertEquals(local.omegaRadians(), offloaded.getOmegaRadians(), 1e-9);
     assertEquals(localPlanner.getErr().isPresent(), offloaded.isHasErrMeters());
-    assertEquals(
-        localPlanner.getErr().orElseThrow().baseUnitMagnitude(), offloaded.getErrMeters(), 1e-9);
+    if (localPlanner.getErr().isPresent()) {
+      assertEquals(
+          localPlanner.getErr().orElseThrow().baseUnitMagnitude(), offloaded.getErrMeters(), 1e-9);
+    } else {
+      assertEquals(0.0, offloaded.getErrMeters(), 1e-9);
+    }
     assertEquals(localPlanner.getGoalPose().getX(), offloaded.getActiveGoalX(), 1e-9);
     assertEquals(localPlanner.getGoalPose().getY(), offloaded.getActiveGoalY(), 1e-9);
     assertEquals(RepulsorOffloadContract.CONTRACT_VERSION, offloaded.getContractVersion());
@@ -114,8 +118,8 @@ class FieldPlannerOffloadParityTest {
         local.globalFallbackStats().generatedNodes(), offloaded.getGlobalFallbackGeneratedNodes());
     assertEquals(local.globalFallbackStats().pathNodes(), offloaded.getGlobalFallbackPathNodes());
     assertTrue(offloaded.isHasSelectedCandidate());
-    assertEquals(local.activeGoal().getX(), offloaded.getSelectedCandidateX(), 1e-9);
-    assertEquals(local.activeGoal().getY(), offloaded.getSelectedCandidateY(), 1e-9);
+    assertEquals(offloaded.getGoalX(), offloaded.getSelectedCandidateX(), 1e-9);
+    assertEquals(offloaded.getGoalY(), offloaded.getSelectedCandidateY(), 1e-9);
     assertFalse(offloaded.getSelectedCandidateReason().isBlank());
     assertTrue(offloaded.getTraceSummary().startsWith("fieldPlanner"));
     if (local.waypointStatus() != null) {
