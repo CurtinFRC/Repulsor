@@ -19,6 +19,7 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Fields;
 
+import edu.wpi.first.math.geometry.Translation2d;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -26,8 +27,13 @@ import java.util.Map;
 import org.curtinfrc.frc2026.util.Repulsor.Behaviours.AutoPathRuntimeConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.CoarseGlobalPlannerConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlannerRuntimeConfig;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointCandidate;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointConfig;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointObjectiveRole;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointPolicyProfile;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointRule;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointScoringConfig;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointZone;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PredictiveRankingConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Objective.ObjectiveSelectionConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.MovingShotSolver;
@@ -42,6 +48,13 @@ import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.CollectPlannerTuning
  * method documents robot-relative motion.
  */
 public class FieldProfileConfig {
+  public static final int CURRENT_SCHEMA_VERSION = 2;
+
+  /**
+   * Optional profile schema version. Missing versions are treated as schema 1 for compatibility.
+   */
+  public Integer schemaVersion;
+
   /**
    * Configuration value for id. The valid range and tuning source are defined by the owning
    * subsystem or field profile.
@@ -104,6 +117,7 @@ public class FieldProfileConfig {
     if (overlay == null) return base;
 
     if (overlay.id != null) base.id = overlay.id;
+    if (overlay.schemaVersion != null) base.schemaVersion = overlay.schemaVersion;
     if (overlay.gameName != null) base.gameName = overlay.gameName;
     if (overlay.gameYear != null) base.gameYear = overlay.gameYear;
 
@@ -255,6 +269,29 @@ public class FieldProfileConfig {
     if (overlay.fieldEdgeMarginMeters != null) {
       base.fieldEdgeMarginMeters = overlay.fieldEdgeMarginMeters;
     }
+    if (overlay.zones != null && !overlay.zones.isEmpty()) {
+      overlay.zones.forEach(
+          (name, zone) -> {
+            if (name == null || name.isBlank() || zone == null) return;
+            ZoneConfig target = base.zones.computeIfAbsent(name, ignored -> new ZoneConfig());
+            mergeZone(target, zone);
+          });
+    }
+    if (overlay.rules != null) base.rules = List.copyOf(overlay.rules);
+  }
+
+  static void mergeWaypointingForValidation(
+      WaypointingConfig target, WaypointingConfig base, WaypointingConfig overlay) {
+    mergeWaypointing(target, base);
+    mergeWaypointing(target, overlay);
+  }
+
+  private static void mergeZone(ZoneConfig base, ZoneConfig overlay) {
+    if (base == null || overlay == null) return;
+    if (overlay.minXMeters != null) base.minXMeters = overlay.minXMeters;
+    if (overlay.maxXMeters != null) base.maxXMeters = overlay.maxXMeters;
+    if (overlay.minYMeters != null) base.minYMeters = overlay.minYMeters;
+    if (overlay.maxYMeters != null) base.maxYMeters = overlay.maxYMeters;
   }
 
   private static void mergeRanking(RankingConfig base, RankingConfig overlay) {
@@ -752,6 +789,8 @@ public class FieldProfileConfig {
     public Double centerReturnExitMaxMeters;
     public Double centerReturnGateMinOffsetMeters;
     public Double fieldEdgeMarginMeters;
+    public Map<String, ZoneConfig> zones = new LinkedHashMap<>();
+    public List<WaypointRuleConfig> rules = new ArrayList<>();
 
     public FieldPlannerWaypointConfig toFieldPlannerWaypointConfig() {
       FieldPlannerWaypointConfig defaults = FieldPlannerWaypointConfig.defaults();
@@ -776,6 +815,127 @@ public class FieldProfileConfig {
           finiteNonNegative(
               centerReturnGateMinOffsetMeters, defaults.centerReturnGateMinOffsetMeters()),
           finiteNonNegative(fieldEdgeMarginMeters, defaults.fieldEdgeMarginMeters()));
+    }
+
+    public FieldPlannerWaypointPolicyProfile toFieldPlannerWaypointPolicyProfile(String name) {
+      if (rules == null || rules.isEmpty()) {
+        return new FieldPlannerWaypointPolicyProfile(name, toFieldPlannerWaypointConfig(), null);
+      }
+      ArrayList<FieldPlannerWaypointRule> converted = new ArrayList<>();
+      for (WaypointRuleConfig rule : rules) {
+        if (rule != null) converted.add(rule.toFieldPlannerWaypointRule(zones));
+      }
+      return FieldPlannerWaypointPolicyProfile.fromRules(
+          name, toFieldPlannerWaypointConfig(), converted);
+    }
+  }
+
+  public static class ZoneConfig {
+    public Double minXMeters;
+    public Double maxXMeters;
+    public Double minYMeters;
+    public Double maxYMeters;
+
+    public FieldPlannerWaypointZone toFieldPlannerWaypointZone(String name) {
+      return new FieldPlannerWaypointZone(
+          name,
+          finiteNonNegative(minXMeters, 0.0),
+          finiteNonNegative(maxXMeters, 0.0),
+          finiteNonNegative(minYMeters, 0.0),
+          finiteNonNegative(maxYMeters, 0.0));
+    }
+  }
+
+  public static class WaypointRuleConfig {
+    public String name;
+    public String objectiveRole;
+    public String fromZone;
+    public String toZone;
+    public Boolean onlyWhenNotAlreadyStaging;
+    public Boolean direct;
+    public List<WaypointCandidateConfig> candidates = new ArrayList<>();
+    public WaypointScoringConfig scoring = new WaypointScoringConfig();
+
+    public FieldPlannerWaypointRule toFieldPlannerWaypointRule(Map<String, ZoneConfig> zones) {
+      return new FieldPlannerWaypointRule(
+          name,
+          parseObjectiveRole(objectiveRole),
+          resolveZone(fromZone, zones),
+          resolveZone(toZone, zones),
+          onlyWhenNotAlreadyStaging == null || onlyWhenNotAlreadyStaging,
+          Boolean.TRUE.equals(direct),
+          toCandidates(candidates),
+          scoring == null
+              ? FieldPlannerWaypointScoringConfig.defaults()
+              : scoring.toScoringConfig());
+    }
+
+    private static FieldPlannerWaypointZone resolveZone(
+        String zoneName, Map<String, ZoneConfig> zones) {
+      if (zoneName == null || zoneName.isBlank() || zones == null) return null;
+      ZoneConfig zone = zones.get(zoneName);
+      return zone == null ? null : zone.toFieldPlannerWaypointZone(zoneName);
+    }
+
+    private static List<FieldPlannerWaypointCandidate> toCandidates(
+        List<WaypointCandidateConfig> candidates) {
+      if (candidates == null || candidates.isEmpty()) return List.of();
+      ArrayList<FieldPlannerWaypointCandidate> converted = new ArrayList<>();
+      for (WaypointCandidateConfig candidate : candidates) {
+        if (candidate != null) converted.add(candidate.toFieldPlannerWaypointCandidate());
+      }
+      return List.copyOf(converted);
+    }
+  }
+
+  public static class WaypointCandidateConfig {
+    public String name;
+    public Double entryXMeters;
+    public Double entryYMeters;
+    public Double exitXMeters;
+    public Double exitYMeters;
+    public Double preference;
+    public Boolean forceStage;
+
+    public FieldPlannerWaypointCandidate toFieldPlannerWaypointCandidate() {
+      Translation2d exit =
+          exitXMeters == null || exitYMeters == null
+              ? null
+              : new Translation2d(
+                  finiteNonNegative(exitXMeters, 0.0), finiteNonNegative(exitYMeters, 0.0));
+      return new FieldPlannerWaypointCandidate(
+          name,
+          new Translation2d(
+              finiteNonNegative(entryXMeters, 0.0), finiteNonNegative(entryYMeters, 0.0)),
+          exit,
+          null,
+          preference != null && Double.isFinite(preference) ? preference : 0.0,
+          forceStage == null || forceStage);
+    }
+  }
+
+  public static class WaypointScoringConfig {
+    public Double distanceCost;
+    public Double goalAlignmentGain;
+    public Double obstacleClearanceGain;
+    public Double preferenceGain;
+
+    public FieldPlannerWaypointScoringConfig toScoringConfig() {
+      FieldPlannerWaypointScoringConfig defaults = FieldPlannerWaypointScoringConfig.defaults();
+      return new FieldPlannerWaypointScoringConfig(
+          finiteNonNegative(distanceCost, defaults.distanceCost()),
+          finiteNonNegative(goalAlignmentGain, defaults.goalAlignmentGain()),
+          finiteNonNegative(obstacleClearanceGain, defaults.obstacleClearanceGain()),
+          finiteNonNegative(preferenceGain, defaults.preferenceGain()));
+    }
+  }
+
+  private static FieldPlannerWaypointObjectiveRole parseObjectiveRole(String role) {
+    if (role == null || role.isBlank()) return FieldPlannerWaypointObjectiveRole.ANY;
+    try {
+      return FieldPlannerWaypointObjectiveRole.valueOf(role.trim().toUpperCase());
+    } catch (IllegalArgumentException ignored) {
+      return FieldPlannerWaypointObjectiveRole.ANY;
     }
   }
 
@@ -889,8 +1049,7 @@ public class FieldProfileConfig {
           ranking.toPredictiveRankingConfig(),
           objective.toObjectiveSelectionConfig(),
           planner.toFieldPlannerRuntimeConfig(),
-          new FieldPlannerWaypointPolicyProfile(
-              name, waypoint.toFieldPlannerWaypointConfig(), null),
+          waypoint.toFieldPlannerWaypointPolicyProfile(name),
           auto.toAutoPathRuntimeConfig());
     }
   }

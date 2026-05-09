@@ -22,6 +22,7 @@ package org.curtinfrc.frc2026.util.Repulsor.Fields;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointObjectiveRole;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointContext;
 
@@ -62,6 +63,16 @@ public final class FieldProfileValidator {
     }
 
     if (cfg.id == null || cfg.id.isBlank()) errors.add("id must be non-empty");
+    if (cfg.schemaVersion != null) {
+      if (cfg.schemaVersion <= 0) errors.add("schemaVersion must be positive when provided");
+      if (cfg.schemaVersion > FieldProfileConfig.CURRENT_SCHEMA_VERSION) {
+        errors.add(
+            "schemaVersion "
+                + cfg.schemaVersion
+                + " is newer than supported version "
+                + FieldProfileConfig.CURRENT_SCHEMA_VERSION);
+      }
+    }
     if (cfg.gameName == null || cfg.gameName.isBlank()) errors.add("gameName must be non-empty");
     if (cfg.gameYear == null || cfg.gameYear <= 0) errors.add("gameYear must be positive");
 
@@ -252,6 +263,110 @@ public final class FieldProfileValidator {
         && waypointing.centerReturnExitMaxMeters < waypointing.centerReturnExitMinMeters) {
       errors.add(prefix + ".centerReturnExitMaxMeters must be >= centerReturnExitMinMeters");
     }
+    validateWaypointZones(prefix, waypointing.zones, errors);
+    validateWaypointRules(prefix, waypointing, errors);
+  }
+
+  private static void validateWaypointZones(
+      String prefix, Map<String, FieldProfileConfig.ZoneConfig> zones, List<String> errors) {
+    if (zones == null) return;
+    for (Map.Entry<String, FieldProfileConfig.ZoneConfig> entry : zones.entrySet()) {
+      String name = entry.getKey();
+      FieldProfileConfig.ZoneConfig zone = entry.getValue();
+      String zonePrefix = prefix + ".zones." + name;
+      if (name == null || name.isBlank()) errors.add(prefix + ".zones key must be non-empty");
+      if (zone == null) {
+        errors.add(zonePrefix + " is null");
+        continue;
+      }
+      requireOptionalNonNegative(zone.minXMeters, zonePrefix + ".minXMeters", errors);
+      requireOptionalNonNegative(zone.maxXMeters, zonePrefix + ".maxXMeters", errors);
+      requireOptionalNonNegative(zone.minYMeters, zonePrefix + ".minYMeters", errors);
+      requireOptionalNonNegative(zone.maxYMeters, zonePrefix + ".maxYMeters", errors);
+      if (zone.minXMeters != null && zone.maxXMeters != null && zone.maxXMeters < zone.minXMeters) {
+        errors.add(zonePrefix + ".maxXMeters must be >= minXMeters");
+      }
+      if (zone.minYMeters != null && zone.maxYMeters != null && zone.maxYMeters < zone.minYMeters) {
+        errors.add(zonePrefix + ".maxYMeters must be >= minYMeters");
+      }
+    }
+  }
+
+  private static void validateWaypointRules(
+      String prefix, FieldProfileConfig.WaypointingConfig waypointing, List<String> errors) {
+    if (waypointing == null || waypointing.rules == null) return;
+    for (int i = 0; i < waypointing.rules.size(); i++) {
+      FieldProfileConfig.WaypointRuleConfig rule = waypointing.rules.get(i);
+      String rulePrefix = prefix + ".rules[" + i + "]";
+      if (rule == null) {
+        errors.add(rulePrefix + " is null");
+        continue;
+      }
+      if (rule.name == null || rule.name.isBlank())
+        errors.add(rulePrefix + ".name must be non-empty");
+      validateWaypointObjectiveRole(rule.objectiveRole, rulePrefix + ".objectiveRole", errors);
+      if (!zoneExists(rule.fromZone, waypointing.zones)) {
+        errors.add(rulePrefix + ".fromZone must reference a defined waypointing.zones entry");
+      }
+      if (!zoneExists(rule.toZone, waypointing.zones)) {
+        errors.add(rulePrefix + ".toZone must reference a defined waypointing.zones entry");
+      }
+      validateWaypointScoring(rule.scoring, rulePrefix + ".scoring", errors);
+      if (!Boolean.TRUE.equals(rule.direct)
+          && (rule.candidates == null || rule.candidates.isEmpty())) {
+        errors.add(rulePrefix + ".candidates must be non-empty unless direct is true");
+      }
+      if (rule.candidates != null) {
+        for (int c = 0; c < rule.candidates.size(); c++) {
+          validateWaypointCandidate(
+              rule.candidates.get(c), rulePrefix + ".candidates[" + c + "]", errors);
+        }
+      }
+    }
+  }
+
+  private static boolean zoneExists(
+      String zoneName, Map<String, FieldProfileConfig.ZoneConfig> zones) {
+    return zoneName == null || zoneName.isBlank() || (zones != null && zones.containsKey(zoneName));
+  }
+
+  private static void validateWaypointObjectiveRole(String role, String name, List<String> errors) {
+    if (role == null || role.isBlank()) return;
+    try {
+      FieldPlannerWaypointObjectiveRole.valueOf(role.trim().toUpperCase());
+    } catch (IllegalArgumentException ex) {
+      errors.add(name + " must be one of FieldPlannerWaypointObjectiveRole values");
+    }
+  }
+
+  private static void validateWaypointScoring(
+      FieldProfileConfig.WaypointScoringConfig scoring, String prefix, List<String> errors) {
+    if (scoring == null) return;
+    requireOptionalNonNegative(scoring.distanceCost, prefix + ".distanceCost", errors);
+    requireOptionalNonNegative(scoring.goalAlignmentGain, prefix + ".goalAlignmentGain", errors);
+    requireOptionalNonNegative(
+        scoring.obstacleClearanceGain, prefix + ".obstacleClearanceGain", errors);
+    requireOptionalNonNegative(scoring.preferenceGain, prefix + ".preferenceGain", errors);
+  }
+
+  private static void validateWaypointCandidate(
+      FieldProfileConfig.WaypointCandidateConfig candidate, String prefix, List<String> errors) {
+    if (candidate == null) {
+      errors.add(prefix + " is null");
+      return;
+    }
+    if (candidate.name == null || candidate.name.isBlank())
+      errors.add(prefix + ".name must be non-empty");
+    requireOptionalNonNegative(candidate.entryXMeters, prefix + ".entryXMeters", errors);
+    requireOptionalNonNegative(candidate.entryYMeters, prefix + ".entryYMeters", errors);
+    requireOptionalNonNegative(candidate.exitXMeters, prefix + ".exitXMeters", errors);
+    requireOptionalNonNegative(candidate.exitYMeters, prefix + ".exitYMeters", errors);
+    if (candidate.entryXMeters == null || candidate.entryYMeters == null) {
+      errors.add(prefix + ".entryXMeters and entryYMeters are required");
+    }
+    if ((candidate.exitXMeters == null) != (candidate.exitYMeters == null)) {
+      errors.add(prefix + ".exitXMeters and exitYMeters must be provided together");
+    }
   }
 
   private static void validateAutoPath(
@@ -348,7 +463,11 @@ public final class FieldProfileValidator {
       validateRanking(preset.predictiveRanking, errors);
       validateObjectiveSelection(preset.objectiveSelection, errors);
       validateCollectPlanner(preset.collectPlanner, errors);
-      validateWaypointing(preset.waypointing, errors);
+      FieldProfileConfig.WaypointingConfig mergedWaypointing =
+          new FieldProfileConfig.WaypointingConfig();
+      FieldProfileConfig.mergeWaypointingForValidation(
+          mergedWaypointing, cfg.waypointing, preset.waypointing);
+      validateWaypointing(mergedWaypointing, errors);
       validatePlannerRuntime(preset.plannerRuntime, errors);
       validateAutoPath(preset.autoPath, errors);
     }

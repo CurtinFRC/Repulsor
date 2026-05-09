@@ -1,6 +1,7 @@
 package org.curtinfrc.frc2026.util.Repulsor.Fields;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -55,6 +56,151 @@ class FieldProfileYamlLoaderTest {
         System.setProperty("repulsor.profile.path", previous);
       }
     }
+  }
+
+  @Test
+  void loadsSchemaVersionAndDeclarativeWaypointRulesFromYaml() throws Exception {
+    Path profile = tempDir.resolve("profile-schema-v2.yaml");
+    Files.writeString(
+        profile,
+        """
+        schemaVersion: 2
+        id: profile-schema-v2
+        gameName: CUSTOM
+        gameYear: 2099
+        geometry:
+          lengthMeters: 12.5
+          widthMeters: 6.25
+        resources: {}
+        projectileShots: {}
+        waypointing:
+          zones:
+            loadingSide:
+              minXMeters: 0.0
+              maxXMeters: 4.0
+              minYMeters: 0.0
+              maxYMeters: 6.25
+            scoringSide:
+              minXMeters: 8.0
+              maxXMeters: 12.5
+              minYMeters: 0.0
+              maxYMeters: 6.25
+          rules:
+            - name: loading-to-score
+              objectiveRole: SCORE
+              fromZone: loadingSide
+              toZone: scoringSide
+              candidates:
+                - name: center-lane
+                  entryXMeters: 6.25
+                  entryYMeters: 3.0
+                  preference: 0.5
+                  forceStage: true
+        strategyPresets:
+          safeCycle:
+            waypointing:
+              rules:
+                - name: collect-direct
+                  objectiveRole: COLLECT
+                  fromZone: scoringSide
+                  toZone: loadingSide
+                  direct: true
+        """);
+
+    String previous = System.getProperty("repulsor.profile.path");
+    try {
+      System.setProperty("repulsor.profile.path", profile.toString());
+      FieldProfileConfig cfg =
+          FieldProfileYamlLoader.loadOrDefault("profile-schema-v2", new FieldProfileConfig());
+
+      assertEquals(2, cfg.schemaVersion);
+      assertEquals(2, cfg.waypointing.zones.size());
+      assertEquals(1, cfg.waypointing.rules.size());
+      assertEquals(
+          "loading-to-score",
+          cfg.waypointing
+                  .toFieldPlannerWaypointPolicyProfile("base")
+                  .strategy()
+                  .getClass()
+                  .getName()
+                  .contains("FieldPlannerWaypointRuleStrategy")
+              ? cfg.waypointing.rules.get(0).name
+              : "missing");
+      assertTrue(cfg.toStrategyPresets().containsKey("safeCycle"));
+    } finally {
+      if (previous == null) {
+        System.clearProperty("repulsor.profile.path");
+      } else {
+        System.setProperty("repulsor.profile.path", previous);
+      }
+    }
+  }
+
+  @Test
+  void rejectsUnsupportedSchemaAndBrokenWaypointReferences() throws Exception {
+    Path profile = tempDir.resolve("invalid-schema-v2.yaml");
+    Files.writeString(
+        profile,
+        """
+        schemaVersion: 999
+        id: invalid-schema-v2
+        gameName: CUSTOM
+        gameYear: 2099
+        geometry:
+          lengthMeters: 12.5
+          widthMeters: 6.25
+        resources: {}
+        projectileShots: {}
+        waypointing:
+          zones:
+            loadingSide:
+              minXMeters: 4.0
+              maxXMeters: 1.0
+              minYMeters: 0.0
+              maxYMeters: 6.25
+          rules:
+            - name: bad-rule
+              objectiveRole: MYSTERY
+              fromZone: missingZone
+              toZone: loadingSide
+              candidates:
+                - name: bad-candidate
+                  entryXMeters: 5.0
+        """);
+
+    String previous = System.getProperty("repulsor.profile.path");
+    try {
+      System.setProperty("repulsor.profile.path", profile.toString());
+      IllegalArgumentException ex =
+          assertThrows(
+              IllegalArgumentException.class,
+              () ->
+                  FieldProfileYamlLoader.loadOrDefault(
+                      "invalid-schema-v2", new FieldProfileConfig()));
+      String message = ex.getMessage();
+      assertTrue(message.contains("schemaVersion 999"));
+      assertTrue(message.contains("fromZone must reference"));
+      assertTrue(message.contains("objectiveRole"));
+      assertTrue(message.contains("entryXMeters and entryYMeters"));
+    } finally {
+      if (previous == null) {
+        System.clearProperty("repulsor.profile.path");
+      } else {
+        System.setProperty("repulsor.profile.path", previous);
+      }
+    }
+  }
+
+  @Test
+  void acceptsLegacyProfilesWithoutSchemaVersion() throws Exception {
+    FieldProfileConfig cfg = new FieldProfileConfig();
+    cfg.id = "legacy";
+    cfg.gameName = "LEGACY";
+    cfg.gameYear = 2099;
+    cfg.geometry.lengthMeters = 12.5;
+    cfg.geometry.widthMeters = 6.25;
+
+    assertFalse(FieldProfileValidator.validate(cfg).contains("schemaVersion must be positive"));
   }
 
   @Test
