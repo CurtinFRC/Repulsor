@@ -53,6 +53,8 @@ class CoarseGlobalPlannerTest {
             4.0);
 
     assertFalse(waypoint.isPresent());
+    assertEquals(
+        CoarseGlobalPlannerFailureReason.GOAL_BLOCKED, planner.lastStats().failureReason());
   }
 
   @Test
@@ -74,6 +76,9 @@ class CoarseGlobalPlannerTest {
     assertTrue(planner.lastStats().expandedNodes() > 0);
     assertFalse(planner.lastStats().timedOut());
     assertFalse(planner.lastStats().exhaustedNodeBudget());
+    assertEquals(CoarseGlobalPlannerFailureReason.NONE, planner.lastStats().failureReason());
+    assertEquals(
+        2, planner.lastStats().pathNodes(), "clear routes should smooth to direct segments");
   }
 
   @Test
@@ -94,6 +99,39 @@ class CoarseGlobalPlannerTest {
     assertFalse(waypoint.isPresent());
     assertTrue(planner.lastStats().exhaustedNodeBudget());
     assertEquals(1, planner.lastStats().expandedNodes());
+    assertEquals(CoarseGlobalPlannerFailureReason.NODE_BUDGET, planner.lastStats().failureReason());
+  }
+
+  @Test
+  void clearanceBufferAddsStrategySpecificFieldMargin() {
+    CoarseGlobalPlanner noBuffer =
+        new CoarseGlobalPlanner(new CoarseGlobalPlannerConfig(0.25, 0.8, 5000, 1.0));
+    CoarseGlobalPlanner buffered =
+        new CoarseGlobalPlanner(new CoarseGlobalPlannerConfig(0.25, 0.8, 5000, 1.0, 0.25));
+
+    var unbufferedWaypoint =
+        noBuffer.nextWaypoint(
+            new Translation2d(0.30, 0.30),
+            new Pose2d(2.0, 2.0, Rotation2d.kZero),
+            List.of(),
+            0.18,
+            0.18,
+            6.0,
+            4.0);
+    var bufferedWaypoint =
+        buffered.nextWaypoint(
+            new Translation2d(0.30, 0.30),
+            new Pose2d(2.0, 2.0, Rotation2d.kZero),
+            List.of(),
+            0.18,
+            0.18,
+            6.0,
+            4.0);
+
+    assertTrue(unbufferedWaypoint.isPresent());
+    assertFalse(bufferedWaypoint.isPresent());
+    assertEquals(
+        CoarseGlobalPlannerFailureReason.START_BLOCKED, buffered.lastStats().failureReason());
   }
 
   @Test

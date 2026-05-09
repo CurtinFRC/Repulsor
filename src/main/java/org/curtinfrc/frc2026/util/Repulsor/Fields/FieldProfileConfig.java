@@ -394,6 +394,9 @@ public class FieldProfileConfig {
     if (overlay.globalFallbackMaxRuntimeSeconds != null) {
       base.globalFallbackMaxRuntimeSeconds = overlay.globalFallbackMaxRuntimeSeconds;
     }
+    if (overlay.globalFallbackClearanceBufferMeters != null) {
+      base.globalFallbackClearanceBufferMeters = overlay.globalFallbackClearanceBufferMeters;
+    }
     if (overlay.forceThroughGoalDistanceMeters != null) {
       base.forceThroughGoalDistanceMeters = overlay.forceThroughGoalDistanceMeters;
     }
@@ -986,6 +989,7 @@ public class FieldProfileConfig {
     public Double globalFallbackLookaheadMeters;
     public Integer globalFallbackMaxExpandedNodes;
     public Double globalFallbackMaxRuntimeSeconds;
+    public Double globalFallbackClearanceBufferMeters;
     public Double forceThroughGoalDistanceMeters;
     public Double forceThroughWallDistanceMeters;
 
@@ -998,7 +1002,9 @@ public class FieldProfileConfig {
               finitePositive(
                   globalFallbackLookaheadMeters, globalDefaults.waypointLookaheadMeters()),
               positive(globalFallbackMaxExpandedNodes, globalDefaults.maxExpandedNodes()),
-              finitePositive(globalFallbackMaxRuntimeSeconds, globalDefaults.maxRuntimeSeconds()));
+              finitePositive(globalFallbackMaxRuntimeSeconds, globalDefaults.maxRuntimeSeconds()),
+              finiteNonNegative(
+                  globalFallbackClearanceBufferMeters, globalDefaults.clearanceBufferMeters()));
       return new FieldPlannerRuntimeConfig(
           globalFallbackEnabled == null ? defaults.globalFallbackEnabled() : globalFallbackEnabled,
           globalConfig,

@@ -127,6 +127,22 @@ strategyPresets:
 
 Preset waypoint rules can reference zones declared in the base `waypointing.zones` map.
 
+## Planner runtime
+
+`plannerRuntime` controls bounded geometric fallback behavior. These values can live in the base profile or inside strategy presets when a mode needs safer or more aggressive routing.
+
+```yaml
+plannerRuntime:
+  globalFallbackEnabled: true
+  globalFallbackCellMeters: 0.55
+  globalFallbackLookaheadMeters: 1.4
+  globalFallbackMaxExpandedNodes: 1200
+  globalFallbackMaxRuntimeSeconds: 0.010
+  globalFallbackClearanceBufferMeters: 0.10
+```
+
+`globalFallbackClearanceBufferMeters` adds extra margin around the robot and field edge for the coarse route only. Use it to make a strategy preset avoid tight corridors without changing waypoint staging or reactive bypass behavior.
+
 ## Common mistakes
 
 - Using feet or inches instead of meters.

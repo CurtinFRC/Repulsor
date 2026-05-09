@@ -135,6 +135,7 @@ public final class FieldPlannerOffloadLocalAccess {
       out.setGlobalFallbackGeneratedNodes(stats.generatedNodes());
       out.setGlobalFallbackPathNodes(stats.pathNodes());
       out.setGlobalFallbackElapsedNanos(stats.elapsedNanos());
+      out.setGlobalFallbackFailureReason(stats.failureReason().name());
     }
   }
 
@@ -162,6 +163,8 @@ public final class FieldPlannerOffloadLocalAccess {
     appendFlag(out, "stuckAbort", diagnostics.stuckAbort());
     if (diagnostics.globalFallbackStats() != null) {
       out.append(" nodes=").append(diagnostics.globalFallbackStats().expandedNodes());
+      out.append(" fallbackReason=")
+          .append(diagnostics.globalFallbackStats().failureReason().name());
     }
     return out.toString();
   }

@@ -5,17 +5,28 @@ public record CoarseGlobalPlannerConfig(
     double cellMeters,
     double waypointLookaheadMeters,
     int maxExpandedNodes,
-    double maxRuntimeSeconds) {
+    double maxRuntimeSeconds,
+    double clearanceBufferMeters) {
   private static final double DEFAULT_CELL_M = 0.55;
   private static final double DEFAULT_WAYPOINT_LOOKAHEAD_M = 1.4;
   private static final int DEFAULT_MAX_EXPANDED_NODES = 1200;
   private static final double DEFAULT_MAX_RUNTIME_SECONDS = 0.010;
+  private static final double DEFAULT_CLEARANCE_BUFFER_METERS = 0.0;
+
+  public CoarseGlobalPlannerConfig(
+      double cellMeters,
+      double waypointLookaheadMeters,
+      int maxExpandedNodes,
+      double maxRuntimeSeconds) {
+    this(cellMeters, waypointLookaheadMeters, maxExpandedNodes, maxRuntimeSeconds, 0.0);
+  }
 
   public CoarseGlobalPlannerConfig {
     cellMeters = Math.max(0.20, cellMeters);
     waypointLookaheadMeters = Math.max(cellMeters, waypointLookaheadMeters);
     maxExpandedNodes = Math.max(1, maxExpandedNodes);
     maxRuntimeSeconds = Math.max(0.0005, maxRuntimeSeconds);
+    clearanceBufferMeters = Math.max(0.0, clearanceBufferMeters);
   }
 
   public static CoarseGlobalPlannerConfig defaults() {
@@ -26,7 +37,10 @@ public record CoarseGlobalPlannerConfig(
         intProperty(
             "repulsor.fieldplanner.globalFallback.maxExpandedNodes", DEFAULT_MAX_EXPANDED_NODES),
         doubleProperty(
-            "repulsor.fieldplanner.globalFallback.maxRuntimeSeconds", DEFAULT_MAX_RUNTIME_SECONDS));
+            "repulsor.fieldplanner.globalFallback.maxRuntimeSeconds", DEFAULT_MAX_RUNTIME_SECONDS),
+        doubleProperty(
+            "repulsor.fieldplanner.globalFallback.clearanceBufferMeters",
+            DEFAULT_CLEARANCE_BUFFER_METERS));
   }
 
   private static double doubleProperty(String key, double fallback) {

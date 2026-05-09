@@ -47,6 +47,7 @@ public final class FieldPlannerCalculateResultDTO {
   private int globalFallbackGeneratedNodes;
   private int globalFallbackPathNodes;
   private long globalFallbackElapsedNanos;
+  private String globalFallbackFailureReason = "";
 
   public int getContractVersion() {
     return contractVersion;
@@ -486,5 +487,14 @@ public final class FieldPlannerCalculateResultDTO {
 
   public void setGlobalFallbackElapsedNanos(long globalFallbackElapsedNanos) {
     this.globalFallbackElapsedNanos = globalFallbackElapsedNanos;
+  }
+
+  public String getGlobalFallbackFailureReason() {
+    return globalFallbackFailureReason;
+  }
+
+  public void setGlobalFallbackFailureReason(String globalFallbackFailureReason) {
+    this.globalFallbackFailureReason =
+        globalFallbackFailureReason == null ? "" : globalFallbackFailureReason;
   }
 }

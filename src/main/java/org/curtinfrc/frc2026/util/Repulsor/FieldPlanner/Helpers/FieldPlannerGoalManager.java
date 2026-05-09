@@ -100,6 +100,7 @@ public final class FieldPlannerGoalManager {
       FieldPlannerWaypointDecision.useDefault();
   private FieldPlannerWaypointObjectiveRole lastObjectiveRole =
       FieldPlannerWaypointObjectiveRole.ANY;
+  private String waypointTransitionReason = "initialized";
 
   private final List<GatedAttractorObstacle> gatedAttractors;
   private final double fieldLengthMeters;
@@ -229,6 +230,7 @@ public final class FieldPlannerGoalManager {
         goal,
         lastStrategyDecision,
         lastObjectiveRole,
+        waypointTransitionReason,
         stagedAttractor != null,
         stagedAttractor,
         stagedExitPoint,
@@ -249,12 +251,14 @@ public final class FieldPlannerGoalManager {
     if (profile == null) {
       this.waypointConfig = FieldPlannerWaypointConfig.defaults();
       setWaypointStrategy(FieldPlannerWaypointStrategy.defaults());
+      waypointTransitionReason = "waypoint_profile_reset";
       return;
     }
     this.waypointConfig =
         profile.config() == null ? FieldPlannerWaypointConfig.defaults() : profile.config();
     setWaypointStrategy(profile.strategy());
     clearStagedState(false);
+    waypointTransitionReason = "waypoint_profile_applied";
   }
 
   /**
@@ -277,6 +281,7 @@ public final class FieldPlannerGoalManager {
       this.stagedCenterReturn = false;
       this.stagedExitPhase = false;
       this.stagedExitPoint = null;
+      this.waypointTransitionReason = "requested_goal_changed";
     }
   }
 
@@ -333,6 +338,7 @@ public final class FieldPlannerGoalManager {
     if (decision.goesDirectlyToRequestedGoal()) {
       clearStagedState(false);
       goal = requestedGoal;
+      waypointTransitionReason = "strategy_direct";
       return true;
     }
     if (decision.stages()) {
@@ -342,21 +348,25 @@ public final class FieldPlannerGoalManager {
       if (stagedAttractor != null) {
         // Strategy intentionally owns the active stage, but the requested waypoint is unchanged.
         // Continue the normal stage progression/release logic below.
+        waypointTransitionReason = "strategy_stage_existing";
       } else {
         clearStagedState(false);
         goal = requestedGoal;
+        waypointTransitionReason = "strategy_stage_suppressed";
         return true;
       }
     }
     if (!decision.usesDefaultPolicy() && stagedAttractor == null) {
       clearStagedState(false);
       goal = requestedGoal;
+      waypointTransitionReason = "strategy_no_stage";
       return true;
     }
 
     if (gatedAttractors.isEmpty() && stagedAttractor == null) {
       goal = requestedGoal;
       clearStagedState(false);
+      waypointTransitionReason = "no_gates_direct";
       return true;
     }
 
@@ -379,6 +389,7 @@ public final class FieldPlannerGoalManager {
           && !stageForOccludingGate
           && !allowImmediateCenterExitRestage) {
         shouldStage = false;
+        waypointTransitionReason = "restage_suppressed";
       } else {
         stagedComplete = false;
         lastStagedPoint = null;
@@ -425,6 +436,7 @@ public final class FieldPlannerGoalManager {
           stagedGatePassed = false;
           stagedGateClearTicks = 0;
           stagedComplete = false;
+          waypointTransitionReason = stageForOccludingGate ? "occluding_gate_stage" : "band_stage";
 
           Pose2d staged = new Pose2d(pick, requestedGoal.getRotation());
           setActiveGoal(staged);
@@ -441,6 +453,7 @@ public final class FieldPlannerGoalManager {
           stagedCenterReturn = false;
           stagedExitPhase = false;
           stagedExitPoint = null;
+          waypointTransitionReason = "stage_candidate_unavailable";
         }
       }
     }
@@ -532,6 +545,7 @@ public final class FieldPlannerGoalManager {
             stagedGatePassed = false;
             stagedGateClearTicks = 0;
             goal = new Pose2d(stagedAttractor, requestedGoal.getRotation());
+            waypointTransitionReason = "stage_repicked";
             return false;
           }
         }
@@ -553,6 +567,7 @@ public final class FieldPlannerGoalManager {
         stagedModeTicks = 0;
         stagedGateClearTicks = 0;
         goal = new Pose2d(stagedAttractor, requestedGoal.getRotation());
+        waypointTransitionReason = "stage_exit_phase";
         return false;
       }
       if (reached && gateCleared) {
@@ -568,6 +583,7 @@ public final class FieldPlannerGoalManager {
           stagedModeTicks = 0;
           stagedGateClearTicks = 0;
           goal = new Pose2d(stagedAttractor, requestedGoal.getRotation());
+          waypointTransitionReason = "center_return_exit_phase";
           return false;
         }
 
@@ -586,6 +602,7 @@ public final class FieldPlannerGoalManager {
         stagedExitPoint = null;
 
         goal = requestedGoal;
+        waypointTransitionReason = "stage_complete";
         return true;
       }
 
@@ -596,10 +613,12 @@ public final class FieldPlannerGoalManager {
         goal = new Pose2d(stagedAttractor, requestedGoal.getRotation());
       }
 
+      waypointTransitionReason = stagedExitPhase ? "stage_exit_holding" : "stage_entry_holding";
       return false;
     }
 
     goal = requestedGoal;
+    waypointTransitionReason = "default_direct";
     return true;
   }
 
@@ -630,11 +649,18 @@ public final class FieldPlannerGoalManager {
   }
 
   private boolean applyWaypointPlan(FieldPlannerWaypointPlan plan, Translation2d curPos) {
-    if (plan == null || plan.entryPoint() == null) return false;
+    if (plan == null || plan.entryPoint() == null) {
+      waypointTransitionReason = "strategy_stage_invalid";
+      return false;
+    }
     Translation2d pick = clampToField(plan.entryPoint());
-    if (pick == null) return false;
+    if (pick == null) {
+      waypointTransitionReason = "strategy_stage_out_of_field";
+      return false;
+    }
 
     if (!plan.forceStage() && curPos != null && curPos.getDistance(pick) <= STAGED_REACH_EXIT_M) {
+      waypointTransitionReason = "strategy_stage_suppressed_near_entry";
       return false;
     }
 
@@ -655,6 +681,8 @@ public final class FieldPlannerGoalManager {
 
     setActiveGoal(new Pose2d(pick, requestedGoal.getRotation()));
     Logger.recordOutput("CustomWaypointStage", new Pose2d(pick, requestedGoal.getRotation()));
+    waypointTransitionReason =
+        plan.centerReturn() ? "strategy_center_return_stage" : "strategy_stage";
     return true;
   }
 

@@ -432,6 +432,10 @@ public final class FieldProfileValidator {
         prefix + ".globalFallbackMaxRuntimeSeconds",
         errors);
     requireOptionalNonNegative(
+        plannerRuntime.globalFallbackClearanceBufferMeters,
+        prefix + ".globalFallbackClearanceBufferMeters",
+        errors);
+    requireOptionalNonNegative(
         plannerRuntime.forceThroughGoalDistanceMeters,
         prefix + ".forceThroughGoalDistanceMeters",
         errors);

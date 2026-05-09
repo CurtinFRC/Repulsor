@@ -117,6 +117,9 @@ class FieldPlannerOffloadParityTest {
     assertEquals(
         local.globalFallbackStats().generatedNodes(), offloaded.getGlobalFallbackGeneratedNodes());
     assertEquals(local.globalFallbackStats().pathNodes(), offloaded.getGlobalFallbackPathNodes());
+    assertEquals(
+        local.globalFallbackStats().failureReason().name(),
+        offloaded.getGlobalFallbackFailureReason());
     assertTrue(offloaded.isHasSelectedCandidate());
     assertEquals(offloaded.getGoalX(), offloaded.getSelectedCandidateX(), 1e-9);
     assertEquals(offloaded.getGoalY(), offloaded.getSelectedCandidateY(), 1e-9);

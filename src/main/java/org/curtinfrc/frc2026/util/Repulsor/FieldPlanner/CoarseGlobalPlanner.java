@@ -51,7 +51,8 @@ public final class CoarseGlobalPlanner {
       double fieldWidthMeters) {
     long startNanos = System.nanoTime();
     if (start == null || goal == null) {
-      finishStats(false, false, false, 0, 0, 0, startNanos);
+      finishStats(
+          false, false, false, 0, 0, 0, startNanos, CoarseGlobalPlannerFailureReason.INVALID_INPUT);
       return Optional.empty();
     }
 
@@ -68,7 +69,8 @@ public final class CoarseGlobalPlanner {
         fieldWidthMeters,
         nx,
         ny)) {
-      finishStats(false, false, false, 0, 0, 0, startNanos);
+      finishStats(
+          false, false, false, 0, 0, 0, startNanos, CoarseGlobalPlannerFailureReason.START_BLOCKED);
       return Optional.empty();
     }
     if (!isFree(
@@ -80,7 +82,8 @@ public final class CoarseGlobalPlanner {
         fieldWidthMeters,
         nx,
         ny)) {
-      finishStats(false, false, false, 0, 0, 0, startNanos);
+      finishStats(
+          false, false, false, 0, 0, 0, startNanos, CoarseGlobalPlannerFailureReason.GOAL_BLOCKED);
       return Optional.empty();
     }
 
@@ -167,20 +170,62 @@ public final class CoarseGlobalPlanner {
     }
 
     if (parent[goalIdx] < 0 && goalIdx != startIdx) {
-      finishStats(false, timedOut, exhaustedBudget, expanded, generated, 0, startNanos);
+      finishStats(
+          false,
+          timedOut,
+          exhaustedBudget,
+          expanded,
+          generated,
+          0,
+          startNanos,
+          failureReason(timedOut, exhaustedBudget, CoarseGlobalPlannerFailureReason.NO_ROUTE));
       return Optional.empty();
     }
     List<Node> path = reconstruct(goalIdx, startIdx, parent, ny);
     if (path.size() < 2) {
-      finishStats(false, timedOut, exhaustedBudget, expanded, generated, path.size(), startNanos);
+      finishStats(
+          false,
+          timedOut,
+          exhaustedBudget,
+          expanded,
+          generated,
+          path.size(),
+          startNanos,
+          CoarseGlobalPlannerFailureReason.PATH_TOO_SHORT);
       return Optional.empty();
     }
 
+    List<Node> smoothedPath =
+        smoothPath(
+            path,
+            obstacles,
+            robotHalfLengthMeters,
+            robotHalfWidthMeters,
+            fieldLengthMeters,
+            fieldWidthMeters,
+            nx,
+            ny);
+
     Translation2d waypoint =
-        chooseLookahead(path, fieldLengthMeters, fieldWidthMeters, nx, ny, start);
+        chooseLookahead(smoothedPath, fieldLengthMeters, fieldWidthMeters, nx, ny, start);
     Rotation2d heading = goal.getTranslation().minus(waypoint).getAngle();
-    finishStats(true, timedOut, exhaustedBudget, expanded, generated, path.size(), startNanos);
+    finishStats(
+        true,
+        timedOut,
+        exhaustedBudget,
+        expanded,
+        generated,
+        smoothedPath.size(),
+        startNanos,
+        CoarseGlobalPlannerFailureReason.NONE);
     return Optional.of(new Pose2d(waypoint, heading));
+  }
+
+  private static CoarseGlobalPlannerFailureReason failureReason(
+      boolean timedOut, boolean exhaustedBudget, CoarseGlobalPlannerFailureReason fallback) {
+    if (timedOut) return CoarseGlobalPlannerFailureReason.TIMEOUT;
+    if (exhaustedBudget) return CoarseGlobalPlannerFailureReason.NODE_BUDGET;
+    return fallback;
   }
 
   private void finishStats(
@@ -190,7 +235,8 @@ public final class CoarseGlobalPlanner {
       int expanded,
       int generated,
       int pathNodes,
-      long startNanos) {
+      long startNanos,
+      CoarseGlobalPlannerFailureReason failureReason) {
     lastStats =
         new CoarseGlobalPlannerStats(
             found,
@@ -199,7 +245,44 @@ public final class CoarseGlobalPlanner {
             expanded,
             generated,
             pathNodes,
-            System.nanoTime() - startNanos);
+            System.nanoTime() - startNanos,
+            failureReason);
+  }
+
+  private List<Node> smoothPath(
+      List<Node> path,
+      List<? extends Obstacle> obstacles,
+      double robotHalfLengthMeters,
+      double robotHalfWidthMeters,
+      double fieldLengthMeters,
+      double fieldWidthMeters,
+      int nx,
+      int ny) {
+    if (path == null || path.size() <= 2) return path == null ? List.of() : path;
+    ArrayList<Node> smoothed = new ArrayList<>();
+    int i = 0;
+    smoothed.add(path.get(0));
+    while (i < path.size() - 1) {
+      int best = i + 1;
+      for (int j = path.size() - 1; j > i + 1; j--) {
+        if (segmentFree(
+            path.get(i),
+            path.get(j),
+            obstacles,
+            robotHalfLengthMeters,
+            robotHalfWidthMeters,
+            fieldLengthMeters,
+            fieldWidthMeters,
+            nx,
+            ny)) {
+          best = j;
+          break;
+        }
+      }
+      smoothed.add(path.get(best));
+      i = best;
+    }
+    return smoothed;
   }
 
   private Translation2d chooseLookahead(
@@ -235,16 +318,43 @@ public final class CoarseGlobalPlanner {
       double fieldWidthMeters,
       int nx,
       int ny) {
+    return segmentFree(
+        a,
+        b,
+        obstacles,
+        robotHalfLengthMeters,
+        robotHalfWidthMeters,
+        fieldLengthMeters,
+        fieldWidthMeters,
+        nx,
+        ny);
+  }
+
+  private boolean segmentFree(
+      Node a,
+      Node b,
+      List<? extends Obstacle> obstacles,
+      double robotHalfLengthMeters,
+      double robotHalfWidthMeters,
+      double fieldLengthMeters,
+      double fieldWidthMeters,
+      int nx,
+      int ny) {
     Translation2d pa = toPoint(a, fieldLengthMeters, fieldWidthMeters, nx, ny);
     Translation2d pb = toPoint(b, fieldLengthMeters, fieldWidthMeters, nx, ny);
     Rotation2d yaw = pb.minus(pa).getAngle();
-    for (int i = 0; i <= 2; i++) {
-      double t = i / 2.0;
+    int samples = Math.max(2, (int) Math.ceil(Math.hypot(a.x - b.x, a.y - b.y) * 2.0));
+    for (int i = 0; i <= samples; i++) {
+      double t = i / (double) samples;
       Translation2d p =
           new Translation2d(
               pa.getX() + (pb.getX() - pa.getX()) * t, pa.getY() + (pb.getY() - pa.getY()) * t);
-      if (rectIntersects(p, yaw, obstacles, robotHalfLengthMeters, robotHalfWidthMeters))
+      if (!pointInsideField(
+          p, fieldLengthMeters, fieldWidthMeters, robotHalfLengthMeters, robotHalfWidthMeters))
         return false;
+      if (rectIntersects(p, yaw, obstacles, robotHalfLengthMeters, robotHalfWidthMeters)) {
+        return false;
+      }
     }
     return true;
   }
@@ -259,12 +369,24 @@ public final class CoarseGlobalPlanner {
       int nx,
       int ny) {
     Translation2d p = toPoint(node, fieldLengthMeters, fieldWidthMeters, nx, ny);
-    double marginX = Math.max(0.0, robotHalfLengthMeters);
-    double marginY = Math.max(0.0, robotHalfWidthMeters);
-    if (p.getX() < marginX || p.getX() > fieldLengthMeters - marginX) return false;
-    if (p.getY() < marginY || p.getY() > fieldWidthMeters - marginY) return false;
+    if (!pointInsideField(
+        p, fieldLengthMeters, fieldWidthMeters, robotHalfLengthMeters, robotHalfWidthMeters)) {
+      return false;
+    }
     return !rectIntersects(
         p, Rotation2d.kZero, obstacles, robotHalfLengthMeters, robotHalfWidthMeters);
+  }
+
+  private boolean pointInsideField(
+      Translation2d p,
+      double fieldLengthMeters,
+      double fieldWidthMeters,
+      double robotHalfLengthMeters,
+      double robotHalfWidthMeters) {
+    double marginX = Math.max(0.0, robotHalfLengthMeters + config.clearanceBufferMeters());
+    double marginY = Math.max(0.0, robotHalfWidthMeters + config.clearanceBufferMeters());
+    if (p.getX() < marginX || p.getX() > fieldLengthMeters - marginX) return false;
+    return !(p.getY() < marginY) && !(p.getY() > fieldWidthMeters - marginY);
   }
 
   private boolean rectIntersects(
@@ -274,7 +396,11 @@ public final class CoarseGlobalPlanner {
       double robotHalfLengthMeters,
       double robotHalfWidthMeters) {
     Translation2d[] rect =
-        FieldPlanner.robotRect(center, yaw, robotHalfLengthMeters, robotHalfWidthMeters);
+        FieldPlanner.robotRect(
+            center,
+            yaw,
+            robotHalfLengthMeters + config.clearanceBufferMeters(),
+            robotHalfWidthMeters + config.clearanceBufferMeters());
     for (Obstacle obstacle : obstacles) if (obstacle.intersectsRectangle(rect)) return true;
     return false;
   }

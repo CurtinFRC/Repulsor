@@ -8,8 +8,33 @@ public record CoarseGlobalPlannerStats(
     int expandedNodes,
     int generatedNodes,
     int pathNodes,
-    long elapsedNanos) {
+    long elapsedNanos,
+    CoarseGlobalPlannerFailureReason failureReason) {
+  public CoarseGlobalPlannerStats(
+      boolean found,
+      boolean timedOut,
+      boolean exhaustedNodeBudget,
+      int expandedNodes,
+      int generatedNodes,
+      int pathNodes,
+      long elapsedNanos) {
+    this(
+        found,
+        timedOut,
+        exhaustedNodeBudget,
+        expandedNodes,
+        generatedNodes,
+        pathNodes,
+        elapsedNanos,
+        found ? CoarseGlobalPlannerFailureReason.NONE : CoarseGlobalPlannerFailureReason.NO_ROUTE);
+  }
+
+  public CoarseGlobalPlannerStats {
+    if (failureReason == null) failureReason = CoarseGlobalPlannerFailureReason.NONE;
+  }
+
   public static CoarseGlobalPlannerStats empty() {
-    return new CoarseGlobalPlannerStats(false, false, false, 0, 0, 0, 0L);
+    return new CoarseGlobalPlannerStats(
+        false, false, false, 0, 0, 0, 0L, CoarseGlobalPlannerFailureReason.NONE);
   }
 }

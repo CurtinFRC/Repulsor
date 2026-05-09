@@ -388,6 +388,7 @@ class FieldPlannerGoalManagerTest {
     assertEquals(6.0, manager.getGoalTranslation().getY(), EPS);
     FieldPlannerWaypointStatus status = manager.getWaypointStatus();
     assertEquals(FieldPlannerWaypointDecision.Mode.STAGE, status.lastStrategyDecision().mode());
+    assertEquals("strategy_stage", status.transitionReason());
     assertTrue(status.activeStage());
     assertEquals(4.0, status.stagedAttractor().getX(), EPS);
     assertEquals(requested.getX(), status.requestedGoal().getX(), EPS);
@@ -399,6 +400,7 @@ class FieldPlannerGoalManagerTest {
     assertTrue(manager.updateStagedGoal(new Translation2d(4.0, 6.0), List.of()));
     assertEquals(requested.getX(), manager.getGoalTranslation().getX(), EPS);
     assertEquals(requested.getY(), manager.getGoalTranslation().getY(), EPS);
+    assertEquals("stage_complete", manager.getWaypointStatus().transitionReason());
   }
 
   @Test
@@ -418,6 +420,7 @@ class FieldPlannerGoalManagerTest {
     assertTrue(manager.updateStagedGoal(new Translation2d(6.0, 4.0), List.of(gate)));
     assertEquals(requested.getX(), manager.getGoalTranslation().getX(), EPS);
     assertEquals(requested.getY(), manager.getGoalTranslation().getY(), EPS);
+    assertEquals("strategy_direct", manager.getWaypointStatus().transitionReason());
   }
 
   @Test
@@ -478,6 +481,7 @@ class FieldPlannerGoalManagerTest {
     assertEquals(6.0, manager.getGoalTranslation().getY(), EPS);
     assertEquals(
         FieldPlannerWaypointObjectiveRole.SCORE, manager.getWaypointStatus().lastObjectiveRole());
+    assertEquals("strategy_stage", manager.getWaypointStatus().transitionReason());
   }
 
   @Test

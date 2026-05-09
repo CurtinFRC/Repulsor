@@ -407,6 +407,7 @@ class FieldProfileYamlLoaderTest {
           globalFallbackLookaheadMeters: 1.7
           globalFallbackMaxExpandedNodes: 321
           globalFallbackMaxRuntimeSeconds: 0.02
+          globalFallbackClearanceBufferMeters: 0.23
           forceThroughGoalDistanceMeters: 1.8
           forceThroughWallDistanceMeters: 0.5
         autoPath:
@@ -449,6 +450,13 @@ class FieldProfileYamlLoaderTest {
               .toFieldPlannerRuntimeConfig()
               .globalFallbackConfig()
               .maxExpandedNodes());
+      assertEquals(
+          0.23,
+          cfg.plannerRuntime
+              .toFieldPlannerRuntimeConfig()
+              .globalFallbackConfig()
+              .clearanceBufferMeters(),
+          1e-9);
 
       Rebuilt2026 field = new Rebuilt2026(cfg);
       FieldPlanner planner =
@@ -458,6 +466,8 @@ class FieldProfileYamlLoaderTest {
       assertEquals(false, planner.getRuntimeConfig().globalFallbackEnabled());
       assertEquals(
           1.7, planner.getRuntimeConfig().globalFallbackConfig().waypointLookaheadMeters(), 1e-9);
+      assertEquals(
+          0.23, planner.getRuntimeConfig().globalFallbackConfig().clearanceBufferMeters(), 1e-9);
       assertEquals(1.8, planner.getRuntimeConfig().forceThroughGoalDistanceMeters(), 1e-9);
       assertEquals(0.75, field.autoPathRuntimeConfig().episodeCooldownSeconds(), 1e-9);
       assertEquals(750_000_000L, field.autoPathRuntimeConfig().episodeCooldownNanos());

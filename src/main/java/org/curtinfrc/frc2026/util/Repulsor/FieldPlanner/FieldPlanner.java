@@ -1073,6 +1073,7 @@ public class FieldPlanner {
             activeGoal,
             null,
             null,
+            remote.getSelectedCandidateReason(),
             remote.isWaypointActiveStage(),
             null,
             null,
@@ -1090,7 +1091,8 @@ public class FieldPlanner {
             remote.getGlobalFallbackExpandedNodes(),
             remote.getGlobalFallbackGeneratedNodes(),
             remote.getGlobalFallbackPathNodes(),
-            remote.getGlobalFallbackElapsedNanos());
+            remote.getGlobalFallbackElapsedNanos(),
+            parseGlobalFallbackFailureReason(remote.getGlobalFallbackFailureReason()));
     Optional<Pose2d> globalWaypoint =
         remote.isHasGlobalFallbackWaypoint()
             ? Optional.of(
@@ -1128,6 +1130,15 @@ public class FieldPlanner {
     return sample;
   }
 
+  private static CoarseGlobalPlannerFailureReason parseGlobalFallbackFailureReason(String value) {
+    if (value == null || value.isBlank()) return CoarseGlobalPlannerFailureReason.NONE;
+    try {
+      return CoarseGlobalPlannerFailureReason.valueOf(value);
+    } catch (IllegalArgumentException ignored) {
+      return CoarseGlobalPlannerFailureReason.NONE;
+    }
+  }
+
   private void recordGlobalFallbackTelemetry(boolean active, Optional<Pose2d> waypoint) {
     CoarseGlobalPlannerStats stats = globalPlanner.lastStats();
     Logger.recordOutput("Repulsor/GlobalFallback/Active", active);
@@ -1137,6 +1148,7 @@ public class FieldPlanner {
     Logger.recordOutput("Repulsor/GlobalFallback/ExpandedNodes", stats.expandedNodes());
     Logger.recordOutput("Repulsor/GlobalFallback/GeneratedNodes", stats.generatedNodes());
     Logger.recordOutput("Repulsor/GlobalFallback/PathNodes", stats.pathNodes());
+    Logger.recordOutput("Repulsor/GlobalFallback/FailureReason", stats.failureReason().name());
     Logger.recordOutput("Repulsor/GlobalFallback/ElapsedMs", stats.elapsedNanos() / 1.0e6);
     Logger.recordOutput("Repulsor/GlobalFallback/Waypoint", waypoint.orElse(Pose2d.kZero));
   }
@@ -1191,13 +1203,15 @@ public class FieldPlanner {
     if (waypoint != null) {
       if (waypoint.usingBypass()) {
         waypointDecision = "bypass";
-        waypointReason = "waypoint_policy_using_bypass";
+        waypointReason = waypoint.transitionReason();
       } else if (waypoint.activeStage()) {
         waypointDecision = "stage";
-        waypointReason = "waypoint_stage_active";
+        waypointReason = waypoint.transitionReason();
       } else if (waypoint.stagedComplete()) {
         waypointDecision = "complete";
-        waypointReason = "waypoint_stage_complete";
+        waypointReason = waypoint.transitionReason();
+      } else {
+        waypointReason = waypoint.transitionReason();
       }
       waypointMetadata =
           Map.of(
@@ -1205,6 +1219,8 @@ public class FieldPlanner {
               waypoint.lastObjectiveRole().name(),
               "strategyMode",
               waypoint.lastStrategyDecision().mode().name(),
+              "transitionReason",
+              waypoint.transitionReason(),
               "exitPhase",
               Boolean.toString(waypoint.exitPhase()),
               "centerReturn",
@@ -1229,16 +1245,16 @@ public class FieldPlanner {
     if (diagnostics.globalFallbackActive()) {
       if (diagnostics.globalFallbackWaypoint().isPresent()) {
         fallbackDecision = "temporary_waypoint";
-        fallbackReason = stats.found() ? "search_found_waypoint" : "fallback_waypoint_supplied";
+        fallbackReason = stats.found() ? "search_found_waypoint" : stats.failureReason().name();
       } else if (stats.timedOut()) {
         fallbackDecision = "timeout";
-        fallbackReason = "search_timed_out";
+        fallbackReason = stats.failureReason().name();
       } else if (stats.exhaustedNodeBudget()) {
         fallbackDecision = "node_budget";
-        fallbackReason = "search_exhausted_node_budget";
+        fallbackReason = stats.failureReason().name();
       } else {
         fallbackDecision = "active_no_waypoint";
-        fallbackReason = "search_failed";
+        fallbackReason = stats.failureReason().name();
       }
     }
     entries.add(
@@ -1259,6 +1275,8 @@ public class FieldPlanner {
                 Boolean.toString(stats.exhaustedNodeBudget()),
                 "expandedNodes",
                 Integer.toString(stats.expandedNodes()),
+                "failureReason",
+                stats.failureReason().name(),
                 "pathNodes",
                 Integer.toString(stats.pathNodes()))));
 

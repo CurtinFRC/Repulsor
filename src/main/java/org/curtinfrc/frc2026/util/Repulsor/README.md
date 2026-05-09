@@ -200,10 +200,22 @@ These JVM properties tune the coarse fallback planner:
 - `repulsor.fieldplanner.globalFallback.lookaheadMeters` defaults to `1.4`.
 - `repulsor.fieldplanner.globalFallback.maxExpandedNodes` defaults to `1200`.
 - `repulsor.fieldplanner.globalFallback.maxRuntimeSeconds` defaults to `0.010`.
+- `repulsor.fieldplanner.globalFallback.clearanceBufferMeters` defaults to `0.0`.
 
-Smaller cells make paths more precise but increase node count and loop time. Larger lookahead values smooth the next target but can cut too close to obstacles if the cell size is coarse. The node and runtime limits are guardrails for robot-loop safety; if either trips, the planner stops instead of spending unbounded time searching.
+Smaller cells make paths more precise but increase node count and loop time. Larger lookahead values smooth the next target but can cut too close to obstacles if the cell size is coarse. The clearance buffer inflates the robot footprint and field-edge margin for strategy-specific safe routes. The node and runtime limits are guardrails for robot-loop safety; if either trips, the planner stops instead of spending unbounded time searching.
 
 Representative Rebuilt 2026 corridor cases are covered by tests using default-like cell, lookahead, and node budgets. Re-tune these values if the field profile changes obstacle density or corridor width.
+
+### Planner Responsibility Boundary
+
+The planner layers should not overlap responsibilities:
+
+- Objective selectors choose **what** destination is worth pursuing for the current strategy.
+- Waypoint policy chooses **strategic staging** waypoints such as lane entries, gates, or profile-defined semantic regions.
+- Global fallback chooses a **temporary coarse route** when the active target is geometrically blocked by large static or dynamic obstacles.
+- Reactive bypass handles **short-horizon local recovery** around the current route target. It should not encode game strategy, objective selection, or profile staging rules.
+
+When adding a new game or strategy preset, put reusable strategic decisions in profile rules/presets first. Only tune global fallback for route feasibility and clearance, and only tune reactive bypass for local safety/rejoin behavior.
 
 ### Global Fallback Telemetry
 
@@ -213,6 +225,7 @@ Planner fallback telemetry is grouped under `Repulsor/GlobalFallback`:
 - `Found`: the last coarse search found a path.
 - `TimedOut`: the runtime guardrail stopped search.
 - `ExhaustedNodeBudget`: the expanded-node guardrail stopped search.
+- `FailureReason`: explainable terminal state such as `START_BLOCKED`, `GOAL_BLOCKED`, `TIMEOUT`, `NODE_BUDGET`, or `NO_ROUTE`.
 - `ExpandedNodes`, `GeneratedNodes`, `PathNodes`: search size and path complexity.
 - `ElapsedMs`: elapsed coarse planner time.
 - `Waypoint`: temporary waypoint selected for the current sample, or zero pose when inactive.
