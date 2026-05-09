@@ -7,6 +7,9 @@ package org.curtinfrc.frc2026.util.Repulsor.Offload;
  * documents robot-relative motion.
  */
 public class ShuttleRecoveryPointDTO {
+  private int contractVersion = RepulsorOffloadContract.CONTRACT_VERSION;
+  private int taskVersion = 1;
+  private String reason = "not_found";
   private boolean found;
   private double x;
   private double y;
@@ -37,6 +40,7 @@ public class ShuttleRecoveryPointDTO {
   public static ShuttleRecoveryPointDTO of(double x, double y, double yawDeg, double score) {
     ShuttleRecoveryPointDTO dto = new ShuttleRecoveryPointDTO();
     dto.found = true;
+    dto.reason = "ranked_resource_recovery";
     dto.x = x;
     dto.y = y;
     dto.yawDeg = yawDeg;
@@ -62,6 +66,30 @@ public class ShuttleRecoveryPointDTO {
    */
   public void setFound(boolean found) {
     this.found = found;
+  }
+
+  public int getContractVersion() {
+    return contractVersion;
+  }
+
+  public void setContractVersion(int contractVersion) {
+    this.contractVersion = contractVersion;
+  }
+
+  public int getTaskVersion() {
+    return taskVersion;
+  }
+
+  public void setTaskVersion(int taskVersion) {
+    this.taskVersion = taskVersion;
+  }
+
+  public String getReason() {
+    return reason;
+  }
+
+  public void setReason(String reason) {
+    this.reason = reason == null ? "" : reason;
   }
 
   /**

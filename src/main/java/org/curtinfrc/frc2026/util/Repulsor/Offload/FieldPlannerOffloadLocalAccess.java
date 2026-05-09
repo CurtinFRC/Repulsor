@@ -77,6 +77,8 @@ public final class FieldPlannerOffloadLocalAccess {
       }
 
       FieldPlannerCalculateResultDTO out = new FieldPlannerCalculateResultDTO();
+      out.setContractVersion(RepulsorOffloadContract.CONTRACT_VERSION);
+      out.setTaskVersion(RepulsorOffloadContract.FIELD_PLANNER_CALCULATE_VERSION);
       Translation2d goal = sample.goal();
       out.setGoalX(goal.getX());
       out.setGoalY(goal.getY());
@@ -105,6 +107,11 @@ public final class FieldPlannerOffloadLocalAccess {
     out.setForceThroughActive(diagnostics.forceThroughActive());
     out.setRobotIntersecting(diagnostics.robotIntersecting());
     out.setStuckAbort(diagnostics.stuckAbort());
+    out.setHasSelectedCandidate(true);
+    out.setSelectedCandidateX(diagnostics.activeGoal().getX());
+    out.setSelectedCandidateY(diagnostics.activeGoal().getY());
+    out.setSelectedCandidateReason(selectedCandidateReason(diagnostics));
+    out.setTraceSummary(traceSummary(diagnostics));
     if (diagnostics.waypointStatus() != null) {
       out.setWaypointActiveStage(diagnostics.waypointStatus().activeStage());
       out.setWaypointUsingBypass(diagnostics.waypointStatus().usingBypass());
@@ -129,6 +136,38 @@ public final class FieldPlannerOffloadLocalAccess {
       out.setGlobalFallbackPathNodes(stats.pathNodes());
       out.setGlobalFallbackElapsedNanos(stats.elapsedNanos());
     }
+  }
+
+  private static String selectedCandidateReason(RepulsorDiagnosticsSnapshot diagnostics) {
+    if (diagnostics == null) return "unknown";
+    if (diagnostics.globalFallbackActive()) return "global_fallback_waypoint";
+    if (diagnostics.waypointStatus() != null && diagnostics.waypointStatus().activeStage()) {
+      return diagnostics.waypointStatus().usingBypass()
+          ? "waypoint_bypass_stage"
+          : "waypoint_stage";
+    }
+    if (diagnostics.reactiveBypassActive()) return "reactive_bypass";
+    if (diagnostics.forceThroughActive()) return "force_through";
+    return "direct_goal";
+  }
+
+  private static String traceSummary(RepulsorDiagnosticsSnapshot diagnostics) {
+    if (diagnostics == null) return "empty";
+    StringBuilder out = new StringBuilder("fieldPlanner");
+    appendFlag(out, "blocked", diagnostics.pathBlocked());
+    appendFlag(out, "globalFallback", diagnostics.globalFallbackActive());
+    appendFlag(out, "reactiveBypass", diagnostics.reactiveBypassActive());
+    appendFlag(out, "forceThrough", diagnostics.forceThroughActive());
+    appendFlag(out, "intersecting", diagnostics.robotIntersecting());
+    appendFlag(out, "stuckAbort", diagnostics.stuckAbort());
+    if (diagnostics.globalFallbackStats() != null) {
+      out.append(" nodes=").append(diagnostics.globalFallbackStats().expandedNodes());
+    }
+    return out.toString();
+  }
+
+  private static void appendFlag(StringBuilder out, String name, boolean active) {
+    if (active) out.append(' ').append(name);
   }
 
   private static FieldPlanner planner() {

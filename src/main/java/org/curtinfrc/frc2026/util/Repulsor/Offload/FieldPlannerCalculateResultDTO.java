@@ -7,6 +7,15 @@ package org.curtinfrc.frc2026.util.Repulsor.Offload;
  * documents robot-relative motion.
  */
 public final class FieldPlannerCalculateResultDTO {
+  private int contractVersion = RepulsorOffloadContract.CONTRACT_VERSION;
+  private int taskVersion = RepulsorOffloadContract.FIELD_PLANNER_CALCULATE_VERSION;
+  private String activeFieldProfile = "";
+  private String activeStrategyPreset = "";
+  private String traceSummary = "";
+  private String selectedCandidateReason = "";
+  private boolean hasSelectedCandidate;
+  private double selectedCandidateX;
+  private double selectedCandidateY;
   private double goalX;
   private double goalY;
   private double vxMetersPerSecond;
@@ -38,6 +47,78 @@ public final class FieldPlannerCalculateResultDTO {
   private int globalFallbackGeneratedNodes;
   private int globalFallbackPathNodes;
   private long globalFallbackElapsedNanos;
+
+  public int getContractVersion() {
+    return contractVersion;
+  }
+
+  public void setContractVersion(int contractVersion) {
+    this.contractVersion = contractVersion;
+  }
+
+  public int getTaskVersion() {
+    return taskVersion;
+  }
+
+  public void setTaskVersion(int taskVersion) {
+    this.taskVersion = taskVersion;
+  }
+
+  public String getActiveFieldProfile() {
+    return activeFieldProfile;
+  }
+
+  public void setActiveFieldProfile(String activeFieldProfile) {
+    this.activeFieldProfile = activeFieldProfile == null ? "" : activeFieldProfile;
+  }
+
+  public String getActiveStrategyPreset() {
+    return activeStrategyPreset;
+  }
+
+  public void setActiveStrategyPreset(String activeStrategyPreset) {
+    this.activeStrategyPreset = activeStrategyPreset == null ? "" : activeStrategyPreset;
+  }
+
+  public String getTraceSummary() {
+    return traceSummary;
+  }
+
+  public void setTraceSummary(String traceSummary) {
+    this.traceSummary = traceSummary == null ? "" : traceSummary;
+  }
+
+  public String getSelectedCandidateReason() {
+    return selectedCandidateReason;
+  }
+
+  public void setSelectedCandidateReason(String selectedCandidateReason) {
+    this.selectedCandidateReason = selectedCandidateReason == null ? "" : selectedCandidateReason;
+  }
+
+  public boolean isHasSelectedCandidate() {
+    return hasSelectedCandidate;
+  }
+
+  public void setHasSelectedCandidate(boolean hasSelectedCandidate) {
+    this.hasSelectedCandidate = hasSelectedCandidate;
+  }
+
+  public double getSelectedCandidateX() {
+    return selectedCandidateX;
+  }
+
+  public void setSelectedCandidateX(double selectedCandidateX) {
+    this.selectedCandidateX = selectedCandidateX;
+  }
+
+  public double getSelectedCandidateY() {
+    return selectedCandidateY;
+  }
+
+  public void setSelectedCandidateY(double selectedCandidateY) {
+    this.selectedCandidateY = selectedCandidateY;
+  }
 
   /**
    * Returns the get goal x value maintained by this Repulsor component.

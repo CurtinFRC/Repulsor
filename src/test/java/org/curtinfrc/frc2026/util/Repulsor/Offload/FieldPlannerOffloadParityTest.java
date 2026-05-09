@@ -1,6 +1,8 @@
 package org.curtinfrc.frc2026.util.Repulsor.Offload;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -83,6 +85,10 @@ class FieldPlannerOffloadParityTest {
         localPlanner.getErr().orElseThrow().baseUnitMagnitude(), offloaded.getErrMeters(), 1e-9);
     assertEquals(localPlanner.getGoalPose().getX(), offloaded.getActiveGoalX(), 1e-9);
     assertEquals(localPlanner.getGoalPose().getY(), offloaded.getActiveGoalY(), 1e-9);
+    assertEquals(RepulsorOffloadContract.CONTRACT_VERSION, offloaded.getContractVersion());
+    assertEquals(
+        RepulsorOffloadContract.FIELD_PLANNER_CALCULATE_VERSION, offloaded.getTaskVersion());
+    assertTrue(RepulsorOffloadContract.isCompatible(offloaded.getContractVersion()));
     assertDiagnosticsParity(localPlanner.lastPlanningResult().diagnostics(), offloaded);
   }
 
@@ -107,6 +113,11 @@ class FieldPlannerOffloadParityTest {
     assertEquals(
         local.globalFallbackStats().generatedNodes(), offloaded.getGlobalFallbackGeneratedNodes());
     assertEquals(local.globalFallbackStats().pathNodes(), offloaded.getGlobalFallbackPathNodes());
+    assertTrue(offloaded.isHasSelectedCandidate());
+    assertEquals(local.activeGoal().getX(), offloaded.getSelectedCandidateX(), 1e-9);
+    assertEquals(local.activeGoal().getY(), offloaded.getSelectedCandidateY(), 1e-9);
+    assertFalse(offloaded.getSelectedCandidateReason().isBlank());
+    assertTrue(offloaded.getTraceSummary().startsWith("fieldPlanner"));
     if (local.waypointStatus() != null) {
       assertEquals(local.waypointStatus().activeStage(), offloaded.isWaypointActiveStage());
       assertEquals(local.waypointStatus().usingBypass(), offloaded.isWaypointUsingBypass());

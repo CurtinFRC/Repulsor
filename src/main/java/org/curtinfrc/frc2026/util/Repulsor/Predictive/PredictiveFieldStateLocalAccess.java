@@ -111,7 +111,10 @@ public final class PredictiveFieldStateLocalAccess {
       return ShuttleRecoveryPointDTO.notFound();
     }
     Rotation2d yaw = nearest.minus(robotPoseBlue.getTranslation()).getAngle();
-    return ShuttleRecoveryPointDTO.of(nearest.getX(), nearest.getY(), yaw.getDegrees(), -1.0);
+    ShuttleRecoveryPointDTO fallback =
+        ShuttleRecoveryPointDTO.of(nearest.getX(), nearest.getY(), yaw.getDegrees(), -1.0);
+    fallback.setReason("nearest_resource_fallback");
+    return fallback;
   }
 
   /**
