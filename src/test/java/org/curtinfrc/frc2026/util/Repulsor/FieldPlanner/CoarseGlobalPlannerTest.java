@@ -34,6 +34,36 @@ class CoarseGlobalPlannerTest {
     assertTrue(
         Math.abs(waypoint.get().getY() - 2.0) > 0.2,
         "Waypoint should leave the blocked centerline");
+    assertTrue(planner.lastStats().rawPathNodes() >= planner.lastStats().pathNodes());
+  }
+
+  @Test
+  void routeQualityBaselinePrefersDeterministicCorridorSideAcrossRepeatedCalls() {
+    CoarseGlobalPlanner planner = deterministicPlanner();
+    List<Obstacle> obstacles =
+        List.of(
+            RectangleObstacle.simple(new Translation2d(3.0, 2.0), 0.75, 0.85, 1.0, 1.0, 1.0),
+            RectangleObstacle.simple(new Translation2d(3.0, 3.15), 0.75, 0.55, 1.0, 1.0, 1.0));
+
+    Double firstSide = null;
+    for (int i = 0; i < 6; i++) {
+      var waypoint =
+          planner.nextWaypoint(
+              new Translation2d(1.0, 2.0),
+              new Pose2d(5.0, 2.0, Rotation2d.kZero),
+              obstacles,
+              0.18,
+              0.18,
+              6.0,
+              4.0);
+
+      assertTrue(waypoint.isPresent());
+      double side = Math.signum(waypoint.get().getY() - 2.0);
+      assertTrue(Math.abs(side) > 0.0, "route should choose a corridor side");
+      if (firstSide == null) firstSide = side;
+      assertEquals(firstSide, side, 0.0, "identical calls should not flip corridor sides");
+      assertTrue(planner.lastStats().rawPathNodes() >= planner.lastStats().pathNodes());
+    }
   }
 
   @Test
@@ -77,8 +107,30 @@ class CoarseGlobalPlannerTest {
     assertFalse(planner.lastStats().timedOut());
     assertFalse(planner.lastStats().exhaustedNodeBudget());
     assertEquals(CoarseGlobalPlannerFailureReason.NONE, planner.lastStats().failureReason());
+    assertTrue(planner.lastStats().rawPathNodes() >= planner.lastStats().pathNodes());
     assertEquals(
         2, planner.lastStats().pathNodes(), "clear routes should smooth to direct segments");
+  }
+
+  @Test
+  void rawAndSmoothedPathNodeCountsExposeRoutePostProcessing() {
+    CoarseGlobalPlanner planner = deterministicPlanner();
+    RectangleObstacle block =
+        RectangleObstacle.simple(new Translation2d(3.0, 2.0), 0.9, 2.0, 1.0, 1.0, 1.0);
+
+    var waypoint =
+        planner.nextWaypoint(
+            new Translation2d(1.0, 2.0),
+            new Pose2d(5.0, 2.0, Rotation2d.kZero),
+            List.of(block),
+            0.18,
+            0.18,
+            6.0,
+            4.0);
+
+    assertTrue(waypoint.isPresent());
+    assertTrue(planner.lastStats().rawPathNodes() > planner.lastStats().pathNodes());
+    assertTrue(planner.lastStats().pathNodes() >= 2);
   }
 
   @Test
@@ -122,6 +174,38 @@ class CoarseGlobalPlannerTest {
         buffered.nextWaypoint(
             new Translation2d(0.30, 0.30),
             new Pose2d(2.0, 2.0, Rotation2d.kZero),
+            List.of(),
+            0.18,
+            0.18,
+            6.0,
+            4.0);
+
+    assertTrue(unbufferedWaypoint.isPresent());
+    assertFalse(bufferedWaypoint.isPresent());
+    assertEquals(
+        CoarseGlobalPlannerFailureReason.START_BLOCKED, buffered.lastStats().failureReason());
+  }
+
+  @Test
+  void wallEdgeRouteIsRejectedWhenClearanceMarginWouldClipFieldBoundary() {
+    CoarseGlobalPlanner noBuffer =
+        new CoarseGlobalPlanner(new CoarseGlobalPlannerConfig(0.25, 0.8, 5000, 1.0));
+    CoarseGlobalPlanner buffered =
+        new CoarseGlobalPlanner(new CoarseGlobalPlannerConfig(0.25, 0.8, 5000, 1.0, 0.30));
+
+    var unbufferedWaypoint =
+        noBuffer.nextWaypoint(
+            new Translation2d(1.0, 0.30),
+            new Pose2d(5.0, 0.30, Rotation2d.kZero),
+            List.of(),
+            0.18,
+            0.18,
+            6.0,
+            4.0);
+    var bufferedWaypoint =
+        buffered.nextWaypoint(
+            new Translation2d(1.0, 0.30),
+            new Pose2d(5.0, 0.30, Rotation2d.kZero),
             List.of(),
             0.18,
             0.18,

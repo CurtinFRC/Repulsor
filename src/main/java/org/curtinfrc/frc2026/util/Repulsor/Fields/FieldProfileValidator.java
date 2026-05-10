@@ -436,6 +436,10 @@ public final class FieldProfileValidator {
         prefix + ".globalFallbackClearanceBufferMeters",
         errors);
     requireOptionalNonNegative(
+        plannerRuntime.globalFallbackTurnCostWeight,
+        prefix + ".globalFallbackTurnCostWeight",
+        errors);
+    requireOptionalNonNegative(
         plannerRuntime.forceThroughGoalDistanceMeters,
         prefix + ".forceThroughGoalDistanceMeters",
         errors);

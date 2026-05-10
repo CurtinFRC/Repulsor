@@ -158,7 +158,8 @@ public final class CoarseGlobalPlanner {
           }
 
           double step = (dx != 0 && dy != 0) ? Math.sqrt(2.0) : 1.0;
-          double tentative = best[curIdx] + step;
+          double turnPenalty = turnPenalty(parent[curIdx], cur.node, next, ny);
+          double tentative = best[curIdx] + step + config.turnCostWeight() * turnPenalty;
           if (tentative < best[nextIdx]) {
             best[nextIdx] = tentative;
             parent[nextIdx] = curIdx;
@@ -215,6 +216,7 @@ public final class CoarseGlobalPlanner {
         exhaustedBudget,
         expanded,
         generated,
+        path.size(),
         smoothedPath.size(),
         startNanos,
         CoarseGlobalPlannerFailureReason.NONE);
@@ -237,6 +239,28 @@ public final class CoarseGlobalPlanner {
       int pathNodes,
       long startNanos,
       CoarseGlobalPlannerFailureReason failureReason) {
+    finishStats(
+        found,
+        timedOut,
+        exhaustedBudget,
+        expanded,
+        generated,
+        pathNodes,
+        pathNodes,
+        startNanos,
+        failureReason);
+  }
+
+  private void finishStats(
+      boolean found,
+      boolean timedOut,
+      boolean exhaustedBudget,
+      int expanded,
+      int generated,
+      int rawPathNodes,
+      int pathNodes,
+      long startNanos,
+      CoarseGlobalPlannerFailureReason failureReason) {
     lastStats =
         new CoarseGlobalPlannerStats(
             found,
@@ -244,6 +268,7 @@ public final class CoarseGlobalPlanner {
             exhaustedBudget,
             expanded,
             generated,
+            rawPathNodes,
             pathNodes,
             System.nanoTime() - startNanos,
             failureReason);
@@ -423,6 +448,20 @@ public final class CoarseGlobalPlanner {
 
   private double heuristic(Node a, Node b) {
     return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  private double turnPenalty(int previousIdx, Node current, Node next, int ny) {
+    if (previousIdx < 0) return 0.0;
+    Node previous = new Node(previousIdx / ny, previousIdx % ny);
+    double ax = current.x - previous.x;
+    double ay = current.y - previous.y;
+    double bx = next.x - current.x;
+    double by = next.y - current.y;
+    double an = Math.hypot(ax, ay);
+    double bn = Math.hypot(bx, by);
+    if (an <= 1e-9 || bn <= 1e-9) return 0.0;
+    double cos = Math.max(-1.0, Math.min(1.0, (ax * bx + ay * by) / (an * bn)));
+    return Math.acos(cos) / Math.PI;
   }
 
   private record Node(int x, int y) {}

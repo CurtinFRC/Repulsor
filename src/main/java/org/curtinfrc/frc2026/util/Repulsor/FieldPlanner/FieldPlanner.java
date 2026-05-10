@@ -1090,6 +1090,7 @@ public class FieldPlanner {
             remote.isGlobalFallbackExhaustedNodeBudget(),
             remote.getGlobalFallbackExpandedNodes(),
             remote.getGlobalFallbackGeneratedNodes(),
+            remote.getGlobalFallbackRawPathNodes(),
             remote.getGlobalFallbackPathNodes(),
             remote.getGlobalFallbackElapsedNanos(),
             parseGlobalFallbackFailureReason(remote.getGlobalFallbackFailureReason()));
@@ -1147,6 +1148,7 @@ public class FieldPlanner {
     Logger.recordOutput("Repulsor/GlobalFallback/ExhaustedNodeBudget", stats.exhaustedNodeBudget());
     Logger.recordOutput("Repulsor/GlobalFallback/ExpandedNodes", stats.expandedNodes());
     Logger.recordOutput("Repulsor/GlobalFallback/GeneratedNodes", stats.generatedNodes());
+    Logger.recordOutput("Repulsor/GlobalFallback/RawPathNodes", stats.rawPathNodes());
     Logger.recordOutput("Repulsor/GlobalFallback/PathNodes", stats.pathNodes());
     Logger.recordOutput("Repulsor/GlobalFallback/FailureReason", stats.failureReason().name());
     Logger.recordOutput("Repulsor/GlobalFallback/ElapsedMs", stats.elapsedNanos() / 1.0e6);

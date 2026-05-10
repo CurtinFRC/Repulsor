@@ -45,6 +45,7 @@ public final class FieldPlannerCalculateResultDTO {
   private boolean globalFallbackExhaustedNodeBudget;
   private int globalFallbackExpandedNodes;
   private int globalFallbackGeneratedNodes;
+  private int globalFallbackRawPathNodes;
   private int globalFallbackPathNodes;
   private long globalFallbackElapsedNanos;
   private String globalFallbackFailureReason = "";
@@ -475,6 +476,14 @@ public final class FieldPlannerCalculateResultDTO {
 
   public int getGlobalFallbackPathNodes() {
     return globalFallbackPathNodes;
+  }
+
+  public int getGlobalFallbackRawPathNodes() {
+    return globalFallbackRawPathNodes;
+  }
+
+  public void setGlobalFallbackRawPathNodes(int globalFallbackRawPathNodes) {
+    this.globalFallbackRawPathNodes = globalFallbackRawPathNodes;
   }
 
   public void setGlobalFallbackPathNodes(int globalFallbackPathNodes) {

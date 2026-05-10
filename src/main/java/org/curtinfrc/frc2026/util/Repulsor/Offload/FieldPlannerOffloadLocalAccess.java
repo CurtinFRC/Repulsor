@@ -133,6 +133,7 @@ public final class FieldPlannerOffloadLocalAccess {
       out.setGlobalFallbackExhaustedNodeBudget(stats.exhaustedNodeBudget());
       out.setGlobalFallbackExpandedNodes(stats.expandedNodes());
       out.setGlobalFallbackGeneratedNodes(stats.generatedNodes());
+      out.setGlobalFallbackRawPathNodes(stats.rawPathNodes());
       out.setGlobalFallbackPathNodes(stats.pathNodes());
       out.setGlobalFallbackElapsedNanos(stats.elapsedNanos());
       out.setGlobalFallbackFailureReason(stats.failureReason().name());
