@@ -1092,6 +1092,12 @@ public class FieldPlanner {
             remote.getGlobalFallbackGeneratedNodes(),
             remote.getGlobalFallbackRawPathNodes(),
             remote.getGlobalFallbackPathNodes(),
+            new CoarseRouteCostBreakdown(
+                remote.getGlobalFallbackRouteTotalCost(),
+                remote.getGlobalFallbackRouteDistanceCost(),
+                remote.getGlobalFallbackRouteObstacleClearanceCost(),
+                remote.getGlobalFallbackRouteWallClearanceCost(),
+                remote.getGlobalFallbackRouteTurnCost()),
             remote.getGlobalFallbackElapsedNanos(),
             parseGlobalFallbackFailureReason(remote.getGlobalFallbackFailureReason()));
     Optional<Pose2d> globalWaypoint =
@@ -1150,6 +1156,18 @@ public class FieldPlanner {
     Logger.recordOutput("Repulsor/GlobalFallback/GeneratedNodes", stats.generatedNodes());
     Logger.recordOutput("Repulsor/GlobalFallback/RawPathNodes", stats.rawPathNodes());
     Logger.recordOutput("Repulsor/GlobalFallback/PathNodes", stats.pathNodes());
+    Logger.recordOutput(
+        "Repulsor/GlobalFallback/RouteTotalCost", stats.routeCostBreakdown().total());
+    Logger.recordOutput(
+        "Repulsor/GlobalFallback/RouteDistanceCost", stats.routeCostBreakdown().distanceCost());
+    Logger.recordOutput(
+        "Repulsor/GlobalFallback/RouteObstacleClearanceCost",
+        stats.routeCostBreakdown().obstacleClearanceCost());
+    Logger.recordOutput(
+        "Repulsor/GlobalFallback/RouteWallClearanceCost",
+        stats.routeCostBreakdown().wallClearanceCost());
+    Logger.recordOutput(
+        "Repulsor/GlobalFallback/RouteTurnCost", stats.routeCostBreakdown().turnCost());
     Logger.recordOutput("Repulsor/GlobalFallback/FailureReason", stats.failureReason().name());
     Logger.recordOutput("Repulsor/GlobalFallback/ElapsedMs", stats.elapsedNanos() / 1.0e6);
     Logger.recordOutput("Repulsor/GlobalFallback/Waypoint", waypoint.orElse(Pose2d.kZero));
@@ -1279,6 +1297,8 @@ public class FieldPlanner {
                 Integer.toString(stats.expandedNodes()),
                 "failureReason",
                 stats.failureReason().name(),
+                "routeTotalCost",
+                Double.toString(stats.routeCostBreakdown().total()),
                 "pathNodes",
                 Integer.toString(stats.pathNodes()))));
 

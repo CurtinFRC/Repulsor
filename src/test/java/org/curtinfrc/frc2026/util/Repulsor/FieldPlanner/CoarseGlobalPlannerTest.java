@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.RectangleObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.Rebuilt2026;
+import org.curtinfrc.frc2026.util.Repulsor.Force;
 import org.junit.jupiter.api.Test;
 
 class CoarseGlobalPlannerTest {
@@ -64,6 +65,59 @@ class CoarseGlobalPlannerTest {
       assertEquals(firstSide, side, 0.0, "identical calls should not flip corridor sides");
       assertTrue(planner.lastStats().rawPathNodes() >= planner.lastStats().pathNodes());
     }
+  }
+
+  @Test
+  void weightedObstacleClearanceCostCanPreferSaferCorridor() {
+    CoarseGlobalPlanner planner =
+        new CoarseGlobalPlanner(
+            new CoarseGlobalPlannerConfig(
+                0.35, 0.8, 5000, 1.0, 0.0, new CoarseRouteCostConfig(1.0, 15.0, 0.0, 0.05)));
+    List<Obstacle> obstacles =
+        List.of(
+            RectangleObstacle.simple(new Translation2d(3.0, 2.0), 0.75, 0.85, 1.0, 1.0, 1.0),
+            new SoftPenaltyObstacle(new Translation2d(3.0, 3.0), 18.0));
+
+    var waypoint =
+        planner.nextWaypoint(
+            new Translation2d(1.0, 2.0),
+            new Pose2d(5.0, 2.0, Rotation2d.kZero),
+            obstacles,
+            0.18,
+            0.18,
+            6.0,
+            4.0);
+
+    assertTrue(waypoint.isPresent());
+    assertTrue(
+        waypoint.get().getY() < 2.0, "weighted cost should avoid the penalized upper corridor");
+    assertTrue(planner.lastStats().routeCostBreakdown().total() > 0.0);
+    assertTrue(planner.lastStats().routeCostBreakdown().distanceCost() > 0.0);
+    assertTrue(planner.lastStats().routeCostBreakdown().obstacleClearanceCost() > 0.0);
+  }
+
+  @Test
+  void weightedWallClearanceCostProducesBreakdownForNearWallRoutes() {
+    CoarseGlobalPlanner planner =
+        new CoarseGlobalPlanner(
+            new CoarseGlobalPlannerConfig(
+                0.25, 0.8, 5000, 1.0, 0.0, new CoarseRouteCostConfig(1.0, 0.0, 0.5, 0.05)));
+
+    var waypoint =
+        planner.nextWaypoint(
+            new Translation2d(1.0, 0.30),
+            new Pose2d(5.0, 0.30, Rotation2d.kZero),
+            List.of(),
+            0.18,
+            0.18,
+            6.0,
+            4.0);
+
+    assertTrue(waypoint.isPresent());
+    assertTrue(planner.lastStats().routeCostBreakdown().wallClearanceCost() > 0.0);
+    assertTrue(
+        planner.lastStats().routeCostBreakdown().total()
+            >= planner.lastStats().routeCostBreakdown().distanceCost());
   }
 
   @Test
@@ -272,4 +326,21 @@ class CoarseGlobalPlannerTest {
   }
 
   private record Scenario(Translation2d start, Pose2d goal) {}
+
+  private static final class SoftPenaltyObstacle extends Obstacle {
+    private final Translation2d center;
+    private final double strength;
+
+    private SoftPenaltyObstacle(Translation2d center, double strength) {
+      super(strength, true);
+      this.center = center;
+      this.strength = strength;
+    }
+
+    @Override
+    public Force getForceAtPosition(Translation2d position, Translation2d target) {
+      double distance = Math.max(0.1, position.getDistance(center));
+      return new Force(strength / (distance * distance), Rotation2d.kZero);
+    }
+  }
 }

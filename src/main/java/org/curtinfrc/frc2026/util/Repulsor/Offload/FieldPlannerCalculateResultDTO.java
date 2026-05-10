@@ -47,6 +47,11 @@ public final class FieldPlannerCalculateResultDTO {
   private int globalFallbackGeneratedNodes;
   private int globalFallbackRawPathNodes;
   private int globalFallbackPathNodes;
+  private double globalFallbackRouteTotalCost;
+  private double globalFallbackRouteDistanceCost;
+  private double globalFallbackRouteObstacleClearanceCost;
+  private double globalFallbackRouteWallClearanceCost;
+  private double globalFallbackRouteTurnCost;
   private long globalFallbackElapsedNanos;
   private String globalFallbackFailureReason = "";
 
@@ -488,6 +493,47 @@ public final class FieldPlannerCalculateResultDTO {
 
   public void setGlobalFallbackPathNodes(int globalFallbackPathNodes) {
     this.globalFallbackPathNodes = globalFallbackPathNodes;
+  }
+
+  public double getGlobalFallbackRouteTotalCost() {
+    return globalFallbackRouteTotalCost;
+  }
+
+  public void setGlobalFallbackRouteTotalCost(double globalFallbackRouteTotalCost) {
+    this.globalFallbackRouteTotalCost = globalFallbackRouteTotalCost;
+  }
+
+  public double getGlobalFallbackRouteDistanceCost() {
+    return globalFallbackRouteDistanceCost;
+  }
+
+  public void setGlobalFallbackRouteDistanceCost(double globalFallbackRouteDistanceCost) {
+    this.globalFallbackRouteDistanceCost = globalFallbackRouteDistanceCost;
+  }
+
+  public double getGlobalFallbackRouteObstacleClearanceCost() {
+    return globalFallbackRouteObstacleClearanceCost;
+  }
+
+  public void setGlobalFallbackRouteObstacleClearanceCost(
+      double globalFallbackRouteObstacleClearanceCost) {
+    this.globalFallbackRouteObstacleClearanceCost = globalFallbackRouteObstacleClearanceCost;
+  }
+
+  public double getGlobalFallbackRouteWallClearanceCost() {
+    return globalFallbackRouteWallClearanceCost;
+  }
+
+  public void setGlobalFallbackRouteWallClearanceCost(double globalFallbackRouteWallClearanceCost) {
+    this.globalFallbackRouteWallClearanceCost = globalFallbackRouteWallClearanceCost;
+  }
+
+  public double getGlobalFallbackRouteTurnCost() {
+    return globalFallbackRouteTurnCost;
+  }
+
+  public void setGlobalFallbackRouteTurnCost(double globalFallbackRouteTurnCost) {
+    this.globalFallbackRouteTurnCost = globalFallbackRouteTurnCost;
   }
 
   public long getGlobalFallbackElapsedNanos() {

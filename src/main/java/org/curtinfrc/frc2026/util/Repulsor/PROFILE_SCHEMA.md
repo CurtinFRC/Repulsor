@@ -139,10 +139,14 @@ plannerRuntime:
   globalFallbackMaxExpandedNodes: 1200
   globalFallbackMaxRuntimeSeconds: 0.010
   globalFallbackClearanceBufferMeters: 0.10
+  globalFallbackDistanceCostWeight: 1.0
+  globalFallbackObstacleClearanceCostWeight: 0.0
+  globalFallbackWallClearanceCostWeight: 0.0
   globalFallbackTurnCostWeight: 0.05
 ```
 
 `globalFallbackClearanceBufferMeters` adds extra margin around the robot and field edge for the coarse route only. Use it to make a strategy preset avoid tight corridors without changing waypoint staging or reactive bypass behavior.
+`globalFallbackDistanceCostWeight`, `globalFallbackObstacleClearanceCostWeight`, and `globalFallbackWallClearanceCostWeight` let a profile prefer shorter routes, routes with softer obstacle clearance, or routes farther from field edges.
 `globalFallbackTurnCostWeight` adds a soft cost for route kinks before smoothing, which helps prefer cleaner coarse paths when multiple routes are otherwise similar.
 
 ## Common mistakes

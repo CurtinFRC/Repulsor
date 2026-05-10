@@ -408,6 +408,9 @@ class FieldProfileYamlLoaderTest {
           globalFallbackMaxExpandedNodes: 321
           globalFallbackMaxRuntimeSeconds: 0.02
           globalFallbackClearanceBufferMeters: 0.23
+          globalFallbackDistanceCostWeight: 1.2
+          globalFallbackObstacleClearanceCostWeight: 2.3
+          globalFallbackWallClearanceCostWeight: 3.4
           globalFallbackTurnCostWeight: 0.17
           forceThroughGoalDistanceMeters: 1.8
           forceThroughWallDistanceMeters: 0.5
@@ -462,6 +465,30 @@ class FieldProfileYamlLoaderTest {
           0.17,
           cfg.plannerRuntime.toFieldPlannerRuntimeConfig().globalFallbackConfig().turnCostWeight(),
           1e-9);
+      assertEquals(
+          1.2,
+          cfg.plannerRuntime
+              .toFieldPlannerRuntimeConfig()
+              .globalFallbackConfig()
+              .routeCostConfig()
+              .distanceWeight(),
+          1e-9);
+      assertEquals(
+          2.3,
+          cfg.plannerRuntime
+              .toFieldPlannerRuntimeConfig()
+              .globalFallbackConfig()
+              .routeCostConfig()
+              .obstacleClearanceWeight(),
+          1e-9);
+      assertEquals(
+          3.4,
+          cfg.plannerRuntime
+              .toFieldPlannerRuntimeConfig()
+              .globalFallbackConfig()
+              .routeCostConfig()
+              .wallClearanceWeight(),
+          1e-9);
 
       Rebuilt2026 field = new Rebuilt2026(cfg);
       FieldPlanner planner =
@@ -474,6 +501,14 @@ class FieldProfileYamlLoaderTest {
       assertEquals(
           0.23, planner.getRuntimeConfig().globalFallbackConfig().clearanceBufferMeters(), 1e-9);
       assertEquals(0.17, planner.getRuntimeConfig().globalFallbackConfig().turnCostWeight(), 1e-9);
+      assertEquals(
+          2.3,
+          planner
+              .getRuntimeConfig()
+              .globalFallbackConfig()
+              .routeCostConfig()
+              .obstacleClearanceWeight(),
+          1e-9);
       assertEquals(1.8, planner.getRuntimeConfig().forceThroughGoalDistanceMeters(), 1e-9);
       assertEquals(0.75, field.autoPathRuntimeConfig().episodeCooldownSeconds(), 1e-9);
       assertEquals(750_000_000L, field.autoPathRuntimeConfig().episodeCooldownNanos());

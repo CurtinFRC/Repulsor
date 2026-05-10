@@ -7,13 +7,12 @@ public record CoarseGlobalPlannerConfig(
     int maxExpandedNodes,
     double maxRuntimeSeconds,
     double clearanceBufferMeters,
-    double turnCostWeight) {
+    CoarseRouteCostConfig routeCostConfig) {
   private static final double DEFAULT_CELL_M = 0.55;
   private static final double DEFAULT_WAYPOINT_LOOKAHEAD_M = 1.4;
   private static final int DEFAULT_MAX_EXPANDED_NODES = 1200;
   private static final double DEFAULT_MAX_RUNTIME_SECONDS = 0.010;
   private static final double DEFAULT_CLEARANCE_BUFFER_METERS = 0.0;
-  private static final double DEFAULT_TURN_COST_WEIGHT = 0.05;
 
   public CoarseGlobalPlannerConfig(
       double cellMeters,
@@ -26,7 +25,7 @@ public record CoarseGlobalPlannerConfig(
         maxExpandedNodes,
         maxRuntimeSeconds,
         0.0,
-        DEFAULT_TURN_COST_WEIGHT);
+        CoarseRouteCostConfig.defaults());
   }
 
   public CoarseGlobalPlannerConfig(
@@ -41,7 +40,23 @@ public record CoarseGlobalPlannerConfig(
         maxExpandedNodes,
         maxRuntimeSeconds,
         clearanceBufferMeters,
-        DEFAULT_TURN_COST_WEIGHT);
+        CoarseRouteCostConfig.defaults());
+  }
+
+  public CoarseGlobalPlannerConfig(
+      double cellMeters,
+      double waypointLookaheadMeters,
+      int maxExpandedNodes,
+      double maxRuntimeSeconds,
+      double clearanceBufferMeters,
+      double turnCostWeight) {
+    this(
+        cellMeters,
+        waypointLookaheadMeters,
+        maxExpandedNodes,
+        maxRuntimeSeconds,
+        clearanceBufferMeters,
+        new CoarseRouteCostConfig(1.0, 0.0, 0.0, turnCostWeight));
   }
 
   public CoarseGlobalPlannerConfig {
@@ -50,7 +65,11 @@ public record CoarseGlobalPlannerConfig(
     maxExpandedNodes = Math.max(1, maxExpandedNodes);
     maxRuntimeSeconds = Math.max(0.0005, maxRuntimeSeconds);
     clearanceBufferMeters = Math.max(0.0, clearanceBufferMeters);
-    turnCostWeight = Math.max(0.0, turnCostWeight);
+    routeCostConfig = routeCostConfig == null ? CoarseRouteCostConfig.defaults() : routeCostConfig;
+  }
+
+  public double turnCostWeight() {
+    return routeCostConfig.turnWeight();
   }
 
   public static CoarseGlobalPlannerConfig defaults() {
@@ -65,8 +84,11 @@ public record CoarseGlobalPlannerConfig(
         doubleProperty(
             "repulsor.fieldplanner.globalFallback.clearanceBufferMeters",
             DEFAULT_CLEARANCE_BUFFER_METERS),
-        doubleProperty(
-            "repulsor.fieldplanner.globalFallback.turnCostWeight", DEFAULT_TURN_COST_WEIGHT));
+        new CoarseRouteCostConfig(
+            doubleProperty("repulsor.fieldplanner.globalFallback.distanceCostWeight", 1.0),
+            doubleProperty("repulsor.fieldplanner.globalFallback.obstacleClearanceCostWeight", 0.0),
+            doubleProperty("repulsor.fieldplanner.globalFallback.wallClearanceCostWeight", 0.0),
+            doubleProperty("repulsor.fieldplanner.globalFallback.turnCostWeight", 0.05)));
   }
 
   private static double doubleProperty(String key, double fallback) {

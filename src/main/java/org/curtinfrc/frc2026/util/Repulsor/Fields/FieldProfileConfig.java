@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import org.curtinfrc.frc2026.util.Repulsor.Behaviours.AutoPathRuntimeConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.CoarseGlobalPlannerConfig;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.CoarseRouteCostConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlannerRuntimeConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointCandidate;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointConfig;
@@ -396,6 +397,16 @@ public class FieldProfileConfig {
     }
     if (overlay.globalFallbackClearanceBufferMeters != null) {
       base.globalFallbackClearanceBufferMeters = overlay.globalFallbackClearanceBufferMeters;
+    }
+    if (overlay.globalFallbackDistanceCostWeight != null) {
+      base.globalFallbackDistanceCostWeight = overlay.globalFallbackDistanceCostWeight;
+    }
+    if (overlay.globalFallbackObstacleClearanceCostWeight != null) {
+      base.globalFallbackObstacleClearanceCostWeight =
+          overlay.globalFallbackObstacleClearanceCostWeight;
+    }
+    if (overlay.globalFallbackWallClearanceCostWeight != null) {
+      base.globalFallbackWallClearanceCostWeight = overlay.globalFallbackWallClearanceCostWeight;
     }
     if (overlay.globalFallbackTurnCostWeight != null) {
       base.globalFallbackTurnCostWeight = overlay.globalFallbackTurnCostWeight;
@@ -993,6 +1004,9 @@ public class FieldProfileConfig {
     public Integer globalFallbackMaxExpandedNodes;
     public Double globalFallbackMaxRuntimeSeconds;
     public Double globalFallbackClearanceBufferMeters;
+    public Double globalFallbackDistanceCostWeight;
+    public Double globalFallbackObstacleClearanceCostWeight;
+    public Double globalFallbackWallClearanceCostWeight;
     public Double globalFallbackTurnCostWeight;
     public Double forceThroughGoalDistanceMeters;
     public Double forceThroughWallDistanceMeters;
@@ -1009,7 +1023,18 @@ public class FieldProfileConfig {
               finitePositive(globalFallbackMaxRuntimeSeconds, globalDefaults.maxRuntimeSeconds()),
               finiteNonNegative(
                   globalFallbackClearanceBufferMeters, globalDefaults.clearanceBufferMeters()),
-              finiteNonNegative(globalFallbackTurnCostWeight, globalDefaults.turnCostWeight()));
+              new CoarseRouteCostConfig(
+                  finiteNonNegative(
+                      globalFallbackDistanceCostWeight,
+                      globalDefaults.routeCostConfig().distanceWeight()),
+                  finiteNonNegative(
+                      globalFallbackObstacleClearanceCostWeight,
+                      globalDefaults.routeCostConfig().obstacleClearanceWeight()),
+                  finiteNonNegative(
+                      globalFallbackWallClearanceCostWeight,
+                      globalDefaults.routeCostConfig().wallClearanceWeight()),
+                  finiteNonNegative(
+                      globalFallbackTurnCostWeight, globalDefaults.turnCostWeight())));
       return new FieldPlannerRuntimeConfig(
           globalFallbackEnabled == null ? defaults.globalFallbackEnabled() : globalFallbackEnabled,
           globalConfig,

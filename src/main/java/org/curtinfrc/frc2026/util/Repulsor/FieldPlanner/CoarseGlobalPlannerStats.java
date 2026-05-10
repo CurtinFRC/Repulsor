@@ -9,6 +9,7 @@ public record CoarseGlobalPlannerStats(
     int generatedNodes,
     int rawPathNodes,
     int pathNodes,
+    CoarseRouteCostBreakdown routeCostBreakdown,
     long elapsedNanos,
     CoarseGlobalPlannerFailureReason failureReason) {
   public CoarseGlobalPlannerStats(
@@ -27,7 +28,9 @@ public record CoarseGlobalPlannerStats(
         generatedNodes,
         pathNodes,
         pathNodes,
-        elapsedNanos);
+        CoarseRouteCostBreakdown.empty(),
+        elapsedNanos,
+        found ? CoarseGlobalPlannerFailureReason.NONE : CoarseGlobalPlannerFailureReason.NO_ROUTE);
   }
 
   public CoarseGlobalPlannerStats(
@@ -47,18 +50,52 @@ public record CoarseGlobalPlannerStats(
         generatedNodes,
         rawPathNodes,
         pathNodes,
+        CoarseRouteCostBreakdown.empty(),
         elapsedNanos,
         found ? CoarseGlobalPlannerFailureReason.NONE : CoarseGlobalPlannerFailureReason.NO_ROUTE);
+  }
+
+  public CoarseGlobalPlannerStats(
+      boolean found,
+      boolean timedOut,
+      boolean exhaustedNodeBudget,
+      int expandedNodes,
+      int generatedNodes,
+      int rawPathNodes,
+      int pathNodes,
+      long elapsedNanos,
+      CoarseGlobalPlannerFailureReason failureReason) {
+    this(
+        found,
+        timedOut,
+        exhaustedNodeBudget,
+        expandedNodes,
+        generatedNodes,
+        rawPathNodes,
+        pathNodes,
+        CoarseRouteCostBreakdown.empty(),
+        elapsedNanos,
+        failureReason);
   }
 
   public CoarseGlobalPlannerStats {
     rawPathNodes = Math.max(0, rawPathNodes);
     pathNodes = Math.max(0, pathNodes);
+    if (routeCostBreakdown == null) routeCostBreakdown = CoarseRouteCostBreakdown.empty();
     if (failureReason == null) failureReason = CoarseGlobalPlannerFailureReason.NONE;
   }
 
   public static CoarseGlobalPlannerStats empty() {
     return new CoarseGlobalPlannerStats(
-        false, false, false, 0, 0, 0, 0, 0L, CoarseGlobalPlannerFailureReason.NONE);
+        false,
+        false,
+        false,
+        0,
+        0,
+        0,
+        0,
+        CoarseRouteCostBreakdown.empty(),
+        0L,
+        CoarseGlobalPlannerFailureReason.NONE);
   }
 }

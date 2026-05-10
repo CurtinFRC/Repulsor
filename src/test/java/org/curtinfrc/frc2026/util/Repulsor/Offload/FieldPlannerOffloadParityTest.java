@@ -120,6 +120,26 @@ class FieldPlannerOffloadParityTest {
         local.globalFallbackStats().rawPathNodes(), offloaded.getGlobalFallbackRawPathNodes());
     assertEquals(local.globalFallbackStats().pathNodes(), offloaded.getGlobalFallbackPathNodes());
     assertEquals(
+        local.globalFallbackStats().routeCostBreakdown().total(),
+        offloaded.getGlobalFallbackRouteTotalCost(),
+        1e-9);
+    assertEquals(
+        local.globalFallbackStats().routeCostBreakdown().distanceCost(),
+        offloaded.getGlobalFallbackRouteDistanceCost(),
+        1e-9);
+    assertEquals(
+        local.globalFallbackStats().routeCostBreakdown().obstacleClearanceCost(),
+        offloaded.getGlobalFallbackRouteObstacleClearanceCost(),
+        1e-9);
+    assertEquals(
+        local.globalFallbackStats().routeCostBreakdown().wallClearanceCost(),
+        offloaded.getGlobalFallbackRouteWallClearanceCost(),
+        1e-9);
+    assertEquals(
+        local.globalFallbackStats().routeCostBreakdown().turnCost(),
+        offloaded.getGlobalFallbackRouteTurnCost(),
+        1e-9);
+    assertEquals(
         local.globalFallbackStats().failureReason().name(),
         offloaded.getGlobalFallbackFailureReason());
     assertTrue(offloaded.isHasSelectedCandidate());

@@ -157,9 +157,19 @@ public final class CoarseGlobalPlanner {
             continue;
           }
 
-          double step = (dx != 0 && dy != 0) ? Math.sqrt(2.0) : 1.0;
-          double turnPenalty = turnPenalty(parent[curIdx], cur.node, next, ny);
-          double tentative = best[curIdx] + step + config.turnCostWeight() * turnPenalty;
+          CoarseRouteCostBreakdown edgeCost =
+              edgeCost(
+                  parent[curIdx],
+                  cur.node,
+                  next,
+                  obstacles,
+                  robotHalfLengthMeters,
+                  robotHalfWidthMeters,
+                  fieldLengthMeters,
+                  fieldWidthMeters,
+                  nx,
+                  ny);
+          double tentative = best[curIdx] + edgeCost.total();
           if (tentative < best[nextIdx]) {
             best[nextIdx] = tentative;
             parent[nextIdx] = curIdx;
@@ -206,6 +216,16 @@ public final class CoarseGlobalPlanner {
             fieldWidthMeters,
             nx,
             ny);
+    CoarseRouteCostBreakdown routeCost =
+        routeCost(
+            path,
+            obstacles,
+            robotHalfLengthMeters,
+            robotHalfWidthMeters,
+            fieldLengthMeters,
+            fieldWidthMeters,
+            nx,
+            ny);
 
     Translation2d waypoint =
         chooseLookahead(smoothedPath, fieldLengthMeters, fieldWidthMeters, nx, ny, start);
@@ -218,6 +238,7 @@ public final class CoarseGlobalPlanner {
         generated,
         path.size(),
         smoothedPath.size(),
+        routeCost,
         startNanos,
         CoarseGlobalPlannerFailureReason.NONE);
     return Optional.of(new Pose2d(waypoint, heading));
@@ -247,6 +268,7 @@ public final class CoarseGlobalPlanner {
         generated,
         pathNodes,
         pathNodes,
+        CoarseRouteCostBreakdown.empty(),
         startNanos,
         failureReason);
   }
@@ -259,6 +281,7 @@ public final class CoarseGlobalPlanner {
       int generated,
       int rawPathNodes,
       int pathNodes,
+      CoarseRouteCostBreakdown routeCost,
       long startNanos,
       CoarseGlobalPlannerFailureReason failureReason) {
     lastStats =
@@ -270,8 +293,74 @@ public final class CoarseGlobalPlanner {
             generated,
             rawPathNodes,
             pathNodes,
+            routeCost,
             System.nanoTime() - startNanos,
             failureReason);
+  }
+
+  private CoarseRouteCostBreakdown routeCost(
+      List<Node> path,
+      List<? extends Obstacle> obstacles,
+      double robotHalfLengthMeters,
+      double robotHalfWidthMeters,
+      double fieldLengthMeters,
+      double fieldWidthMeters,
+      int nx,
+      int ny) {
+    if (path == null || path.size() < 2) return CoarseRouteCostBreakdown.empty();
+    CoarseRouteCostBreakdown total = CoarseRouteCostBreakdown.empty();
+    for (int i = 1; i < path.size(); i++) {
+      int previousIdx = i >= 2 ? index(path.get(i - 2), ny) : -1;
+      total =
+          total.plus(
+              edgeCost(
+                  previousIdx,
+                  path.get(i - 1),
+                  path.get(i),
+                  obstacles,
+                  robotHalfLengthMeters,
+                  robotHalfWidthMeters,
+                  fieldLengthMeters,
+                  fieldWidthMeters,
+                  nx,
+                  ny));
+    }
+    return total;
+  }
+
+  private CoarseRouteCostBreakdown edgeCost(
+      int previousIdx,
+      Node current,
+      Node next,
+      List<? extends Obstacle> obstacles,
+      double robotHalfLengthMeters,
+      double robotHalfWidthMeters,
+      double fieldLengthMeters,
+      double fieldWidthMeters,
+      int nx,
+      int ny) {
+    CoarseRouteCostConfig weights = config.routeCostConfig();
+    double step = Math.hypot(next.x - current.x, next.y - current.y);
+    Translation2d point = toPoint(next, fieldLengthMeters, fieldWidthMeters, nx, ny);
+    double turnPenalty = turnPenalty(previousIdx, current, next, ny);
+    double distanceCost = weights.distanceWeight() * step;
+    double obstacleCost =
+        weights.obstacleClearanceWeight() * obstacleProximityCost(point, obstacles);
+    double wallCost =
+        weights.wallClearanceWeight()
+            * wallProximityCost(
+                point,
+                fieldLengthMeters,
+                fieldWidthMeters,
+                robotHalfLengthMeters,
+                robotHalfWidthMeters);
+    double turnCost = weights.turnWeight() * turnPenalty;
+    return new CoarseRouteCostBreakdown(
+        distanceCost + obstacleCost + wallCost + turnCost,
+        distanceCost,
+        obstacleCost,
+        wallCost,
+        turnCost);
   }
 
   private List<Node> smoothPath(
@@ -447,7 +536,37 @@ public final class CoarseGlobalPlanner {
   }
 
   private double heuristic(Node a, Node b) {
-    return Math.hypot(a.x - b.x, a.y - b.y);
+    return Math.max(0.0, config.routeCostConfig().distanceWeight())
+        * Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  private double obstacleProximityCost(Translation2d point, List<? extends Obstacle> obstacles) {
+    if (point == null || obstacles == null || obstacles.isEmpty()) return 0.0;
+    double cost = 0.0;
+    for (Obstacle obstacle : obstacles) {
+      if (obstacle == null) continue;
+      var force = obstacle.sampleForceAtPosition(point, point);
+      if (force != null && Double.isFinite(force.getNorm())) {
+        cost += force.getNorm();
+      }
+    }
+    return cost;
+  }
+
+  private double wallProximityCost(
+      Translation2d point,
+      double fieldLengthMeters,
+      double fieldWidthMeters,
+      double robotHalfLengthMeters,
+      double robotHalfWidthMeters) {
+    if (point == null) return 0.0;
+    double marginX = Math.max(0.0, robotHalfLengthMeters + config.clearanceBufferMeters());
+    double marginY = Math.max(0.0, robotHalfWidthMeters + config.clearanceBufferMeters());
+    double clearanceX =
+        Math.min(point.getX() - marginX, fieldLengthMeters - marginX - point.getX());
+    double clearanceY = Math.min(point.getY() - marginY, fieldWidthMeters - marginY - point.getY());
+    double clearance = Math.max(0.0, Math.min(clearanceX, clearanceY));
+    return 1.0 / (0.05 + clearance);
   }
 
   private double turnPenalty(int previousIdx, Node current, Node next, int ny) {

@@ -135,6 +135,12 @@ public final class FieldPlannerOffloadLocalAccess {
       out.setGlobalFallbackGeneratedNodes(stats.generatedNodes());
       out.setGlobalFallbackRawPathNodes(stats.rawPathNodes());
       out.setGlobalFallbackPathNodes(stats.pathNodes());
+      out.setGlobalFallbackRouteTotalCost(stats.routeCostBreakdown().total());
+      out.setGlobalFallbackRouteDistanceCost(stats.routeCostBreakdown().distanceCost());
+      out.setGlobalFallbackRouteObstacleClearanceCost(
+          stats.routeCostBreakdown().obstacleClearanceCost());
+      out.setGlobalFallbackRouteWallClearanceCost(stats.routeCostBreakdown().wallClearanceCost());
+      out.setGlobalFallbackRouteTurnCost(stats.routeCostBreakdown().turnCost());
       out.setGlobalFallbackElapsedNanos(stats.elapsedNanos());
       out.setGlobalFallbackFailureReason(stats.failureReason().name());
     }
