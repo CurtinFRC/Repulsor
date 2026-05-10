@@ -94,6 +94,39 @@ class CoarseGlobalPlannerTest {
     assertTrue(planner.lastStats().routeCostBreakdown().total() > 0.0);
     assertTrue(planner.lastStats().routeCostBreakdown().distanceCost() > 0.0);
     assertTrue(planner.lastStats().routeCostBreakdown().obstacleClearanceCost() > 0.0);
+    assertTrue(planner.lastStats().routeClearanceMetrics().minRouteClearanceMeters() > 0.0);
+    assertTrue(
+        planner.lastStats().routeClearanceMetrics().averageRouteClearanceMeters()
+            >= planner.lastStats().routeClearanceMetrics().minRouteClearanceMeters());
+  }
+
+  @Test
+  void clearanceFieldDynamicObstacleNearCorridorShiftsRouteToAlternateSide() {
+    CoarseGlobalPlanner planner =
+        new CoarseGlobalPlanner(
+            new CoarseGlobalPlannerConfig(
+                0.35, 0.8, 5000, 1.0, 0.0, new CoarseRouteCostConfig(1.0, 12.0, 0.0, 0.05)));
+    List<Obstacle> obstacles =
+        List.of(
+            RectangleObstacle.simple(new Translation2d(3.0, 2.0), 0.75, 0.85, 1.0, 1.0, 1.0),
+            RectangleObstacle.simple(new Translation2d(3.0, 3.0), 0.20, 0.25, 1.0, 1.0, 1.0));
+
+    var waypoint =
+        planner.nextWaypoint(
+            new Translation2d(1.0, 2.0),
+            new Pose2d(5.0, 2.0, Rotation2d.kZero),
+            obstacles,
+            0.18,
+            0.18,
+            6.0,
+            4.0);
+
+    assertTrue(waypoint.isPresent());
+    assertTrue(
+        waypoint.get().getY() < 2.0,
+        "clearance field cost should route away from the upper dynamic obstacle");
+    assertTrue(planner.lastStats().routeCostBreakdown().obstacleClearanceCost() > 0.0);
+    assertTrue(planner.lastStats().routeClearanceMetrics().minRouteClearanceMeters() > 0.0);
   }
 
   @Test
@@ -118,6 +151,10 @@ class CoarseGlobalPlannerTest {
     assertTrue(
         planner.lastStats().routeCostBreakdown().total()
             >= planner.lastStats().routeCostBreakdown().distanceCost());
+    assertTrue(planner.lastStats().routeClearanceMetrics().minRouteClearanceMeters() > 0.0);
+    assertTrue(
+        planner.lastStats().routeClearanceMetrics().averageRouteClearanceMeters()
+            >= planner.lastStats().routeClearanceMetrics().minRouteClearanceMeters());
   }
 
   @Test

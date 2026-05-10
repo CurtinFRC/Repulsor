@@ -52,6 +52,8 @@ public final class FieldPlannerCalculateResultDTO {
   private double globalFallbackRouteObstacleClearanceCost;
   private double globalFallbackRouteWallClearanceCost;
   private double globalFallbackRouteTurnCost;
+  private double globalFallbackMinRouteClearanceMeters;
+  private double globalFallbackAverageRouteClearanceMeters;
   private long globalFallbackElapsedNanos;
   private String globalFallbackFailureReason = "";
 
@@ -534,6 +536,24 @@ public final class FieldPlannerCalculateResultDTO {
 
   public void setGlobalFallbackRouteTurnCost(double globalFallbackRouteTurnCost) {
     this.globalFallbackRouteTurnCost = globalFallbackRouteTurnCost;
+  }
+
+  public double getGlobalFallbackMinRouteClearanceMeters() {
+    return globalFallbackMinRouteClearanceMeters;
+  }
+
+  public void setGlobalFallbackMinRouteClearanceMeters(
+      double globalFallbackMinRouteClearanceMeters) {
+    this.globalFallbackMinRouteClearanceMeters = globalFallbackMinRouteClearanceMeters;
+  }
+
+  public double getGlobalFallbackAverageRouteClearanceMeters() {
+    return globalFallbackAverageRouteClearanceMeters;
+  }
+
+  public void setGlobalFallbackAverageRouteClearanceMeters(
+      double globalFallbackAverageRouteClearanceMeters) {
+    this.globalFallbackAverageRouteClearanceMeters = globalFallbackAverageRouteClearanceMeters;
   }
 
   public long getGlobalFallbackElapsedNanos() {

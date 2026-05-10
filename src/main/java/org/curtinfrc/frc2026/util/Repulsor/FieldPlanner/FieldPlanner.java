@@ -1098,6 +1098,9 @@ public class FieldPlanner {
                 remote.getGlobalFallbackRouteObstacleClearanceCost(),
                 remote.getGlobalFallbackRouteWallClearanceCost(),
                 remote.getGlobalFallbackRouteTurnCost()),
+            new CoarseRouteClearanceMetrics(
+                remote.getGlobalFallbackMinRouteClearanceMeters(),
+                remote.getGlobalFallbackAverageRouteClearanceMeters()),
             remote.getGlobalFallbackElapsedNanos(),
             parseGlobalFallbackFailureReason(remote.getGlobalFallbackFailureReason()));
     Optional<Pose2d> globalWaypoint =
@@ -1168,6 +1171,12 @@ public class FieldPlanner {
         stats.routeCostBreakdown().wallClearanceCost());
     Logger.recordOutput(
         "Repulsor/GlobalFallback/RouteTurnCost", stats.routeCostBreakdown().turnCost());
+    Logger.recordOutput(
+        "Repulsor/GlobalFallback/MinRouteClearanceMeters",
+        stats.routeClearanceMetrics().minRouteClearanceMeters());
+    Logger.recordOutput(
+        "Repulsor/GlobalFallback/AverageRouteClearanceMeters",
+        stats.routeClearanceMetrics().averageRouteClearanceMeters());
     Logger.recordOutput("Repulsor/GlobalFallback/FailureReason", stats.failureReason().name());
     Logger.recordOutput("Repulsor/GlobalFallback/ElapsedMs", stats.elapsedNanos() / 1.0e6);
     Logger.recordOutput("Repulsor/GlobalFallback/Waypoint", waypoint.orElse(Pose2d.kZero));
@@ -1299,6 +1308,8 @@ public class FieldPlanner {
                 stats.failureReason().name(),
                 "routeTotalCost",
                 Double.toString(stats.routeCostBreakdown().total()),
+                "minRouteClearanceMeters",
+                Double.toString(stats.routeClearanceMetrics().minRouteClearanceMeters()),
                 "pathNodes",
                 Integer.toString(stats.pathNodes()))));
 
