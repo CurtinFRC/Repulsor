@@ -270,6 +270,55 @@ class CoarseGlobalPlannerTest {
   }
 
   @Test
+  void optionalPartialRouteFallbackReturnsSafeProgressTowardBlockedGoal() {
+    CoarseGlobalPlanner planner =
+        new CoarseGlobalPlanner(
+            new CoarseGlobalPlannerConfig(0.35, 0.8, 5000, 1.0)
+                .withPartialRouteFallback(true, 0.6, 0.0));
+    RectangleObstacle block =
+        RectangleObstacle.simple(new Translation2d(5.0, 2.0), 1.0, 1.0, 1.0, 1.0, 1.0);
+    Translation2d start = new Translation2d(1.0, 2.0);
+    Pose2d goal = new Pose2d(5.0, 2.0, Rotation2d.kZero);
+
+    var waypoint = planner.nextWaypoint(start, goal, List.of(block), 0.18, 0.18, 6.0, 4.0);
+
+    assertTrue(waypoint.isPresent());
+    assertTrue(planner.lastStats().found());
+    assertEquals(
+        CoarseGlobalPlannerFailureReason.PARTIAL_ROUTE_USED, planner.lastStats().failureReason());
+    assertTrue(
+        waypoint.get().getTranslation().getDistance(goal.getTranslation())
+            < start.getDistance(goal.getTranslation()),
+        "partial route should make safe progress toward the blocked goal");
+  }
+
+  @Test
+  void optionalPartialRouteFallbackRejectsUnsafePartialProgress() {
+    CoarseGlobalPlanner planner =
+        new CoarseGlobalPlanner(
+            new CoarseGlobalPlannerConfig(0.35, 0.8, 5000, 1.0)
+                .withPartialRouteFallback(true, 0.6, 10.0));
+    RectangleObstacle block =
+        RectangleObstacle.simple(new Translation2d(5.0, 2.0), 1.0, 1.0, 1.0, 1.0, 1.0);
+
+    var waypoint =
+        planner.nextWaypoint(
+            new Translation2d(1.0, 2.0),
+            new Pose2d(5.0, 2.0, Rotation2d.kZero),
+            List.of(block),
+            0.18,
+            0.18,
+            6.0,
+            4.0);
+
+    assertFalse(waypoint.isPresent());
+    assertFalse(planner.lastStats().found());
+    assertEquals(
+        CoarseGlobalPlannerFailureReason.PARTIAL_ROUTE_REJECTED_UNSAFE,
+        planner.lastStats().failureReason());
+  }
+
+  @Test
   void recordsSearchStatsWhenRouteIsFound() {
     CoarseGlobalPlanner planner = deterministicPlanner();
 

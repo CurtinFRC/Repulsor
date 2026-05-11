@@ -427,6 +427,18 @@ public class FieldProfileConfig {
       base.globalFallbackCorridorPreferenceCostWeight =
           overlay.globalFallbackCorridorPreferenceCostWeight;
     }
+    if (overlay.globalFallbackPartialRouteFallbackEnabled != null) {
+      base.globalFallbackPartialRouteFallbackEnabled =
+          overlay.globalFallbackPartialRouteFallbackEnabled;
+    }
+    if (overlay.globalFallbackPartialRouteMinProgressMeters != null) {
+      base.globalFallbackPartialRouteMinProgressMeters =
+          overlay.globalFallbackPartialRouteMinProgressMeters;
+    }
+    if (overlay.globalFallbackPartialRouteMinClearanceMeters != null) {
+      base.globalFallbackPartialRouteMinClearanceMeters =
+          overlay.globalFallbackPartialRouteMinClearanceMeters;
+    }
     if (overlay.forceThroughGoalDistanceMeters != null) {
       base.forceThroughGoalDistanceMeters = overlay.forceThroughGoalDistanceMeters;
     }
@@ -1025,6 +1037,9 @@ public class FieldProfileConfig {
     public Double globalFallbackWallClearanceCostWeight;
     public Double globalFallbackTurnCostWeight;
     public Double globalFallbackCorridorPreferenceCostWeight;
+    public Boolean globalFallbackPartialRouteFallbackEnabled;
+    public Double globalFallbackPartialRouteMinProgressMeters;
+    public Double globalFallbackPartialRouteMinClearanceMeters;
     public Double forceThroughGoalDistanceMeters;
     public Double forceThroughWallDistanceMeters;
 
@@ -1053,7 +1068,17 @@ public class FieldProfileConfig {
                   finiteNonNegative(globalFallbackTurnCostWeight, globalDefaults.turnCostWeight()),
                   finiteNonNegative(
                       globalFallbackCorridorPreferenceCostWeight,
-                      globalDefaults.routeCostConfig().corridorPreferenceWeight())));
+                      globalDefaults.routeCostConfig().corridorPreferenceWeight())),
+              globalDefaults.corridorPreferences(),
+              globalFallbackPartialRouteFallbackEnabled == null
+                  ? globalDefaults.partialRouteFallbackEnabled()
+                  : globalFallbackPartialRouteFallbackEnabled,
+              finiteNonNegative(
+                  globalFallbackPartialRouteMinProgressMeters,
+                  globalDefaults.partialRouteMinProgressMeters()),
+              finiteNonNegative(
+                  globalFallbackPartialRouteMinClearanceMeters,
+                  globalDefaults.partialRouteMinClearanceMeters()));
       return new FieldPlannerRuntimeConfig(
           globalFallbackEnabled == null ? defaults.globalFallbackEnabled() : globalFallbackEnabled,
           globalConfig,

@@ -90,15 +90,17 @@ public final class CoarseGlobalPlanner {
           false, false, false, 0, 0, 0, startNanos, CoarseGlobalPlannerFailureReason.START_BLOCKED);
       return Optional.empty();
     }
-    if (!isFree(
-        g,
-        obstacles,
-        robotHalfLengthMeters,
-        robotHalfWidthMeters,
-        fieldLengthMeters,
-        fieldWidthMeters,
-        nx,
-        ny)) {
+    boolean goalBlocked =
+        !isFree(
+            g,
+            obstacles,
+            robotHalfLengthMeters,
+            robotHalfWidthMeters,
+            fieldLengthMeters,
+            fieldWidthMeters,
+            nx,
+            ny);
+    if (goalBlocked && !config.partialRouteFallbackEnabled()) {
       finishStats(
           false, false, false, 0, 0, 0, startNanos, CoarseGlobalPlannerFailureReason.GOAL_BLOCKED);
       return Optional.empty();
@@ -125,6 +127,9 @@ public final class CoarseGlobalPlanner {
     boolean exhaustedBudget = false;
     long maxRuntimeNanos = (long) (config.maxRuntimeSeconds() * 1_000_000_000.0);
     long searchStartNanos = System.nanoTime();
+    int bestPartialIdx = -1;
+    double bestPartialScore = Double.POSITIVE_INFINITY;
+    double directGoalDistance = start.getDistance(goal.getTranslation());
 
     while (!open.isEmpty()) {
       if (System.nanoTime() - searchStartNanos > maxRuntimeNanos) {
@@ -141,6 +146,27 @@ public final class CoarseGlobalPlanner {
       if (closed[curIdx]) continue;
       closed[curIdx] = true;
       expanded++;
+      PartialRouteCandidate partialCandidate =
+          partialRouteCandidate(
+              cur.node,
+              curIdx,
+              startIdx,
+              parent,
+              best,
+              goal.getTranslation(),
+              directGoalDistance,
+              fieldLengthMeters,
+              fieldWidthMeters,
+              nx,
+              ny,
+              clearanceField,
+              obstacles,
+              robotHalfLengthMeters,
+              robotHalfWidthMeters);
+      if (partialCandidate.usable() && partialCandidate.score() < bestPartialScore) {
+        bestPartialScore = partialCandidate.score();
+        bestPartialIdx = curIdx;
+      }
       if (curIdx == goalIdx) break;
 
       for (int dx = -1; dx <= 1; dx++) {
@@ -199,6 +225,27 @@ public final class CoarseGlobalPlanner {
     }
 
     if (parent[goalIdx] < 0 && goalIdx != startIdx) {
+      Optional<Pose2d> partialWaypoint =
+          partialRouteWaypoint(
+              bestPartialIdx,
+              startIdx,
+              parent,
+              ny,
+              obstacles,
+              robotHalfLengthMeters,
+              robotHalfWidthMeters,
+              fieldLengthMeters,
+              fieldWidthMeters,
+              nx,
+              clearanceField,
+              start,
+              goal.getTranslation(),
+              timedOut,
+              exhaustedBudget,
+              expanded,
+              generated,
+              startNanos);
+      if (partialWaypoint.isPresent()) return partialWaypoint;
       previousWaypoint = null;
       finishStats(
           false,
@@ -208,7 +255,7 @@ public final class CoarseGlobalPlanner {
           generated,
           0,
           startNanos,
-          failureReason(timedOut, exhaustedBudget, CoarseGlobalPlannerFailureReason.NO_ROUTE));
+          noFullRouteFailureReason(timedOut, exhaustedBudget, goalBlocked));
       return Optional.empty();
     }
     List<Node> path = reconstruct(goalIdx, startIdx, parent, ny);
@@ -281,11 +328,201 @@ public final class CoarseGlobalPlanner {
     return Optional.of(new Pose2d(waypoint, heading));
   }
 
-  private static CoarseGlobalPlannerFailureReason failureReason(
-      boolean timedOut, boolean exhaustedBudget, CoarseGlobalPlannerFailureReason fallback) {
+  private CoarseGlobalPlannerFailureReason noFullRouteFailureReason(
+      boolean timedOut, boolean exhaustedBudget, boolean goalBlocked) {
     if (timedOut) return CoarseGlobalPlannerFailureReason.TIMEOUT;
     if (exhaustedBudget) return CoarseGlobalPlannerFailureReason.NODE_BUDGET;
-    return fallback;
+    if (config.partialRouteFallbackEnabled()) {
+      return CoarseGlobalPlannerFailureReason.PARTIAL_ROUTE_REJECTED_UNSAFE;
+    }
+    return goalBlocked
+        ? CoarseGlobalPlannerFailureReason.GOAL_BLOCKED
+        : CoarseGlobalPlannerFailureReason.NO_ROUTE;
+  }
+
+  private Optional<Pose2d> partialRouteWaypoint(
+      int partialIdx,
+      int startIdx,
+      int[] parent,
+      int ny,
+      List<? extends Obstacle> obstacles,
+      double robotHalfLengthMeters,
+      double robotHalfWidthMeters,
+      double fieldLengthMeters,
+      double fieldWidthMeters,
+      int nx,
+      ClearanceField clearanceField,
+      Translation2d start,
+      Translation2d goal,
+      boolean timedOut,
+      boolean exhaustedBudget,
+      int expanded,
+      int generated,
+      long startNanos) {
+    if (!config.partialRouteFallbackEnabled() || partialIdx < 0 || parent == null) {
+      return Optional.empty();
+    }
+    List<Node> path = reconstruct(partialIdx, startIdx, parent, ny);
+    if (path.size() < 2) return Optional.empty();
+    List<Node> smoothedPath =
+        smoothPath(
+            path,
+            obstacles,
+            robotHalfLengthMeters,
+            robotHalfWidthMeters,
+            fieldLengthMeters,
+            fieldWidthMeters,
+            nx,
+            ny);
+    CoarseRouteClearanceMetrics routeClearanceMetrics = routeClearance(path, clearanceField);
+    CoarseRouteCostBreakdown routeCost =
+        routeCost(
+            path,
+            obstacles,
+            robotHalfLengthMeters,
+            robotHalfWidthMeters,
+            fieldLengthMeters,
+            fieldWidthMeters,
+            nx,
+            ny,
+            clearanceField);
+    LookaheadSelection selection =
+        chooseLookahead(
+            smoothedPath,
+            clearanceField,
+            obstacles,
+            robotHalfLengthMeters,
+            robotHalfWidthMeters,
+            fieldLengthMeters,
+            fieldWidthMeters,
+            nx,
+            ny,
+            start);
+    Translation2d waypoint = selection.point();
+    if (waypoint == null || start.getDistance(waypoint) < config.cellMeters() * 0.5) {
+      return Optional.empty();
+    }
+    previousWaypoint = waypoint;
+    Rotation2d heading = goal.minus(waypoint).getAngle();
+    finishStats(
+        true,
+        timedOut,
+        exhaustedBudget,
+        expanded,
+        generated,
+        path.size(),
+        smoothedPath.size(),
+        routeCost,
+        routeClearanceMetrics,
+        selection.index(),
+        selection.reason(),
+        startNanos,
+        CoarseGlobalPlannerFailureReason.PARTIAL_ROUTE_USED);
+    return Optional.of(new Pose2d(waypoint, heading));
+  }
+
+  private PartialRouteCandidate partialRouteCandidate(
+      Node node,
+      int nodeIdx,
+      int startIdx,
+      int[] parent,
+      double[] best,
+      Translation2d goal,
+      double directGoalDistance,
+      double fieldLengthMeters,
+      double fieldWidthMeters,
+      int nx,
+      int ny,
+      ClearanceField clearanceField,
+      List<? extends Obstacle> obstacles,
+      double robotHalfLengthMeters,
+      double robotHalfWidthMeters) {
+    if (!config.partialRouteFallbackEnabled()
+        || node == null
+        || nodeIdx == startIdx
+        || parent == null
+        || best == null
+        || parent[nodeIdx] < 0) {
+      return PartialRouteCandidate.unusable();
+    }
+    Translation2d point = toPoint(node, fieldLengthMeters, fieldWidthMeters, nx, ny);
+    double remaining = point.getDistance(goal);
+    double progress = directGoalDistance - remaining;
+    if (progress < config.partialRouteMinProgressMeters()) {
+      return PartialRouteCandidate.unusable();
+    }
+    double clearance =
+        clearanceField == null
+            ? Double.POSITIVE_INFINITY
+            : clearanceField.routeClearanceMeters(node);
+    if (clearance < config.partialRouteMinClearanceMeters()) {
+      return PartialRouteCandidate.unusable();
+    }
+    if (!hasPartialRouteEscape(
+        node,
+        point,
+        goal,
+        obstacles,
+        robotHalfLengthMeters,
+        robotHalfWidthMeters,
+        fieldLengthMeters,
+        fieldWidthMeters,
+        nx,
+        ny)) {
+      return PartialRouteCandidate.unusable();
+    }
+    double boundedClearance = Double.isFinite(clearance) ? Math.min(clearance, 2.0) : 2.0;
+    double pathCost = Double.isFinite(best[nodeIdx]) ? best[nodeIdx] : 0.0;
+    double score = remaining + 0.15 * pathCost - 0.25 * boundedClearance;
+    return new PartialRouteCandidate(true, score);
+  }
+
+  private boolean hasPartialRouteEscape(
+      Node node,
+      Translation2d point,
+      Translation2d goal,
+      List<? extends Obstacle> obstacles,
+      double robotHalfLengthMeters,
+      double robotHalfWidthMeters,
+      double fieldLengthMeters,
+      double fieldWidthMeters,
+      int nx,
+      int ny) {
+    int exits = 0;
+    double remaining = point.getDistance(goal);
+    for (int dx = -1; dx <= 1; dx++) {
+      for (int dy = -1; dy <= 1; dy++) {
+        if (dx == 0 && dy == 0) continue;
+        Node next = new Node(node.x + dx, node.y + dy);
+        if (next.x < 0 || next.x >= nx || next.y < 0 || next.y >= ny) continue;
+        if (!isFree(
+            next,
+            obstacles,
+            robotHalfLengthMeters,
+            robotHalfWidthMeters,
+            fieldLengthMeters,
+            fieldWidthMeters,
+            nx,
+            ny)) {
+          continue;
+        }
+        if (!edgeFree(
+            node,
+            next,
+            obstacles,
+            robotHalfLengthMeters,
+            robotHalfWidthMeters,
+            fieldLengthMeters,
+            fieldWidthMeters,
+            nx,
+            ny)) {
+          continue;
+        }
+        Translation2d nextPoint = toPoint(next, fieldLengthMeters, fieldWidthMeters, nx, ny);
+        if (nextPoint.getDistance(goal) <= remaining + config.cellMeters()) exits++;
+      }
+    }
+    return exits >= 2;
   }
 
   private void finishStats(
@@ -882,6 +1119,12 @@ public final class CoarseGlobalPlanner {
   private record Node(int x, int y) {}
 
   private record Entry(Node node, double g, double f) {}
+
+  private record PartialRouteCandidate(boolean usable, double score) {
+    static PartialRouteCandidate unusable() {
+      return new PartialRouteCandidate(false, Double.POSITIVE_INFINITY);
+    }
+  }
 
   private record LookaheadSelection(
       Translation2d point, int index, CoarseGlobalPlannerWaypointReason reason) {

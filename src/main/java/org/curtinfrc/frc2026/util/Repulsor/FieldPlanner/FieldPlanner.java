@@ -1329,7 +1329,10 @@ public class FieldPlanner {
     if (diagnostics.globalFallbackActive()) {
       if (diagnostics.globalFallbackWaypoint().isPresent()) {
         fallbackDecision = "temporary_waypoint";
-        fallbackReason = stats.found() ? "search_found_waypoint" : stats.failureReason().name();
+        fallbackReason =
+            stats.failureReason() == CoarseGlobalPlannerFailureReason.PARTIAL_ROUTE_USED
+                ? stats.failureReason().name()
+                : stats.found() ? "search_found_waypoint" : stats.failureReason().name();
       } else if (stats.timedOut()) {
         fallbackDecision = "timeout";
         fallbackReason = stats.failureReason().name();

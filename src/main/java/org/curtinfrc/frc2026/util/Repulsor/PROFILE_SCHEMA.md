@@ -144,12 +144,17 @@ plannerRuntime:
   globalFallbackWallClearanceCostWeight: 0.0
   globalFallbackTurnCostWeight: 0.05
   globalFallbackCorridorPreferenceCostWeight: 0.0
+  globalFallbackPartialRouteFallbackEnabled: false
+  globalFallbackPartialRouteMinProgressMeters: 0.75
+  globalFallbackPartialRouteMinClearanceMeters: 0.05
 ```
 
 `globalFallbackClearanceBufferMeters` adds extra margin around the robot and field edge for the coarse route only. Use it to make a strategy preset avoid tight corridors without changing waypoint staging or reactive bypass behavior.
 `globalFallbackDistanceCostWeight`, `globalFallbackObstacleClearanceCostWeight`, and `globalFallbackWallClearanceCostWeight` let a profile prefer shorter routes, routes with softer obstacle clearance, or routes farther from field edges.
 `globalFallbackTurnCostWeight` adds a soft cost for route kinks before smoothing, which helps prefer cleaner coarse paths when multiple routes are otherwise similar.
 `globalFallbackCorridorPreferenceCostWeight` scales soft route costs created from `semanticRegions`: regions with `penaltyTags` or `collectPenalty` become avoided corridors, while regions with `preferenceTags` or `collectPreference` become preferred corridors. This only biases coarse fallback routing; waypoint policy still owns strategic staging and reactive bypass still owns local obstacle recovery.
+`globalFallbackPartialRouteFallbackEnabled` allows the coarse planner to return a conservative temporary waypoint toward the safest best frontier when the final goal is unreachable, such as when the goal cell is currently blocked. It defaults off so blocked goals remain explicit unless a strategy opts in.
+`globalFallbackPartialRouteMinProgressMeters` and `globalFallbackPartialRouteMinClearanceMeters` gate partial-route use so the planner only accepts a partial route when it moves meaningfully toward the goal and remains geometrically safe. Partial routes report `PARTIAL_ROUTE_USED` or `PARTIAL_ROUTE_REJECTED_UNSAFE` in diagnostics.
 
 ## Common mistakes
 

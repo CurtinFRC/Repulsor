@@ -153,6 +153,9 @@ class FieldProfileYamlLoaderTest {
         projectileShots: {}
         plannerRuntime:
           globalFallbackCorridorPreferenceCostWeight: 4.0
+          globalFallbackPartialRouteFallbackEnabled: true
+          globalFallbackPartialRouteMinProgressMeters: 0.9
+          globalFallbackPartialRouteMinClearanceMeters: 0.12
         semanticRegions:
           safeLane:
             minXMeters: 0.0
@@ -178,6 +181,9 @@ class FieldProfileYamlLoaderTest {
       assertEquals(
           4.0, runtime.globalFallbackConfig().routeCostConfig().corridorPreferenceWeight());
       assertEquals(2, runtime.globalFallbackConfig().corridorPreferences().size());
+      assertTrue(runtime.globalFallbackConfig().partialRouteFallbackEnabled());
+      assertEquals(0.9, runtime.globalFallbackConfig().partialRouteMinProgressMeters(), 1e-9);
+      assertEquals(0.12, runtime.globalFallbackConfig().partialRouteMinClearanceMeters(), 1e-9);
     } finally {
       if (previous == null) {
         System.clearProperty("repulsor.profile.path");

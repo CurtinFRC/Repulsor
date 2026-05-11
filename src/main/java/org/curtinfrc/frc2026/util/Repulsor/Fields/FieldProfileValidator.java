@@ -456,6 +456,14 @@ public final class FieldProfileValidator {
         prefix + ".globalFallbackCorridorPreferenceCostWeight",
         errors);
     requireOptionalNonNegative(
+        plannerRuntime.globalFallbackPartialRouteMinProgressMeters,
+        prefix + ".globalFallbackPartialRouteMinProgressMeters",
+        errors);
+    requireOptionalNonNegative(
+        plannerRuntime.globalFallbackPartialRouteMinClearanceMeters,
+        prefix + ".globalFallbackPartialRouteMinClearanceMeters",
+        errors);
+    requireOptionalNonNegative(
         plannerRuntime.forceThroughGoalDistanceMeters,
         prefix + ".forceThroughGoalDistanceMeters",
         errors);

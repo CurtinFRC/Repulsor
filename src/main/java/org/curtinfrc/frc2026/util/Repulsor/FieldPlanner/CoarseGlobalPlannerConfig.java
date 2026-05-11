@@ -10,12 +10,17 @@ public record CoarseGlobalPlannerConfig(
     double maxRuntimeSeconds,
     double clearanceBufferMeters,
     CoarseRouteCostConfig routeCostConfig,
-    List<PlannerCorridorPreference> corridorPreferences) {
+    List<PlannerCorridorPreference> corridorPreferences,
+    boolean partialRouteFallbackEnabled,
+    double partialRouteMinProgressMeters,
+    double partialRouteMinClearanceMeters) {
   private static final double DEFAULT_CELL_M = 0.55;
   private static final double DEFAULT_WAYPOINT_LOOKAHEAD_M = 1.4;
   private static final int DEFAULT_MAX_EXPANDED_NODES = 1200;
   private static final double DEFAULT_MAX_RUNTIME_SECONDS = 0.010;
   private static final double DEFAULT_CLEARANCE_BUFFER_METERS = 0.0;
+  private static final double DEFAULT_PARTIAL_ROUTE_MIN_PROGRESS_METERS = 0.75;
+  private static final double DEFAULT_PARTIAL_ROUTE_MIN_CLEARANCE_METERS = 0.05;
 
   public CoarseGlobalPlannerConfig(
       double cellMeters,
@@ -29,7 +34,10 @@ public record CoarseGlobalPlannerConfig(
         maxRuntimeSeconds,
         0.0,
         CoarseRouteCostConfig.defaults(),
-        List.of());
+        List.of(),
+        false,
+        DEFAULT_PARTIAL_ROUTE_MIN_PROGRESS_METERS,
+        DEFAULT_PARTIAL_ROUTE_MIN_CLEARANCE_METERS);
   }
 
   public CoarseGlobalPlannerConfig(
@@ -45,7 +53,10 @@ public record CoarseGlobalPlannerConfig(
         maxRuntimeSeconds,
         clearanceBufferMeters,
         CoarseRouteCostConfig.defaults(),
-        List.of());
+        List.of(),
+        false,
+        DEFAULT_PARTIAL_ROUTE_MIN_PROGRESS_METERS,
+        DEFAULT_PARTIAL_ROUTE_MIN_CLEARANCE_METERS);
   }
 
   public CoarseGlobalPlannerConfig(
@@ -62,7 +73,10 @@ public record CoarseGlobalPlannerConfig(
         maxRuntimeSeconds,
         clearanceBufferMeters,
         new CoarseRouteCostConfig(1.0, 0.0, 0.0, turnCostWeight),
-        List.of());
+        List.of(),
+        false,
+        DEFAULT_PARTIAL_ROUTE_MIN_PROGRESS_METERS,
+        DEFAULT_PARTIAL_ROUTE_MIN_CLEARANCE_METERS);
   }
 
   public CoarseGlobalPlannerConfig(
@@ -79,7 +93,31 @@ public record CoarseGlobalPlannerConfig(
         maxRuntimeSeconds,
         clearanceBufferMeters,
         routeCostConfig,
-        List.of());
+        List.of(),
+        false,
+        DEFAULT_PARTIAL_ROUTE_MIN_PROGRESS_METERS,
+        DEFAULT_PARTIAL_ROUTE_MIN_CLEARANCE_METERS);
+  }
+
+  public CoarseGlobalPlannerConfig(
+      double cellMeters,
+      double waypointLookaheadMeters,
+      int maxExpandedNodes,
+      double maxRuntimeSeconds,
+      double clearanceBufferMeters,
+      CoarseRouteCostConfig routeCostConfig,
+      List<PlannerCorridorPreference> corridorPreferences) {
+    this(
+        cellMeters,
+        waypointLookaheadMeters,
+        maxExpandedNodes,
+        maxRuntimeSeconds,
+        clearanceBufferMeters,
+        routeCostConfig,
+        corridorPreferences,
+        false,
+        DEFAULT_PARTIAL_ROUTE_MIN_PROGRESS_METERS,
+        DEFAULT_PARTIAL_ROUTE_MIN_CLEARANCE_METERS);
   }
 
   public CoarseGlobalPlannerConfig {
@@ -91,6 +129,8 @@ public record CoarseGlobalPlannerConfig(
     routeCostConfig = routeCostConfig == null ? CoarseRouteCostConfig.defaults() : routeCostConfig;
     corridorPreferences =
         corridorPreferences == null ? List.of() : List.copyOf(corridorPreferences);
+    partialRouteMinProgressMeters = Math.max(0.0, partialRouteMinProgressMeters);
+    partialRouteMinClearanceMeters = Math.max(0.0, partialRouteMinClearanceMeters);
   }
 
   public double turnCostWeight() {
@@ -116,7 +156,14 @@ public record CoarseGlobalPlannerConfig(
             doubleProperty("repulsor.fieldplanner.globalFallback.turnCostWeight", 0.05),
             doubleProperty(
                 "repulsor.fieldplanner.globalFallback.corridorPreferenceCostWeight", 0.0)),
-        List.of());
+        List.of(),
+        booleanProperty("repulsor.fieldplanner.globalFallback.partialRouteFallbackEnabled", false),
+        doubleProperty(
+            "repulsor.fieldplanner.globalFallback.partialRouteMinProgressMeters",
+            DEFAULT_PARTIAL_ROUTE_MIN_PROGRESS_METERS),
+        doubleProperty(
+            "repulsor.fieldplanner.globalFallback.partialRouteMinClearanceMeters",
+            DEFAULT_PARTIAL_ROUTE_MIN_CLEARANCE_METERS));
   }
 
   public CoarseGlobalPlannerConfig withCorridorPreferences(
@@ -128,7 +175,30 @@ public record CoarseGlobalPlannerConfig(
         maxRuntimeSeconds,
         clearanceBufferMeters,
         routeCostConfig,
-        preferences);
+        preferences,
+        partialRouteFallbackEnabled,
+        partialRouteMinProgressMeters,
+        partialRouteMinClearanceMeters);
+  }
+
+  public CoarseGlobalPlannerConfig withPartialRouteFallback(
+      boolean enabled, double minProgressMeters, double minClearanceMeters) {
+    return new CoarseGlobalPlannerConfig(
+        cellMeters,
+        waypointLookaheadMeters,
+        maxExpandedNodes,
+        maxRuntimeSeconds,
+        clearanceBufferMeters,
+        routeCostConfig,
+        corridorPreferences,
+        enabled,
+        minProgressMeters,
+        minClearanceMeters);
+  }
+
+  private static boolean booleanProperty(String key, boolean fallback) {
+    String value = System.getProperty(key);
+    return value == null ? fallback : Boolean.parseBoolean(value);
   }
 
   private static double doubleProperty(String key, double fallback) {

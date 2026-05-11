@@ -9,5 +9,7 @@ public enum CoarseGlobalPlannerFailureReason {
   TIMEOUT,
   NODE_BUDGET,
   NO_ROUTE,
+  PARTIAL_ROUTE_USED,
+  PARTIAL_ROUTE_REJECTED_UNSAFE,
   PATH_TOO_SHORT
 }
