@@ -23,11 +23,11 @@ import edu.wpi.first.math.geometry.Translation2d;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.curtinfrc.frc2026.util.Repulsor.DriverStation.NtRepulsorDriverStation;
 import org.curtinfrc.frc2026.util.Repulsor.DriverStation.RepulsorDriverStation;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.PredictedDynamicObstacleEnvelope;
 import org.curtinfrc.frc2026.util.Repulsor.Vision.RepulsorVision;
 import org.curtinfrc.frc2026.util.Repulsor.Vision.RepulsorVision.Kind;
 import org.curtinfrc.frc2026.util.Repulsor.Vision.RepulsorVision.ObstacleType;
@@ -38,6 +38,11 @@ import org.curtinfrc.frc2026.util.Repulsor.Vision.RepulsorVision.ObstacleType;
  * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
  */
 public class VisionPlanner {
+  private static final double DEFAULT_PREDICTION_STRENGTH = 1.5;
+  private static final double DEFAULT_PREDICTION_HORIZON_WEIGHT = 0.70;
+  private static final double DEFAULT_PREDICTION_UNCERTAINTY_METERS = 0.15;
+  private static final double DEFAULT_MAX_ASSOCIATION_METERS = 2.0;
+
   /**
    * Provides vision obstacle functionality for the Repulsor core Repulsor coordination layer. Use
    * this type from robot code, field profiles, or tests when integrating the corresponding Repulsor
@@ -146,6 +151,9 @@ public class VisionPlanner {
   }
 
   private List<RepulsorVision> m_vision = new ArrayList<RepulsorVision>();
+  private List<RepulsorVision.Obstacle> previousDetections = List.of();
+  private List<Obstacle> cachedObstacles = List.of();
+  private boolean cacheInitialized = false;
 
   /** Returns the vision planner value maintained by this Repulsor component. */
   public VisionPlanner() {}
@@ -175,17 +183,130 @@ public class VisionPlanner {
    *
    * @return list of vision obstacle values produced by this operation.
    */
-  public List<VisionObstacle> getObstacles() {
-    return m_vision.stream()
-        .flatMap(v -> Arrays.stream(v.getObstacles()))
-        .map(o -> new VisionObstacle(new Translation2d(o.x(), o.y()), 1.5, o.type()))
-        .collect(Collectors.toList());
+  public List<Obstacle> getObstacles() {
+    if (!cacheInitialized) {
+      refreshObstacleCache();
+    }
+    return cachedObstacles;
   }
 
   /** Runs tick in the Repulsor runtime. */
   public void tick() {
     for (RepulsorVision vision : m_vision) {
       vision.tick();
+    }
+    refreshObstacleCache();
+  }
+
+  private void refreshObstacleCache() {
+    List<RepulsorVision.Obstacle> currentDetections = currentDetections();
+    ArrayList<Obstacle> output = new ArrayList<>();
+    for (RepulsorVision.Obstacle detection : currentDetections) {
+      output.add(toVisionObstacle(detection));
+    }
+    if (predictionEnabled()) {
+      output.addAll(predictedEnvelopes(currentDetections, previousDetections));
+    }
+    previousDetections = List.copyOf(currentDetections);
+    cachedObstacles = List.copyOf(output);
+    cacheInitialized = true;
+  }
+
+  private List<RepulsorVision.Obstacle> currentDetections() {
+    ArrayList<RepulsorVision.Obstacle> detections = new ArrayList<>();
+    for (RepulsorVision vision : m_vision) {
+      detections.addAll(Arrays.asList(vision.getObstacles()));
+    }
+    return detections;
+  }
+
+  private VisionObstacle toVisionObstacle(RepulsorVision.Obstacle detection) {
+    return new VisionObstacle(
+        new Translation2d(detection.x(), detection.y()),
+        DEFAULT_PREDICTION_STRENGTH,
+        detection.type());
+  }
+
+  private List<PredictedDynamicObstacleEnvelope> predictedEnvelopes(
+      List<RepulsorVision.Obstacle> currentDetections,
+      List<RepulsorVision.Obstacle> previousDetections) {
+    if (currentDetections.isEmpty() || previousDetections.isEmpty()) return List.of();
+    boolean[] usedPrevious = new boolean[previousDetections.size()];
+    ArrayList<PredictedDynamicObstacleEnvelope> predictions = new ArrayList<>();
+    for (RepulsorVision.Obstacle current : currentDetections) {
+      int previousIdx = nearestMatchingPrevious(current, previousDetections, usedPrevious);
+      if (previousIdx < 0) continue;
+      usedPrevious[previousIdx] = true;
+      RepulsorVision.Obstacle previous = previousDetections.get(previousIdx);
+      Translation2d displacement =
+          new Translation2d(current.x() - previous.x(), current.y() - previous.y());
+      if (displacement.getNorm() <= 1e-6) continue;
+      ObstacleType type = current.type();
+      double uncertainty = predictionUncertaintyMeters();
+      double weight = predictionHorizonWeight();
+      predictions.add(
+          new PredictedDynamicObstacleEnvelope(
+              new Translation2d(
+                  current.x() + displacement.getX(), current.y() + displacement.getY()),
+              type.getSize().getFirst() * 0.5 + uncertainty,
+              type.getSize().getSecond() * 0.5 + uncertainty,
+              DEFAULT_PREDICTION_STRENGTH,
+              weight,
+              1));
+    }
+    return predictions;
+  }
+
+  private int nearestMatchingPrevious(
+      RepulsorVision.Obstacle current,
+      List<RepulsorVision.Obstacle> previousDetections,
+      boolean[] usedPrevious) {
+    int best = -1;
+    double bestDistance = Double.POSITIVE_INFINITY;
+    for (int i = 0; i < previousDetections.size(); i++) {
+      if (usedPrevious[i]) continue;
+      RepulsorVision.Obstacle previous = previousDetections.get(i);
+      if (!sameType(current.type(), previous.type())) continue;
+      double distance = Math.hypot(current.x() - previous.x(), current.y() - previous.y());
+      if (distance < bestDistance && distance <= maxAssociationMeters()) {
+        bestDistance = distance;
+        best = i;
+      }
+    }
+    return best;
+  }
+
+  private boolean sameType(ObstacleType a, ObstacleType b) {
+    if (a == null || b == null) return false;
+    return a.getKind() == b.getKind()
+        && Math.abs(a.getSize().getFirst() - b.getSize().getFirst()) <= 1e-9
+        && Math.abs(a.getSize().getSecond() - b.getSize().getSecond()) <= 1e-9;
+  }
+
+  private static boolean predictionEnabled() {
+    return Boolean.parseBoolean(System.getProperty("repulsor.vision.prediction.enabled", "true"));
+  }
+
+  private static double predictionHorizonWeight() {
+    return doubleProperty(
+        "repulsor.vision.prediction.horizonWeight", DEFAULT_PREDICTION_HORIZON_WEIGHT);
+  }
+
+  private static double predictionUncertaintyMeters() {
+    return doubleProperty(
+        "repulsor.vision.prediction.uncertaintyMeters", DEFAULT_PREDICTION_UNCERTAINTY_METERS);
+  }
+
+  private static double maxAssociationMeters() {
+    return doubleProperty(
+        "repulsor.vision.prediction.maxAssociationMeters", DEFAULT_MAX_ASSOCIATION_METERS);
+  }
+
+  private static double doubleProperty(String key, double fallback) {
+    try {
+      return Double.parseDouble(System.getProperty(key, Double.toString(fallback)));
+    } catch (NumberFormatException ex) {
+      return fallback;
     }
   }
 }

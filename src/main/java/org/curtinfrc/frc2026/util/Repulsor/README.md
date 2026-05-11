@@ -252,6 +252,20 @@ Local force-field stability diagnostics are grouped under `Repulsor/LocalForce`:
 
 This layer only damps the local force output when global fallback, reactive bypass, and force-through are not active. It does not choose strategic waypoints, select objectives, or replace the coarse fallback route.
 
+
+### Dynamic Obstacle Prediction
+
+`VisionPlanner` now keeps a deterministic previous/current detection cache and, when a detection moves between ticks, adds a soft predicted envelope at the next extrapolated position. Current-cycle vision obstacles still provide hard collision geometry; predicted envelopes only add route and local-force cost so they bias routing away from likely near-future conflicts without pretending to be a strategy decision.
+
+Prediction tuning uses JVM properties:
+
+- `repulsor.vision.prediction.enabled` defaults to `true`.
+- `repulsor.vision.prediction.horizonWeight` defaults to `0.70`.
+- `repulsor.vision.prediction.uncertaintyMeters` defaults to `0.15`.
+- `repulsor.vision.prediction.maxAssociationMeters` defaults to `2.0`.
+
+Keep prediction deterministic and geometry-driven. Do not add loop-time assertions for this layer; validate route choices with fixed detection sequences and scenario geometry instead.
+
 ### Offload Boundary
 
 `FieldPlanner.calculate(...)` may run through the offload entrypoint when enabled. The offload path receives the requested/active goal, dynamic obstacles, category, alliance preference, and shooter height, then returns both the sample and the resulting active goal/error state. Regression tests cover parity for clear paths, dynamic obstacles, and global-fallback temporary waypoint cases.

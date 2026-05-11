@@ -15,6 +15,8 @@ public class ObstacleDTO {
   private double sizeX;
   private double sizeY;
   private double radius;
+  private double horizonWeight;
+  private int horizonStep;
 
   /** Returns the obstacle dto value maintained by this Repulsor component. */
   public ObstacleDTO() {}
@@ -177,5 +179,21 @@ public class ObstacleDTO {
    */
   public void setRadius(double radius) {
     this.radius = radius;
+  }
+
+  public double getHorizonWeight() {
+    return horizonWeight;
+  }
+
+  public void setHorizonWeight(double horizonWeight) {
+    this.horizonWeight = horizonWeight;
+  }
+
+  public int getHorizonStep() {
+    return horizonStep;
+  }
+
+  public void setHorizonStep(int horizonStep) {
+    this.horizonStep = horizonStep;
   }
 }

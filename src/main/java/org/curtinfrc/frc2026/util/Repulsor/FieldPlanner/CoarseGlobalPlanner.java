@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.PriorityQueue;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.PredictedDynamicObstacleEnvelope;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.RectangleObstacle;
 
 /**
@@ -763,7 +764,24 @@ public final class CoarseGlobalPlanner {
       Obstacle obstacle,
       double robotHalfLengthMeters,
       double robotHalfWidthMeters) {
-    if (!(obstacle instanceof RectangleObstacle rectangle)) return Double.POSITIVE_INFINITY;
+    if (obstacle instanceof PredictedDynamicObstacleEnvelope prediction) {
+      return prediction.clearanceMeters(
+          point,
+          robotHalfLengthMeters + config.clearanceBufferMeters(),
+          robotHalfWidthMeters + config.clearanceBufferMeters());
+    }
+    if (obstacle instanceof RectangleObstacle rectangle) {
+      return rectangleClearanceMeters(
+          point, rectangle, robotHalfLengthMeters, robotHalfWidthMeters);
+    }
+    return Double.POSITIVE_INFINITY;
+  }
+
+  private double rectangleClearanceMeters(
+      Translation2d point,
+      RectangleObstacle rectangle,
+      double robotHalfLengthMeters,
+      double robotHalfWidthMeters) {
     double dx = point.getX() - rectangle.center.getX();
     double dy = point.getY() - rectangle.center.getY();
     double cos = rectangle.rot.getCos();

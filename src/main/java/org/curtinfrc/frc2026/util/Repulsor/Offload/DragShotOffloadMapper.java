@@ -10,6 +10,7 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.HorizontalObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.PointObstacle;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.PredictedDynamicObstacleEnvelope;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.SnowmanObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.SquareObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.VerticalObstacle;
@@ -272,9 +273,22 @@ public final class DragShotOffloadMapper {
     }
 
     for (ObstacleDTO dto : obstacleDtos) {
-      output.add(new SerializedObstacle(dto));
+      output.add(fromObstacleDto(dto));
     }
     return output;
+  }
+
+  private static Obstacle fromObstacleDto(ObstacleDTO dto) {
+    if (dto != null && "PREDICTED_ELLIPSE".equals(dto.getKind())) {
+      return new PredictedDynamicObstacleEnvelope(
+          new Translation2d(dto.getX(), dto.getY()),
+          Math.max(0.0, dto.getSizeX() * 0.5),
+          Math.max(0.0, dto.getSizeY() * 0.5),
+          dto.getStrength(),
+          dto.getHorizonWeight(),
+          dto.getHorizonStep());
+    }
+    return new SerializedObstacle(dto);
   }
 
   private static ObstacleDTO toObstacleDto(Obstacle obstacle) {
@@ -285,6 +299,17 @@ public final class DragShotOffloadMapper {
     ObstacleDTO dto = new ObstacleDTO();
     dto.setStrength(obstacle.strength);
     dto.setPositive(obstacle.positive);
+
+    if (obstacle instanceof PredictedDynamicObstacleEnvelope prediction) {
+      dto.setKind("PREDICTED_ELLIPSE");
+      dto.setX(prediction.center.getX());
+      dto.setY(prediction.center.getY());
+      dto.setSizeX(prediction.radiusX * 2.0);
+      dto.setSizeY(prediction.radiusY * 2.0);
+      dto.setHorizonWeight(prediction.horizonWeight);
+      dto.setHorizonStep(prediction.horizonStep);
+      return dto;
+    }
 
     if (obstacle instanceof VisionPlanner.VisionObstacle vision) {
       dto.setKind("ELLIPSE");
