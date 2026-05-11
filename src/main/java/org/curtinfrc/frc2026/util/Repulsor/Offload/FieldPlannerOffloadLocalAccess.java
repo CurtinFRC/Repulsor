@@ -110,6 +110,15 @@ public final class FieldPlannerOffloadLocalAccess {
     out.setForceThroughActive(diagnostics.forceThroughActive());
     out.setRobotIntersecting(diagnostics.robotIntersecting());
     out.setStuckAbort(diagnostics.stuckAbort());
+    if (diagnostics.localForceStability() != null) {
+      out.setLocalForceProgressMeters(diagnostics.localForceStability().progressMeters());
+      out.setLocalForceLowProgressSamples(diagnostics.localForceStability().lowProgressSamples());
+      out.setLocalForceDirectionFlipSamples(
+          diagnostics.localForceStability().directionFlipSamples());
+      out.setLocalForceBlended(diagnostics.localForceStability().blended());
+      out.setLocalForceOscillationSuspected(
+          diagnostics.localForceStability().oscillationSuspected());
+    }
     out.setSelectedCandidateReason(selectedCandidateReason(diagnostics));
     out.setTraceSummary(traceSummary(diagnostics));
     if (diagnostics.waypointStatus() != null) {

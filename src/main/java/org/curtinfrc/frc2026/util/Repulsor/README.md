@@ -239,6 +239,19 @@ Planner fallback telemetry is grouped under `Repulsor/GlobalFallback`:
 
 Use these together when tuning. A healthy robot loop should show occasional `Active=true` during blocked paths, low `ElapsedMs`, and no persistent timeout or node-budget exhaustion.
 
+
+### Local Force Stability Telemetry
+
+Local force-field stability diagnostics are grouped under `Repulsor/LocalForce`:
+
+- `ProgressMeters`: deterministic progress toward the active local target between samples.
+- `LowProgressSamples`: consecutive geometry samples that made too little progress.
+- `DirectionFlipSamples`: consecutive samples where the requested force direction flipped sharply.
+- `Blended`: the current output force was conservatively blended with previous force state.
+- `OscillationSuspected`: repeated low-progress or direction-flip evidence suggests local oscillation.
+
+This layer only damps the local force output when global fallback, reactive bypass, and force-through are not active. It does not choose strategic waypoints, select objectives, or replace the coarse fallback route.
+
 ### Offload Boundary
 
 `FieldPlanner.calculate(...)` may run through the offload entrypoint when enabled. The offload path receives the requested/active goal, dynamic obstacles, category, alliance preference, and shooter height, then returns both the sample and the resulting active goal/error state. Regression tests cover parity for clear paths, dynamic obstacles, and global-fallback temporary waypoint cases.

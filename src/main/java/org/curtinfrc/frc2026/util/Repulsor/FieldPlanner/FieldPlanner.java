@@ -43,6 +43,8 @@ import org.curtinfrc.frc2026.util.Repulsor.Fallback.PlannerFallback;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerForceModel;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerGoalManager;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerLocalForceStabilitySnapshot;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerLocalForceStabilizer;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointObjectiveRole;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointPolicyProfile;
@@ -175,6 +177,8 @@ public class FieldPlanner {
   private final double fieldWidthMeters;
 
   private final FieldPlannerForceModel forceModel;
+  private final FieldPlannerLocalForceStabilizer localForceStabilizer =
+      new FieldPlannerLocalForceStabilizer();
   private final FieldPlannerGoalManager goalManager;
   private volatile FieldPlannerRuntimeConfig runtimeConfig;
   private volatile CoarseGlobalPlanner globalPlanner;
@@ -881,6 +885,7 @@ public class FieldPlanner {
     currentErr = Optional.of(Meters.of(err.getNorm()));
 
     if (err.getNorm() < 0.04) {
+      localForceStabilizer.reset();
       return finishPlanningResult(
           planningRequest,
           new RepulsorSample(
@@ -896,6 +901,7 @@ public class FieldPlanner {
     }
 
     if (fallback.isPresent() && fallback.get().within(err)) {
+      localForceStabilizer.reset();
       var speeds = fallback.get().calculate(curTrans, calculationGoalTranslationFinal);
       return finishPlanningResult(
           planningRequest,
@@ -976,6 +982,12 @@ public class FieldPlanner {
         removeBackwardObstacleForceWhenClear(
             obstacleForce, curTrans, effectiveGoal.getTranslation(), clearPathToEffectiveGoal);
     var netForce = getGoalForce(curTrans, effectiveGoal.getTranslation()).plus(obstacleForce);
+    boolean localForceStabilizationEnabled =
+        !globalFallbackActive && !reactiveBypassActive && !forceThrough;
+    var stabilizedForce =
+        localForceStabilizer.stabilize(
+            curTrans, effectiveGoal.getTranslation(), netForce, localForceStabilizationEnabled);
+    netForce = stabilizedForce.force();
     var dist = curTrans.getDistance(effectiveGoal.getTranslation());
 
     double stepSize_m =
@@ -1127,6 +1139,17 @@ public class FieldPlanner {
             remote.isPathBlocked(),
             remote.isRobotIntersecting(),
             remote.isStuckAbort(),
+            new FieldPlannerLocalForceStabilitySnapshot(
+                null,
+                null,
+                Force.kZero,
+                Force.kZero,
+                Double.NaN,
+                remote.getLocalForceProgressMeters(),
+                remote.getLocalForceLowProgressSamples(),
+                remote.getLocalForceDirectionFlipSamples(),
+                remote.isLocalForceBlended(),
+                remote.isLocalForceOscillationSuspected()),
             true,
             currentErr.map(distance -> distance.in(Meters)).orElse(Double.NaN));
     RepulsorDecisionTrace trace = buildDecisionTrace(diagnostics);
@@ -1138,6 +1161,7 @@ public class FieldPlanner {
     Logger.recordOutput("Repulsor/Diagnostics/RobotIntersecting", remote.isRobotIntersecting());
     Logger.recordOutput("Repulsor/Diagnostics/StuckAbort", remote.isStuckAbort());
     Logger.recordOutput("Repulsor/Diagnostics/Offloaded", true);
+    recordLocalForceTelemetry(diagnostics.localForceStability());
     recordDecisionTraceTelemetry(trace);
     return sample;
   }
@@ -1222,6 +1246,7 @@ public class FieldPlanner {
             pathBlocked,
             robotIntersecting,
             stuckAbort,
+            localForceStabilizer.snapshot(),
             offloaded,
             currentErr.map(distance -> distance.in(Meters)).orElse(Double.NaN));
     RepulsorDecisionTrace trace = buildDecisionTrace(diagnostics);
@@ -1232,8 +1257,19 @@ public class FieldPlanner {
     Logger.recordOutput("Repulsor/Diagnostics/RobotIntersecting", robotIntersecting);
     Logger.recordOutput("Repulsor/Diagnostics/StuckAbort", stuckAbort);
     Logger.recordOutput("Repulsor/Diagnostics/Offloaded", offloaded);
+    recordLocalForceTelemetry(diagnostics.localForceStability());
     recordDecisionTraceTelemetry(trace);
     return sample;
+  }
+
+  private void recordLocalForceTelemetry(FieldPlannerLocalForceStabilitySnapshot snapshot) {
+    FieldPlannerLocalForceStabilitySnapshot safe =
+        snapshot == null ? FieldPlannerLocalForceStabilitySnapshot.empty() : snapshot;
+    Logger.recordOutput("Repulsor/LocalForce/ProgressMeters", safe.progressMeters());
+    Logger.recordOutput("Repulsor/LocalForce/LowProgressSamples", safe.lowProgressSamples());
+    Logger.recordOutput("Repulsor/LocalForce/DirectionFlipSamples", safe.directionFlipSamples());
+    Logger.recordOutput("Repulsor/LocalForce/Blended", safe.blended());
+    Logger.recordOutput("Repulsor/LocalForce/OscillationSuspected", safe.oscillationSuspected());
   }
 
   private RepulsorDecisionTrace buildDecisionTrace(RepulsorDiagnosticsSnapshot diagnostics) {
@@ -1350,6 +1386,27 @@ public class FieldPlanner {
                 Boolean.toString(diagnostics.pathBlocked()),
                 "robotIntersecting",
                 Boolean.toString(diagnostics.robotIntersecting()))));
+
+    FieldPlannerLocalForceStabilitySnapshot localForce = diagnostics.localForceStability();
+    if (localForce == null) localForce = FieldPlannerLocalForceStabilitySnapshot.empty();
+    entries.add(
+        new RepulsorDecisionEntry(
+            "LocalForceStability",
+            localForce.blended() ? "blended" : "raw",
+            localForce.oscillationSuspected() ? "oscillation_suspected" : "stable",
+            formatPose(diagnostics.activeGoal()),
+            formatPose(diagnostics.requestedGoal()),
+            diagnostics.errorMeters(),
+            localForce.progressMeters(),
+            Map.of(
+                "lowProgressSamples",
+                Integer.toString(localForce.lowProgressSamples()),
+                "directionFlipSamples",
+                Integer.toString(localForce.directionFlipSamples()),
+                "blended",
+                Boolean.toString(localForce.blended()),
+                "oscillationSuspected",
+                Boolean.toString(localForce.oscillationSuspected()))));
 
     entries.add(
         RepulsorDecisionEntry.of(

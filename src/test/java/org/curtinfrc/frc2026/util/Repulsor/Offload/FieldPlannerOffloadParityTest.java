@@ -106,6 +106,20 @@ class FieldPlannerOffloadParityTest {
     assertEquals(local.robotIntersecting(), offloaded.isRobotIntersecting());
     assertEquals(local.stuckAbort(), offloaded.isStuckAbort());
     assertEquals(
+        local.localForceStability().lowProgressSamples(),
+        offloaded.getLocalForceLowProgressSamples());
+    assertEquals(
+        local.localForceStability().directionFlipSamples(),
+        offloaded.getLocalForceDirectionFlipSamples());
+    assertEquals(
+        local.localForceStability().progressMeters(),
+        offloaded.getLocalForceProgressMeters(),
+        1e-9);
+    assertEquals(local.localForceStability().blended(), offloaded.isLocalForceBlended());
+    assertEquals(
+        local.localForceStability().oscillationSuspected(),
+        offloaded.isLocalForceOscillationSuspected());
+    assertEquals(
         local.globalFallbackWaypoint().isPresent(), offloaded.isHasGlobalFallbackWaypoint());
     assertEquals(local.globalFallbackStats().found(), offloaded.isGlobalFallbackFound());
     assertEquals(local.globalFallbackStats().timedOut(), offloaded.isGlobalFallbackTimedOut());

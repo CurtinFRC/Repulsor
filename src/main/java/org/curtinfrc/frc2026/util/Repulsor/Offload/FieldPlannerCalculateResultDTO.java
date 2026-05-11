@@ -33,6 +33,11 @@ public final class FieldPlannerCalculateResultDTO {
   private boolean forceThroughActive;
   private boolean robotIntersecting;
   private boolean stuckAbort;
+  private int localForceLowProgressSamples;
+  private int localForceDirectionFlipSamples;
+  private double localForceProgressMeters;
+  private boolean localForceBlended;
+  private boolean localForceOscillationSuspected;
   private boolean waypointActiveStage;
   private boolean waypointUsingBypass;
   private int waypointStagedModeTicks;
@@ -385,6 +390,46 @@ public final class FieldPlannerCalculateResultDTO {
 
   public void setStuckAbort(boolean stuckAbort) {
     this.stuckAbort = stuckAbort;
+  }
+
+  public int getLocalForceLowProgressSamples() {
+    return localForceLowProgressSamples;
+  }
+
+  public void setLocalForceLowProgressSamples(int localForceLowProgressSamples) {
+    this.localForceLowProgressSamples = localForceLowProgressSamples;
+  }
+
+  public int getLocalForceDirectionFlipSamples() {
+    return localForceDirectionFlipSamples;
+  }
+
+  public void setLocalForceDirectionFlipSamples(int localForceDirectionFlipSamples) {
+    this.localForceDirectionFlipSamples = localForceDirectionFlipSamples;
+  }
+
+  public double getLocalForceProgressMeters() {
+    return localForceProgressMeters;
+  }
+
+  public void setLocalForceProgressMeters(double localForceProgressMeters) {
+    this.localForceProgressMeters = localForceProgressMeters;
+  }
+
+  public boolean isLocalForceBlended() {
+    return localForceBlended;
+  }
+
+  public void setLocalForceBlended(boolean localForceBlended) {
+    this.localForceBlended = localForceBlended;
+  }
+
+  public boolean isLocalForceOscillationSuspected() {
+    return localForceOscillationSuspected;
+  }
+
+  public void setLocalForceOscillationSuspected(boolean localForceOscillationSuspected) {
+    this.localForceOscillationSuspected = localForceOscillationSuspected;
   }
 
   public boolean isWaypointActiveStage() {
