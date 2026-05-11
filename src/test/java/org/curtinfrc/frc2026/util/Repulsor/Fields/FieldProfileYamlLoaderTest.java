@@ -137,6 +137,57 @@ class FieldProfileYamlLoaderTest {
   }
 
   @Test
+  void semanticRegionsFeedSoftCorridorPreferencesIntoPlannerRuntime() throws Exception {
+    Path profile = tempDir.resolve("semantic-corridors.yaml");
+    Files.writeString(
+        profile,
+        """
+        schemaVersion: 2
+        id: semantic-corridors
+        gameName: CUSTOM
+        gameYear: 2099
+        geometry:
+          lengthMeters: 12.5
+          widthMeters: 6.25
+        resources: {}
+        projectileShots: {}
+        plannerRuntime:
+          globalFallbackCorridorPreferenceCostWeight: 4.0
+        semanticRegions:
+          safeLane:
+            minXMeters: 0.0
+            maxXMeters: 12.5
+            minYMeters: 3.0
+            maxYMeters: 4.0
+            preferenceTags: [cycle]
+          trapLane:
+            minXMeters: 0.0
+            maxXMeters: 12.5
+            minYMeters: 0.0
+            maxYMeters: 1.0
+            penaltyTags: [trap]
+        """);
+
+    String previous = System.getProperty("repulsor.profile.path");
+    try {
+      System.setProperty("repulsor.profile.path", profile.toString());
+      FieldProfileConfig cfg =
+          FieldProfileYamlLoader.loadOrDefault("semantic-corridors", new FieldProfileConfig());
+
+      var runtime = cfg.toFieldPlannerRuntimeConfig();
+      assertEquals(
+          4.0, runtime.globalFallbackConfig().routeCostConfig().corridorPreferenceWeight());
+      assertEquals(2, runtime.globalFallbackConfig().corridorPreferences().size());
+    } finally {
+      if (previous == null) {
+        System.clearProperty("repulsor.profile.path");
+      } else {
+        System.setProperty("repulsor.profile.path", previous);
+      }
+    }
+  }
+
+  @Test
   void rejectsUnsupportedSchemaAndBrokenWaypointReferences() throws Exception {
     Path profile = tempDir.resolve("invalid-schema-v2.yaml");
     Files.writeString(

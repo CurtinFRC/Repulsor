@@ -6,17 +6,19 @@ public record CoarseRouteCostBreakdown(
     double distanceCost,
     double obstacleClearanceCost,
     double wallClearanceCost,
-    double turnCost) {
+    double turnCost,
+    double corridorPreferenceCost) {
   public CoarseRouteCostBreakdown {
     total = finiteNonNegative(total);
     distanceCost = finiteNonNegative(distanceCost);
     obstacleClearanceCost = finiteNonNegative(obstacleClearanceCost);
     wallClearanceCost = finiteNonNegative(wallClearanceCost);
     turnCost = finiteNonNegative(turnCost);
+    corridorPreferenceCost = finiteNonNegative(corridorPreferenceCost);
   }
 
   public static CoarseRouteCostBreakdown empty() {
-    return new CoarseRouteCostBreakdown(0.0, 0.0, 0.0, 0.0, 0.0);
+    return new CoarseRouteCostBreakdown(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
   }
 
   public CoarseRouteCostBreakdown plus(CoarseRouteCostBreakdown other) {
@@ -26,7 +28,8 @@ public record CoarseRouteCostBreakdown(
         distanceCost + other.distanceCost,
         obstacleClearanceCost + other.obstacleClearanceCost,
         wallClearanceCost + other.wallClearanceCost,
-        turnCost + other.turnCost);
+        turnCost + other.turnCost,
+        corridorPreferenceCost + other.corridorPreferenceCost);
   }
 
   private static double finiteNonNegative(double value) {

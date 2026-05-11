@@ -35,6 +35,7 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWayp
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointRule;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointScoringConfig;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointZone;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.PlannerCorridorPreference;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PredictiveRankingConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Objective.ObjectiveSelectionConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.MovingShotSolver;
@@ -196,6 +197,17 @@ public class FieldProfileConfig {
           out.add(region.toSemanticRegion(id));
         });
     return List.copyOf(out);
+  }
+
+  public FieldPlannerRuntimeConfig toFieldPlannerRuntimeConfig() {
+    FieldPlannerRuntimeConfig runtime =
+        plannerRuntime == null
+            ? FieldPlannerRuntimeConfig.defaults()
+            : plannerRuntime.toFieldPlannerRuntimeConfig();
+    List<PlannerCorridorPreference> preferences =
+        PlannerCorridorPreference.fromSemanticRegions(toSemanticRegions());
+    return runtime.withGlobalFallbackConfig(
+        runtime.globalFallbackConfig().withCorridorPreferences(preferences));
   }
 
   private static void mergeStrategyPresets(
@@ -410,6 +422,10 @@ public class FieldProfileConfig {
     }
     if (overlay.globalFallbackTurnCostWeight != null) {
       base.globalFallbackTurnCostWeight = overlay.globalFallbackTurnCostWeight;
+    }
+    if (overlay.globalFallbackCorridorPreferenceCostWeight != null) {
+      base.globalFallbackCorridorPreferenceCostWeight =
+          overlay.globalFallbackCorridorPreferenceCostWeight;
     }
     if (overlay.forceThroughGoalDistanceMeters != null) {
       base.forceThroughGoalDistanceMeters = overlay.forceThroughGoalDistanceMeters;
@@ -1008,6 +1024,7 @@ public class FieldProfileConfig {
     public Double globalFallbackObstacleClearanceCostWeight;
     public Double globalFallbackWallClearanceCostWeight;
     public Double globalFallbackTurnCostWeight;
+    public Double globalFallbackCorridorPreferenceCostWeight;
     public Double forceThroughGoalDistanceMeters;
     public Double forceThroughWallDistanceMeters;
 
@@ -1033,8 +1050,10 @@ public class FieldProfileConfig {
                   finiteNonNegative(
                       globalFallbackWallClearanceCostWeight,
                       globalDefaults.routeCostConfig().wallClearanceWeight()),
+                  finiteNonNegative(globalFallbackTurnCostWeight, globalDefaults.turnCostWeight()),
                   finiteNonNegative(
-                      globalFallbackTurnCostWeight, globalDefaults.turnCostWeight())));
+                      globalFallbackCorridorPreferenceCostWeight,
+                      globalDefaults.routeCostConfig().corridorPreferenceWeight())));
       return new FieldPlannerRuntimeConfig(
           globalFallbackEnabled == null ? defaults.globalFallbackEnabled() : globalFallbackEnabled,
           globalConfig,

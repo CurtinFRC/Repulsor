@@ -57,6 +57,7 @@ public final class FieldPlannerCalculateResultDTO {
   private double globalFallbackRouteObstacleClearanceCost;
   private double globalFallbackRouteWallClearanceCost;
   private double globalFallbackRouteTurnCost;
+  private double globalFallbackRouteCorridorPreferenceCost;
   private double globalFallbackMinRouteClearanceMeters;
   private double globalFallbackAverageRouteClearanceMeters;
   private int globalFallbackSelectedWaypointIndex;
@@ -583,6 +584,15 @@ public final class FieldPlannerCalculateResultDTO {
 
   public void setGlobalFallbackRouteTurnCost(double globalFallbackRouteTurnCost) {
     this.globalFallbackRouteTurnCost = globalFallbackRouteTurnCost;
+  }
+
+  public double getGlobalFallbackRouteCorridorPreferenceCost() {
+    return globalFallbackRouteCorridorPreferenceCost;
+  }
+
+  public void setGlobalFallbackRouteCorridorPreferenceCost(
+      double globalFallbackRouteCorridorPreferenceCost) {
+    this.globalFallbackRouteCorridorPreferenceCost = globalFallbackRouteCorridorPreferenceCost;
   }
 
   public double getGlobalFallbackMinRouteClearanceMeters() {

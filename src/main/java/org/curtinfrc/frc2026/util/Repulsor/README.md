@@ -231,7 +231,7 @@ Planner fallback telemetry is grouped under `Repulsor/GlobalFallback`:
 - `ExhaustedNodeBudget`: the expanded-node guardrail stopped search.
 - `FailureReason`: explainable terminal state such as `START_BLOCKED`, `GOAL_BLOCKED`, `TIMEOUT`, `NODE_BUDGET`, or `NO_ROUTE`.
 - `ExpandedNodes`, `GeneratedNodes`, `RawPathNodes`, `PathNodes`: search size and path complexity before/after smoothing.
-- `RouteTotalCost`, `RouteDistanceCost`, `RouteObstacleClearanceCost`, `RouteWallClearanceCost`, `RouteTurnCost`: weighted cost breakdown for the raw selected route.
+- `RouteTotalCost`, `RouteDistanceCost`, `RouteObstacleClearanceCost`, `RouteWallClearanceCost`, `RouteTurnCost`, `RouteCorridorPreferenceCost`: weighted cost breakdown for the raw selected route.
 - `MinRouteClearanceMeters`, `AverageRouteClearanceMeters`: clearance-field diagnostics for the selected raw route, including field-wall and rectangular obstacle margins.
 - `SelectedWaypointIndex`, `SelectedWaypointReason`: selected smoothed-route waypoint index and why it was chosen, such as lookahead distance, before a sharp turn, before a narrow passage, or hysteresis keep.
 - `ElapsedMs`: elapsed coarse planner time.

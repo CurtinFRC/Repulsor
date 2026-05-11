@@ -399,12 +399,23 @@ public final class CoarseGlobalPlanner {
                 + obstacleProximityCost(point, obstacles));
     double wallCost = weights.wallClearanceWeight() * clearanceField.wallProximityCost(next);
     double turnCost = weights.turnWeight() * turnPenalty;
+    double corridorCost = weights.corridorPreferenceWeight() * corridorPreferenceCost(point);
     return new CoarseRouteCostBreakdown(
-        distanceCost + obstacleCost + wallCost + turnCost,
+        distanceCost + obstacleCost + wallCost + turnCost + corridorCost,
         distanceCost,
         obstacleCost,
         wallCost,
-        turnCost);
+        turnCost,
+        corridorCost);
+  }
+
+  private double corridorPreferenceCost(Translation2d point) {
+    if (point == null || config.corridorPreferences().isEmpty()) return 0.0;
+    double cost = 0.0;
+    for (PlannerCorridorPreference preference : config.corridorPreferences()) {
+      if (preference != null) cost += preference.costAt(point);
+    }
+    return cost;
   }
 
   private CoarseRouteClearanceMetrics routeClearance(

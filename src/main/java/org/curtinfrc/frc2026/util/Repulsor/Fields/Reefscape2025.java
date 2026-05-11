@@ -138,9 +138,9 @@ public final class Reefscape2025 implements FieldDefinition {
 
   @Override
   public FieldPlannerRuntimeConfig fieldPlannerRuntimeConfig() {
-    return profile.plannerRuntime == null
+    return profile == null
         ? FieldPlannerRuntimeConfig.defaults()
-        : profile.plannerRuntime.toFieldPlannerRuntimeConfig();
+        : profile.toFieldPlannerRuntimeConfig();
   }
 
   @Override

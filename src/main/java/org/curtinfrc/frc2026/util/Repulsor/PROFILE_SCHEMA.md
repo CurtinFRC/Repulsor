@@ -143,11 +143,13 @@ plannerRuntime:
   globalFallbackObstacleClearanceCostWeight: 0.0
   globalFallbackWallClearanceCostWeight: 0.0
   globalFallbackTurnCostWeight: 0.05
+  globalFallbackCorridorPreferenceCostWeight: 0.0
 ```
 
 `globalFallbackClearanceBufferMeters` adds extra margin around the robot and field edge for the coarse route only. Use it to make a strategy preset avoid tight corridors without changing waypoint staging or reactive bypass behavior.
 `globalFallbackDistanceCostWeight`, `globalFallbackObstacleClearanceCostWeight`, and `globalFallbackWallClearanceCostWeight` let a profile prefer shorter routes, routes with softer obstacle clearance, or routes farther from field edges.
 `globalFallbackTurnCostWeight` adds a soft cost for route kinks before smoothing, which helps prefer cleaner coarse paths when multiple routes are otherwise similar.
+`globalFallbackCorridorPreferenceCostWeight` scales soft route costs created from `semanticRegions`: regions with `penaltyTags` or `collectPenalty` become avoided corridors, while regions with `preferenceTags` or `collectPreference` become preferred corridors. This only biases coarse fallback routing; waypoint policy still owns strategic staging and reactive bypass still owns local obstacle recovery.
 
 ## Common mistakes
 

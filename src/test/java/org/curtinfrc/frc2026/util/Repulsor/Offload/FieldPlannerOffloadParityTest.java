@@ -154,6 +154,10 @@ class FieldPlannerOffloadParityTest {
         offloaded.getGlobalFallbackRouteTurnCost(),
         1e-9);
     assertEquals(
+        local.globalFallbackStats().routeCostBreakdown().corridorPreferenceCost(),
+        offloaded.getGlobalFallbackRouteCorridorPreferenceCost(),
+        1e-9);
+    assertEquals(
         local.globalFallbackStats().routeClearanceMetrics().minRouteClearanceMeters(),
         offloaded.getGlobalFallbackMinRouteClearanceMeters(),
         1e-9);

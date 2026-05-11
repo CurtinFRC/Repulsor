@@ -161,6 +161,66 @@ class CoarseGlobalPlannerTest {
   }
 
   @Test
+  void avoidedCorridorPreferenceBiasesGlobalFallbackAwayFromSoftRegion() {
+    CoarseGlobalPlanner planner =
+        new CoarseGlobalPlanner(
+            new CoarseGlobalPlannerConfig(
+                0.35,
+                0.8,
+                5000,
+                1.0,
+                0.0,
+                new CoarseRouteCostConfig(1.0, 0.0, 0.0, 0.05, 8.0),
+                List.of(PlannerCorridorPreference.avoided("upper", 0.0, 6.0, 2.35, 4.0, 1.0))));
+    List<Obstacle> obstacles =
+        List.of(RectangleObstacle.simple(new Translation2d(3.0, 2.0), 0.75, 0.85, 1.0, 1.0, 1.0));
+
+    var waypoint =
+        planner.nextWaypoint(
+            new Translation2d(1.0, 2.0),
+            new Pose2d(5.0, 2.0, Rotation2d.kZero),
+            obstacles,
+            0.18,
+            0.18,
+            6.0,
+            4.0);
+
+    assertTrue(waypoint.isPresent());
+    assertTrue(waypoint.get().getY() < 2.0, "avoided upper corridor should route below");
+    assertEquals(0.0, planner.lastStats().routeCostBreakdown().corridorPreferenceCost(), 1e-9);
+  }
+
+  @Test
+  void preferredCorridorPreferenceBiasesGlobalFallbackTowardSoftRegion() {
+    CoarseGlobalPlanner planner =
+        new CoarseGlobalPlanner(
+            new CoarseGlobalPlannerConfig(
+                0.35,
+                0.8,
+                5000,
+                1.0,
+                0.0,
+                new CoarseRouteCostConfig(1.0, 0.0, 0.0, 0.05, 8.0),
+                List.of(PlannerCorridorPreference.preferred("upper", 0.0, 6.0, 2.35, 4.0, 1.0))));
+    List<Obstacle> obstacles =
+        List.of(RectangleObstacle.simple(new Translation2d(3.0, 2.0), 0.75, 0.85, 1.0, 1.0, 1.0));
+
+    var waypoint =
+        planner.nextWaypoint(
+            new Translation2d(1.0, 2.0),
+            new Pose2d(5.0, 2.0, Rotation2d.kZero),
+            obstacles,
+            0.18,
+            0.18,
+            6.0,
+            4.0);
+
+    assertTrue(waypoint.isPresent());
+    assertTrue(waypoint.get().getY() > 2.0, "preferred upper corridor should route above");
+    assertTrue(planner.lastStats().routeCostBreakdown().corridorPreferenceCost() > 0.0);
+  }
+
+  @Test
   void weightedWallClearanceCostProducesBreakdownForNearWallRoutes() {
     CoarseGlobalPlanner planner =
         new CoarseGlobalPlanner(
@@ -408,7 +468,7 @@ class CoarseGlobalPlannerTest {
     obstacles.addAll(field.walls());
 
     CoarseGlobalPlanner planner =
-        new CoarseGlobalPlanner(new CoarseGlobalPlannerConfig(0.55, 1.4, 1200, 0.050));
+        new CoarseGlobalPlanner(new CoarseGlobalPlannerConfig(0.55, 1.4, 1200, 1.0));
     List<Scenario> scenarios =
         List.of(
             new Scenario(new Translation2d(1.4, 1.0), new Pose2d(7.6, 1.0, Rotation2d.kZero)),
@@ -427,7 +487,9 @@ class CoarseGlobalPlannerTest {
               field.geometry().lengthMeters(),
               field.geometry().widthMeters());
 
-      assertTrue(waypoint.isPresent(), "should route representative Rebuilt2026 case");
+      assertTrue(
+          waypoint.isPresent(),
+          "should route representative Rebuilt2026 case, stats=" + planner.lastStats());
       assertFalse(planner.lastStats().timedOut());
       assertFalse(planner.lastStats().exhaustedNodeBudget());
       assertTrue(planner.lastStats().expandedNodes() <= 1200);

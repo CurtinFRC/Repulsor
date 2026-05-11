@@ -260,9 +260,9 @@ public final class Rebuilt2026 implements FieldDefinition {
 
   @Override
   public FieldPlannerRuntimeConfig fieldPlannerRuntimeConfig() {
-    return profile.plannerRuntime == null
+    return profile == null
         ? FieldPlannerRuntimeConfig.defaults()
-        : profile.plannerRuntime.toFieldPlannerRuntimeConfig();
+        : profile.toFieldPlannerRuntimeConfig();
   }
 
   @Override

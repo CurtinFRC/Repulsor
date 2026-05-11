@@ -1109,7 +1109,8 @@ public class FieldPlanner {
                 remote.getGlobalFallbackRouteDistanceCost(),
                 remote.getGlobalFallbackRouteObstacleClearanceCost(),
                 remote.getGlobalFallbackRouteWallClearanceCost(),
-                remote.getGlobalFallbackRouteTurnCost()),
+                remote.getGlobalFallbackRouteTurnCost(),
+                remote.getGlobalFallbackRouteCorridorPreferenceCost()),
             new CoarseRouteClearanceMetrics(
                 remote.getGlobalFallbackMinRouteClearanceMeters(),
                 remote.getGlobalFallbackAverageRouteClearanceMeters()),
@@ -1206,6 +1207,9 @@ public class FieldPlanner {
         stats.routeCostBreakdown().wallClearanceCost());
     Logger.recordOutput(
         "Repulsor/GlobalFallback/RouteTurnCost", stats.routeCostBreakdown().turnCost());
+    Logger.recordOutput(
+        "Repulsor/GlobalFallback/RouteCorridorPreferenceCost",
+        stats.routeCostBreakdown().corridorPreferenceCost());
     Logger.recordOutput(
         "Repulsor/GlobalFallback/MinRouteClearanceMeters",
         stats.routeClearanceMetrics().minRouteClearanceMeters());

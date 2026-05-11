@@ -1,5 +1,7 @@
 package org.curtinfrc.frc2026.util.Repulsor.FieldPlanner;
 
+import java.util.List;
+
 /** Tunable limits for the coarse global fallback planner. */
 public record CoarseGlobalPlannerConfig(
     double cellMeters,
@@ -7,7 +9,8 @@ public record CoarseGlobalPlannerConfig(
     int maxExpandedNodes,
     double maxRuntimeSeconds,
     double clearanceBufferMeters,
-    CoarseRouteCostConfig routeCostConfig) {
+    CoarseRouteCostConfig routeCostConfig,
+    List<PlannerCorridorPreference> corridorPreferences) {
   private static final double DEFAULT_CELL_M = 0.55;
   private static final double DEFAULT_WAYPOINT_LOOKAHEAD_M = 1.4;
   private static final int DEFAULT_MAX_EXPANDED_NODES = 1200;
@@ -25,7 +28,8 @@ public record CoarseGlobalPlannerConfig(
         maxExpandedNodes,
         maxRuntimeSeconds,
         0.0,
-        CoarseRouteCostConfig.defaults());
+        CoarseRouteCostConfig.defaults(),
+        List.of());
   }
 
   public CoarseGlobalPlannerConfig(
@@ -40,7 +44,8 @@ public record CoarseGlobalPlannerConfig(
         maxExpandedNodes,
         maxRuntimeSeconds,
         clearanceBufferMeters,
-        CoarseRouteCostConfig.defaults());
+        CoarseRouteCostConfig.defaults(),
+        List.of());
   }
 
   public CoarseGlobalPlannerConfig(
@@ -56,7 +61,25 @@ public record CoarseGlobalPlannerConfig(
         maxExpandedNodes,
         maxRuntimeSeconds,
         clearanceBufferMeters,
-        new CoarseRouteCostConfig(1.0, 0.0, 0.0, turnCostWeight));
+        new CoarseRouteCostConfig(1.0, 0.0, 0.0, turnCostWeight),
+        List.of());
+  }
+
+  public CoarseGlobalPlannerConfig(
+      double cellMeters,
+      double waypointLookaheadMeters,
+      int maxExpandedNodes,
+      double maxRuntimeSeconds,
+      double clearanceBufferMeters,
+      CoarseRouteCostConfig routeCostConfig) {
+    this(
+        cellMeters,
+        waypointLookaheadMeters,
+        maxExpandedNodes,
+        maxRuntimeSeconds,
+        clearanceBufferMeters,
+        routeCostConfig,
+        List.of());
   }
 
   public CoarseGlobalPlannerConfig {
@@ -66,6 +89,8 @@ public record CoarseGlobalPlannerConfig(
     maxRuntimeSeconds = Math.max(0.0005, maxRuntimeSeconds);
     clearanceBufferMeters = Math.max(0.0, clearanceBufferMeters);
     routeCostConfig = routeCostConfig == null ? CoarseRouteCostConfig.defaults() : routeCostConfig;
+    corridorPreferences =
+        corridorPreferences == null ? List.of() : List.copyOf(corridorPreferences);
   }
 
   public double turnCostWeight() {
@@ -88,7 +113,22 @@ public record CoarseGlobalPlannerConfig(
             doubleProperty("repulsor.fieldplanner.globalFallback.distanceCostWeight", 1.0),
             doubleProperty("repulsor.fieldplanner.globalFallback.obstacleClearanceCostWeight", 0.0),
             doubleProperty("repulsor.fieldplanner.globalFallback.wallClearanceCostWeight", 0.0),
-            doubleProperty("repulsor.fieldplanner.globalFallback.turnCostWeight", 0.05)));
+            doubleProperty("repulsor.fieldplanner.globalFallback.turnCostWeight", 0.05),
+            doubleProperty(
+                "repulsor.fieldplanner.globalFallback.corridorPreferenceCostWeight", 0.0)),
+        List.of());
+  }
+
+  public CoarseGlobalPlannerConfig withCorridorPreferences(
+      List<PlannerCorridorPreference> preferences) {
+    return new CoarseGlobalPlannerConfig(
+        cellMeters,
+        waypointLookaheadMeters,
+        maxExpandedNodes,
+        maxRuntimeSeconds,
+        clearanceBufferMeters,
+        routeCostConfig,
+        preferences);
   }
 
   private static double doubleProperty(String key, double fallback) {

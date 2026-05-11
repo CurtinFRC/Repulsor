@@ -150,6 +150,8 @@ public final class FieldPlannerOffloadLocalAccess {
           stats.routeCostBreakdown().obstacleClearanceCost());
       out.setGlobalFallbackRouteWallClearanceCost(stats.routeCostBreakdown().wallClearanceCost());
       out.setGlobalFallbackRouteTurnCost(stats.routeCostBreakdown().turnCost());
+      out.setGlobalFallbackRouteCorridorPreferenceCost(
+          stats.routeCostBreakdown().corridorPreferenceCost());
       out.setGlobalFallbackMinRouteClearanceMeters(
           stats.routeClearanceMetrics().minRouteClearanceMeters());
       out.setGlobalFallbackAverageRouteClearanceMeters(
