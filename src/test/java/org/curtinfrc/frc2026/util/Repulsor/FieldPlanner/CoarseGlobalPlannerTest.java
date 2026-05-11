@@ -225,6 +225,51 @@ class CoarseGlobalPlannerTest {
   }
 
   @Test
+  void lookaheadStopsBeforeSharpTurnInsteadOfSkippingToRouteEnd() {
+    CoarseGlobalPlanner planner =
+        new CoarseGlobalPlanner(new CoarseGlobalPlannerConfig(0.35, 2.0, 5000, 1.0));
+    RectangleObstacle block =
+        RectangleObstacle.simple(new Translation2d(3.0, 2.0), 0.9, 2.0, 1.0, 1.0, 1.0);
+
+    var waypoint =
+        planner.nextWaypoint(
+            new Translation2d(1.0, 2.0),
+            new Pose2d(5.0, 2.0, Rotation2d.kZero),
+            List.of(block),
+            0.18,
+            0.18,
+            6.0,
+            4.0);
+
+    assertTrue(waypoint.isPresent());
+    assertEquals(
+        CoarseGlobalPlannerWaypointReason.BEFORE_SHARP_TURN,
+        planner.lastStats().selectedWaypointReason());
+    assertTrue(planner.lastStats().selectedWaypointIndex() >= 1);
+    assertTrue(waypoint.get().getTranslation().getDistance(new Translation2d(5.0, 2.0)) > 0.5);
+  }
+
+  @Test
+  void repeatedSimilarRoutesKeepPreviousGlobalWaypointWhenStillValid() {
+    CoarseGlobalPlanner planner =
+        new CoarseGlobalPlanner(new CoarseGlobalPlannerConfig(0.35, 0.8, 5000, 1.0));
+    Pose2d goal = new Pose2d(5.0, 3.0, Rotation2d.kZero);
+
+    var first =
+        planner.nextWaypoint(new Translation2d(1.0, 1.0), goal, List.of(), 0.18, 0.18, 6.0, 4.0);
+    var second =
+        planner.nextWaypoint(new Translation2d(1.05, 1.0), goal, List.of(), 0.18, 0.18, 6.0, 4.0);
+
+    assertTrue(first.isPresent());
+    assertTrue(second.isPresent());
+    assertEquals(first.get().getX(), second.get().getX(), 1e-9);
+    assertEquals(first.get().getY(), second.get().getY(), 1e-9);
+    assertEquals(
+        CoarseGlobalPlannerWaypointReason.HYSTERESIS_KEEP,
+        planner.lastStats().selectedWaypointReason());
+  }
+
+  @Test
   void honorsExpandedNodeBudget() {
     CoarseGlobalPlanner planner =
         new CoarseGlobalPlanner(new CoarseGlobalPlannerConfig(0.25, 1.0, 1, 1.0));

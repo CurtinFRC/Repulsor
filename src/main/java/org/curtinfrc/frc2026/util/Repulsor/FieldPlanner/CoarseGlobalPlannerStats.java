@@ -11,6 +11,8 @@ public record CoarseGlobalPlannerStats(
     int pathNodes,
     CoarseRouteCostBreakdown routeCostBreakdown,
     CoarseRouteClearanceMetrics routeClearanceMetrics,
+    int selectedWaypointIndex,
+    CoarseGlobalPlannerWaypointReason selectedWaypointReason,
     long elapsedNanos,
     CoarseGlobalPlannerFailureReason failureReason) {
   public CoarseGlobalPlannerStats(
@@ -31,6 +33,8 @@ public record CoarseGlobalPlannerStats(
         pathNodes,
         CoarseRouteCostBreakdown.empty(),
         CoarseRouteClearanceMetrics.empty(),
+        -1,
+        CoarseGlobalPlannerWaypointReason.NONE,
         elapsedNanos,
         found ? CoarseGlobalPlannerFailureReason.NONE : CoarseGlobalPlannerFailureReason.NO_ROUTE);
   }
@@ -54,6 +58,8 @@ public record CoarseGlobalPlannerStats(
         pathNodes,
         CoarseRouteCostBreakdown.empty(),
         CoarseRouteClearanceMetrics.empty(),
+        -1,
+        CoarseGlobalPlannerWaypointReason.NONE,
         elapsedNanos,
         found ? CoarseGlobalPlannerFailureReason.NONE : CoarseGlobalPlannerFailureReason.NO_ROUTE);
   }
@@ -78,6 +84,8 @@ public record CoarseGlobalPlannerStats(
         pathNodes,
         CoarseRouteCostBreakdown.empty(),
         CoarseRouteClearanceMetrics.empty(),
+        -1,
+        CoarseGlobalPlannerWaypointReason.NONE,
         elapsedNanos,
         failureReason);
   }
@@ -85,8 +93,11 @@ public record CoarseGlobalPlannerStats(
   public CoarseGlobalPlannerStats {
     rawPathNodes = Math.max(0, rawPathNodes);
     pathNodes = Math.max(0, pathNodes);
+    selectedWaypointIndex = Math.max(-1, selectedWaypointIndex);
     if (routeCostBreakdown == null) routeCostBreakdown = CoarseRouteCostBreakdown.empty();
     if (routeClearanceMetrics == null) routeClearanceMetrics = CoarseRouteClearanceMetrics.empty();
+    if (selectedWaypointReason == null)
+      selectedWaypointReason = CoarseGlobalPlannerWaypointReason.NONE;
     if (failureReason == null) failureReason = CoarseGlobalPlannerFailureReason.NONE;
   }
 
@@ -101,6 +112,8 @@ public record CoarseGlobalPlannerStats(
         0,
         CoarseRouteCostBreakdown.empty(),
         CoarseRouteClearanceMetrics.empty(),
+        -1,
+        CoarseGlobalPlannerWaypointReason.NONE,
         0L,
         CoarseGlobalPlannerFailureReason.NONE);
   }

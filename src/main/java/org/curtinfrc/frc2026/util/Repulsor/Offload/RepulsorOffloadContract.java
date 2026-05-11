@@ -6,7 +6,7 @@ public final class RepulsorOffloadContract {
   public static final int CONTRACT_VERSION = 1;
 
   /** Matches the FieldPlanner calculate @Offloadable task version. */
-  public static final int FIELD_PLANNER_CALCULATE_VERSION = 6;
+  public static final int FIELD_PLANNER_CALCULATE_VERSION = 7;
 
   private RepulsorOffloadContract() {}
 

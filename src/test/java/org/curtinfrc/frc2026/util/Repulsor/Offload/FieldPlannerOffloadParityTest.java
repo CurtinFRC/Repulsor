@@ -148,6 +148,12 @@ class FieldPlannerOffloadParityTest {
         offloaded.getGlobalFallbackAverageRouteClearanceMeters(),
         1e-9);
     assertEquals(
+        local.globalFallbackStats().selectedWaypointIndex(),
+        offloaded.getGlobalFallbackSelectedWaypointIndex());
+    assertEquals(
+        local.globalFallbackStats().selectedWaypointReason().name(),
+        offloaded.getGlobalFallbackSelectedWaypointReason());
+    assertEquals(
         local.globalFallbackStats().failureReason().name(),
         offloaded.getGlobalFallbackFailureReason());
     assertTrue(offloaded.isHasSelectedCandidate());

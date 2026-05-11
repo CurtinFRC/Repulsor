@@ -145,6 +145,8 @@ public final class FieldPlannerOffloadLocalAccess {
           stats.routeClearanceMetrics().minRouteClearanceMeters());
       out.setGlobalFallbackAverageRouteClearanceMeters(
           stats.routeClearanceMetrics().averageRouteClearanceMeters());
+      out.setGlobalFallbackSelectedWaypointIndex(stats.selectedWaypointIndex());
+      out.setGlobalFallbackSelectedWaypointReason(stats.selectedWaypointReason().name());
       out.setGlobalFallbackElapsedNanos(stats.elapsedNanos());
       out.setGlobalFallbackFailureReason(stats.failureReason().name());
     }

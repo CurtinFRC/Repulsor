@@ -54,6 +54,8 @@ public final class FieldPlannerCalculateResultDTO {
   private double globalFallbackRouteTurnCost;
   private double globalFallbackMinRouteClearanceMeters;
   private double globalFallbackAverageRouteClearanceMeters;
+  private int globalFallbackSelectedWaypointIndex;
+  private String globalFallbackSelectedWaypointReason = "";
   private long globalFallbackElapsedNanos;
   private String globalFallbackFailureReason = "";
 
@@ -554,6 +556,23 @@ public final class FieldPlannerCalculateResultDTO {
   public void setGlobalFallbackAverageRouteClearanceMeters(
       double globalFallbackAverageRouteClearanceMeters) {
     this.globalFallbackAverageRouteClearanceMeters = globalFallbackAverageRouteClearanceMeters;
+  }
+
+  public int getGlobalFallbackSelectedWaypointIndex() {
+    return globalFallbackSelectedWaypointIndex;
+  }
+
+  public void setGlobalFallbackSelectedWaypointIndex(int globalFallbackSelectedWaypointIndex) {
+    this.globalFallbackSelectedWaypointIndex = globalFallbackSelectedWaypointIndex;
+  }
+
+  public String getGlobalFallbackSelectedWaypointReason() {
+    return globalFallbackSelectedWaypointReason;
+  }
+
+  public void setGlobalFallbackSelectedWaypointReason(String globalFallbackSelectedWaypointReason) {
+    this.globalFallbackSelectedWaypointReason =
+        globalFallbackSelectedWaypointReason == null ? "" : globalFallbackSelectedWaypointReason;
   }
 
   public long getGlobalFallbackElapsedNanos() {

@@ -1101,6 +1101,8 @@ public class FieldPlanner {
             new CoarseRouteClearanceMetrics(
                 remote.getGlobalFallbackMinRouteClearanceMeters(),
                 remote.getGlobalFallbackAverageRouteClearanceMeters()),
+            remote.getGlobalFallbackSelectedWaypointIndex(),
+            parseGlobalFallbackWaypointReason(remote.getGlobalFallbackSelectedWaypointReason()),
             remote.getGlobalFallbackElapsedNanos(),
             parseGlobalFallbackFailureReason(remote.getGlobalFallbackFailureReason()));
     Optional<Pose2d> globalWaypoint =
@@ -1149,6 +1151,15 @@ public class FieldPlanner {
     }
   }
 
+  private static CoarseGlobalPlannerWaypointReason parseGlobalFallbackWaypointReason(String value) {
+    if (value == null || value.isBlank()) return CoarseGlobalPlannerWaypointReason.NONE;
+    try {
+      return CoarseGlobalPlannerWaypointReason.valueOf(value);
+    } catch (IllegalArgumentException ignored) {
+      return CoarseGlobalPlannerWaypointReason.NONE;
+    }
+  }
+
   private void recordGlobalFallbackTelemetry(boolean active, Optional<Pose2d> waypoint) {
     CoarseGlobalPlannerStats stats = globalPlanner.lastStats();
     Logger.recordOutput("Repulsor/GlobalFallback/Active", active);
@@ -1177,6 +1188,10 @@ public class FieldPlanner {
     Logger.recordOutput(
         "Repulsor/GlobalFallback/AverageRouteClearanceMeters",
         stats.routeClearanceMetrics().averageRouteClearanceMeters());
+    Logger.recordOutput(
+        "Repulsor/GlobalFallback/SelectedWaypointIndex", stats.selectedWaypointIndex());
+    Logger.recordOutput(
+        "Repulsor/GlobalFallback/SelectedWaypointReason", stats.selectedWaypointReason().name());
     Logger.recordOutput("Repulsor/GlobalFallback/FailureReason", stats.failureReason().name());
     Logger.recordOutput("Repulsor/GlobalFallback/ElapsedMs", stats.elapsedNanos() / 1.0e6);
     Logger.recordOutput("Repulsor/GlobalFallback/Waypoint", waypoint.orElse(Pose2d.kZero));
@@ -1310,6 +1325,8 @@ public class FieldPlanner {
                 Double.toString(stats.routeCostBreakdown().total()),
                 "minRouteClearanceMeters",
                 Double.toString(stats.routeClearanceMetrics().minRouteClearanceMeters()),
+                "selectedWaypointReason",
+                stats.selectedWaypointReason().name(),
                 "pathNodes",
                 Integer.toString(stats.pathNodes()))));
 

@@ -18,8 +18,14 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.RectangleObsta
  * limiting, heading control, and dynamic bypass.
  */
 public final class CoarseGlobalPlanner {
+  private static final double SHARP_TURN_RADIANS = Math.toRadians(50.0);
+  private static final double NARROW_PASSAGE_CLEARANCE_METERS = 0.35;
+  private static final double MIN_CORNER_LOOKAHEAD_FRACTION = 0.45;
+  private static final double WAYPOINT_HYSTERESIS_METERS = 0.55;
+
   private final CoarseGlobalPlannerConfig config;
   private CoarseGlobalPlannerStats lastStats = CoarseGlobalPlannerStats.empty();
+  private Translation2d previousWaypoint = null;
 
   public CoarseGlobalPlanner() {
     this(CoarseGlobalPlannerConfig.defaults());
@@ -192,6 +198,7 @@ public final class CoarseGlobalPlanner {
     }
 
     if (parent[goalIdx] < 0 && goalIdx != startIdx) {
+      previousWaypoint = null;
       finishStats(
           false,
           timedOut,
@@ -205,6 +212,7 @@ public final class CoarseGlobalPlanner {
     }
     List<Node> path = reconstruct(goalIdx, startIdx, parent, ny);
     if (path.size() < 2) {
+      previousWaypoint = null;
       finishStats(
           false,
           timedOut,
@@ -240,8 +248,20 @@ public final class CoarseGlobalPlanner {
             ny,
             clearanceField);
 
-    Translation2d waypoint =
-        chooseLookahead(smoothedPath, fieldLengthMeters, fieldWidthMeters, nx, ny, start);
+    LookaheadSelection selection =
+        chooseLookahead(
+            smoothedPath,
+            clearanceField,
+            obstacles,
+            robotHalfLengthMeters,
+            robotHalfWidthMeters,
+            fieldLengthMeters,
+            fieldWidthMeters,
+            nx,
+            ny,
+            start);
+    Translation2d waypoint = selection.point();
+    previousWaypoint = waypoint;
     Rotation2d heading = goal.getTranslation().minus(waypoint).getAngle();
     finishStats(
         true,
@@ -253,6 +273,8 @@ public final class CoarseGlobalPlanner {
         smoothedPath.size(),
         routeCost,
         routeClearanceMetrics,
+        selection.index(),
+        selection.reason(),
         startNanos,
         CoarseGlobalPlannerFailureReason.NONE);
     return Optional.of(new Pose2d(waypoint, heading));
@@ -284,6 +306,8 @@ public final class CoarseGlobalPlanner {
         pathNodes,
         CoarseRouteCostBreakdown.empty(),
         CoarseRouteClearanceMetrics.empty(),
+        -1,
+        CoarseGlobalPlannerWaypointReason.NONE,
         startNanos,
         failureReason);
   }
@@ -298,6 +322,8 @@ public final class CoarseGlobalPlanner {
       int pathNodes,
       CoarseRouteCostBreakdown routeCost,
       CoarseRouteClearanceMetrics clearanceMetrics,
+      int selectedWaypointIndex,
+      CoarseGlobalPlannerWaypointReason selectedWaypointReason,
       long startNanos,
       CoarseGlobalPlannerFailureReason failureReason) {
     lastStats =
@@ -311,6 +337,8 @@ public final class CoarseGlobalPlanner {
             pathNodes,
             routeCost,
             clearanceMetrics,
+            selectedWaypointIndex,
+            selectedWaypointReason,
             System.nanoTime() - startNanos,
             failureReason);
   }
@@ -433,15 +461,131 @@ public final class CoarseGlobalPlanner {
     return smoothed;
   }
 
-  private Translation2d chooseLookahead(
-      List<Node> path, double fieldLength, double fieldWidth, int nx, int ny, Translation2d start) {
-    Translation2d bestPoint = toPoint(path.get(1), fieldLength, fieldWidth, nx, ny);
-    for (int i = 1; i < path.size(); i++) {
-      Translation2d p = toPoint(path.get(i), fieldLength, fieldWidth, nx, ny);
-      bestPoint = p;
-      if (start.getDistance(p) >= config.waypointLookaheadMeters()) break;
+  private LookaheadSelection chooseLookahead(
+      List<Node> path,
+      ClearanceField clearanceField,
+      List<? extends Obstacle> obstacles,
+      double robotHalfLengthMeters,
+      double robotHalfWidthMeters,
+      double fieldLength,
+      double fieldWidth,
+      int nx,
+      int ny,
+      Translation2d start) {
+    if (path == null || path.size() < 2) {
+      return new LookaheadSelection(start, 0, CoarseGlobalPlannerWaypointReason.NONE);
     }
-    return bestPoint;
+
+    LookaheadSelection base =
+        chooseBaseLookahead(path, clearanceField, fieldLength, fieldWidth, nx, ny, start);
+    LookaheadSelection stable =
+        maybeKeepPreviousWaypoint(
+            base,
+            path,
+            obstacles,
+            robotHalfLengthMeters,
+            robotHalfWidthMeters,
+            fieldLength,
+            fieldWidth,
+            nx,
+            ny,
+            start);
+    return stable;
+  }
+
+  private LookaheadSelection chooseBaseLookahead(
+      List<Node> path,
+      ClearanceField clearanceField,
+      double fieldLength,
+      double fieldWidth,
+      int nx,
+      int ny,
+      Translation2d start) {
+    double lookahead = config.waypointLookaheadMeters();
+    int fallbackIndex = path.size() - 1;
+
+    for (int i = 1; i < path.size(); i++) {
+      Translation2d point = toPoint(path.get(i), fieldLength, fieldWidth, nx, ny);
+      double distance = start.getDistance(point);
+      if (isSharpTurn(path, i, ny) && distance >= lookahead * MIN_CORNER_LOOKAHEAD_FRACTION) {
+        return new LookaheadSelection(
+            point, i, CoarseGlobalPlannerWaypointReason.BEFORE_SHARP_TURN);
+      }
+      if (clearanceField != null
+          && i < path.size() - 1
+          && clearanceField.routeClearanceMeters(path.get(i)) < NARROW_PASSAGE_CLEARANCE_METERS
+          && distance >= lookahead * MIN_CORNER_LOOKAHEAD_FRACTION) {
+        return new LookaheadSelection(
+            point, i, CoarseGlobalPlannerWaypointReason.BEFORE_NARROW_PASSAGE);
+      }
+      if (distance >= lookahead) {
+        return new LookaheadSelection(
+            point, i, CoarseGlobalPlannerWaypointReason.LOOKAHEAD_DISTANCE);
+      }
+    }
+
+    return new LookaheadSelection(
+        toPoint(path.get(fallbackIndex), fieldLength, fieldWidth, nx, ny),
+        fallbackIndex,
+        CoarseGlobalPlannerWaypointReason.ROUTE_END);
+  }
+
+  private LookaheadSelection maybeKeepPreviousWaypoint(
+      LookaheadSelection base,
+      List<Node> path,
+      List<? extends Obstacle> obstacles,
+      double robotHalfLengthMeters,
+      double robotHalfWidthMeters,
+      double fieldLength,
+      double fieldWidth,
+      int nx,
+      int ny,
+      Translation2d start) {
+    if (previousWaypoint == null || base == null || start == null) return base;
+    if (previousWaypoint.getDistance(base.point()) > WAYPOINT_HYSTERESIS_METERS) return base;
+    if (start.getDistance(previousWaypoint) < config.waypointLookaheadMeters() * 0.35) return base;
+    if (!pointInsideField(
+        previousWaypoint, fieldLength, fieldWidth, robotHalfLengthMeters, robotHalfWidthMeters)) {
+      return base;
+    }
+    Node previousNode = nearestNode(previousWaypoint, nx, ny, fieldLength, fieldWidth);
+    if (!segmentFree(
+        nearestNode(start, nx, ny, fieldLength, fieldWidth),
+        previousNode,
+        obstacles,
+        robotHalfLengthMeters,
+        robotHalfWidthMeters,
+        fieldLength,
+        fieldWidth,
+        nx,
+        ny)) {
+      return base;
+    }
+    int routeIndex = nearestPathIndex(path, previousWaypoint, fieldLength, fieldWidth, nx, ny);
+    if (routeIndex < 1) return base;
+    return new LookaheadSelection(
+        previousWaypoint, routeIndex, CoarseGlobalPlannerWaypointReason.HYSTERESIS_KEEP);
+  }
+
+  private boolean isSharpTurn(List<Node> path, int index, int ny) {
+    if (path == null || index <= 0 || index >= path.size() - 1) return false;
+    return turnPenalty(index(path.get(index - 1), ny), path.get(index), path.get(index + 1), ny)
+            * Math.PI
+        >= SHARP_TURN_RADIANS;
+  }
+
+  private int nearestPathIndex(
+      List<Node> path, Translation2d point, double fieldLength, double fieldWidth, int nx, int ny) {
+    int bestIndex = -1;
+    double bestDistance = Double.POSITIVE_INFINITY;
+    for (int i = 0; i < path.size(); i++) {
+      double distance = toPoint(path.get(i), fieldLength, fieldWidth, nx, ny).getDistance(point);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestIndex = i;
+      }
+    }
+    return bestDistance <= WAYPOINT_HYSTERESIS_METERS ? bestIndex : -1;
   }
 
   private List<Node> reconstruct(int goalIdx, int startIdx, int[] parent, int ny) {
@@ -709,6 +853,14 @@ public final class CoarseGlobalPlanner {
   private record Node(int x, int y) {}
 
   private record Entry(Node node, double g, double f) {}
+
+  private record LookaheadSelection(
+      Translation2d point, int index, CoarseGlobalPlannerWaypointReason reason) {
+    private LookaheadSelection {
+      if (reason == null) reason = CoarseGlobalPlannerWaypointReason.NONE;
+      index = Math.max(0, index);
+    }
+  }
 
   private record ClearanceField(double[] obstacleClearance, double[] wallClearance, int ny) {
     double obstacleProximityCost(Node node) {
