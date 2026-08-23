@@ -59,6 +59,14 @@ public final class IntakeFootprint {
   }
 
   /**
+   * Clears the current footprint instance so a new one can be installed. Intended for simulation
+   * and test reconfiguration; production code should keep the set-once semantics of setFootprint.
+   */
+  public static void resetFootprint() {
+    instance = null;
+  }
+
+  /**
    * Returns the robot square value maintained by this Repulsor component.
    *
    * @param robotSideMeters distance or field-coordinate value in meters.
