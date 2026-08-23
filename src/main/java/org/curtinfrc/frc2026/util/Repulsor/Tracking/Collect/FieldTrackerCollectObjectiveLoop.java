@@ -934,25 +934,20 @@ public final class FieldTrackerCollectObjectiveLoop {
     if (robotPoseBlue == null) return Pose2d.kZero;
     double cap = Math.max(0.2, ourSpeedCap);
 
-    for (int pass = 0; pass < 2; pass++) {
-      FieldTrackerCollectPassSetupResult setup =
-          FieldTrackerCollectPassSetup.prepare(this, robotPoseBlue, cap);
-      if (setup.immediatePose() != null) return setup.immediatePose();
+    FieldTrackerCollectPassSetupResult setup =
+        FieldTrackerCollectPassSetup.prepare(this, robotPoseBlue, cap);
+    if (setup.immediatePose() != null) return setup.immediatePose();
 
-      FieldTrackerCollectPassContext ctx = setup.context();
-      FieldTrackerCollectPassCandidateResult candidate =
-          FieldTrackerCollectPassCandidateStep.choose(this, ctx, goalUnits);
-      if (candidate.immediatePose() != null) return candidate.immediatePose();
+    FieldTrackerCollectPassContext ctx = setup.context();
+    FieldTrackerCollectPassCandidateResult candidate =
+        FieldTrackerCollectPassCandidateStep.choose(this, ctx, goalUnits);
+    if (candidate.immediatePose() != null) return candidate.immediatePose();
 
-      FieldTrackerCollectPassStickyResult sticky =
-          FieldTrackerCollectPassStickyStep.selectAndPrime(this, ctx, candidate, pass);
-      if (sticky.immediatePose() != null) return sticky.immediatePose();
+    FieldTrackerCollectPassStickyResult sticky =
+        FieldTrackerCollectPassStickyStep.selectAndPrime(this, ctx, candidate, 0);
+    if (sticky.immediatePose() != null) return sticky.immediatePose();
 
-      return FieldTrackerCollectPassDriveStep.driveAndFinish(this, ctx, candidate, sticky, pass);
-    }
-
-    clearCollectSticky();
-    return fallbackCollectPose(robotPoseBlue);
+    return FieldTrackerCollectPassDriveStep.driveAndFinish(this, ctx, candidate, sticky, 0);
   }
 
   /**

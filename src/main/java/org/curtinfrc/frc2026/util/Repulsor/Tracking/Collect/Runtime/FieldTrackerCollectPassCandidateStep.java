@@ -558,29 +558,31 @@ public final class FieldTrackerCollectPassCandidateStep {
     PointCandidate best = null;
     String selectionReason = "ranked_candidate";
 
-    for (int attempt = 0; attempt < 5; attempt++) {
-      best =
-          loop.predictor.rankCollectNearest(
-              ctx.robotPos(),
-              ctx.cap(),
-              ctx.usePts(),
-              FieldTrackerCollectObjectiveLoop.COLLECT_CELL_M,
-              goalUnits,
-              Math.min(160, Math.max(32, ctx.usePts().length)));
+    boolean matched = false;
 
-      if (best != null && collectValid.test(best.point)) {
-        loop.lastBest = best;
-        selectionReason = "rank_collect_nearest";
-        Logger.recordOutput("Repulsor/Collect/Selection/Method", "CollectNearest");
-        break;
-      }
+    best =
+        loop.predictor.rankCollectNearest(
+            ctx.robotPos(),
+            ctx.cap(),
+            ctx.usePts(),
+            FieldTrackerCollectObjectiveLoop.COLLECT_CELL_M,
+            goalUnits,
+            Math.min(160, Math.max(32, ctx.usePts().length)));
 
-      if (best == null && loop.lastBest != null) {
-        best = loop.lastBest;
-        selectionReason = "last_best_fallback";
-        break;
-      }
+    if (best != null && collectValid.test(best.point)) {
+      loop.lastBest = best;
+      selectionReason = "rank_collect_nearest";
+      Logger.recordOutput("Repulsor/Collect/Selection/Method", "CollectNearest");
+      matched = true;
+    }
 
+    if (!matched && best == null && loop.lastBest != null) {
+      best = loop.lastBest;
+      selectionReason = "last_best_fallback";
+      matched = true;
+    }
+
+    if (!matched) {
       best =
           loop.predictor.rankCollectHierarchical(
               ctx.robotPos(),
@@ -594,9 +596,11 @@ public final class FieldTrackerCollectPassCandidateStep {
       if (best != null && collectValid.test(best.point)) {
         selectionReason = "rank_collect_hierarchical";
         Logger.recordOutput("Repulsor/Collect/Selection/Method", "CollectHierarchical");
-        break;
+        matched = true;
       }
+    }
 
+    if (!matched) {
       best =
           loop.predictor.rankCollectPoints(
               ctx.robotPos(),
@@ -608,9 +612,11 @@ public final class FieldTrackerCollectPassCandidateStep {
       if (best != null && collectValid.test(best.point)) {
         selectionReason = "rank_collect_points";
         Logger.recordOutput("Repulsor/Collect/Selection/Method", "CollectPoints");
-        break;
+        matched = true;
       }
+    }
 
+    if (!matched) {
       Translation2d hot =
           loop.predictor.bestCollectHotspot(
               ctx.usePts(), FieldTrackerCollectObjectiveLoop.COLLECT_CELL_M);
@@ -632,7 +638,6 @@ public final class FieldTrackerCollectPassCandidateStep {
                   -1e9);
           Logger.recordOutput("Repulsor/Collect/Selection/Method", "CollectHotspot");
           selectionReason = "collect_hotspot";
-          break;
         }
       }
     }
