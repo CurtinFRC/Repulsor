@@ -42,6 +42,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Shooting.MovingShotSolver;
 import org.curtinfrc.frc2026.util.Repulsor.Strategy.RepulsorStrategyPreset;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.CollectObjectiveSelectionConfig;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.CollectPlannerTuning;
+import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.ForbiddenBandTuning;
 
 /**
  * Provides field profile config functionality for the Repulsor field/profile definition layer used
@@ -387,6 +388,16 @@ public class FieldProfileConfig {
     }
     if (overlay.closeSwitchMarginScale != null) {
       base.closeSwitchMarginScale = overlay.closeSwitchMarginScale;
+    }
+    if (overlay.forbidMarginMeters != null) base.forbidMarginMeters = overlay.forbidMarginMeters;
+    if (overlay.forbiddenBandSquareCenterXMeters != null) {
+      base.forbiddenBandSquareCenterXMeters = overlay.forbiddenBandSquareCenterXMeters;
+    }
+    if (overlay.forbiddenBandRectCenterOffsetMeters != null) {
+      base.forbiddenBandRectCenterOffsetMeters = overlay.forbiddenBandRectCenterOffsetMeters;
+    }
+    if (overlay.forbiddenBandHalfWidthMeters != null) {
+      base.forbiddenBandHalfWidthMeters = overlay.forbiddenBandHalfWidthMeters;
     }
   }
 
@@ -769,6 +780,10 @@ public class FieldProfileConfig {
     public Double farSwitchForceMultiplier;
     public Double closeSwitchEasyDistanceMeters;
     public Double closeSwitchMarginScale;
+    public Double forbidMarginMeters;
+    public Double forbiddenBandSquareCenterXMeters;
+    public Double forbiddenBandRectCenterOffsetMeters;
+    public Double forbiddenBandHalfWidthMeters;
 
     public CollectPlannerTuning toCollectPlannerTuning() {
       CollectPlannerTuning defaults = CollectPlannerTuning.defaults();
@@ -813,7 +828,18 @@ public class FieldProfileConfig {
           finiteNonNegative(stickyNoProgressSeconds, defaults.stickyNoProgressSeconds()),
           finiteNonNegative(switchCooldownSeconds, defaults.switchCooldownSeconds()),
           finitePositive(collectCellMeters, defaults.collectCellMeters()),
-          selection);
+          selection,
+          new ForbiddenBandTuning(
+              finiteNonNegative(forbidMarginMeters, defaults.forbiddenBands().forbidMarginMeters()),
+              finitePositive(
+                  forbiddenBandSquareCenterXMeters,
+                  defaults.forbiddenBands().trenchSquareCenterXMeters()),
+              finitePositive(
+                  forbiddenBandRectCenterOffsetMeters,
+                  defaults.forbiddenBands().bumpRectCenterOffsetMeters()),
+              finitePositive(
+                  forbiddenBandHalfWidthMeters,
+                  defaults.forbiddenBands().bandHalfWidthMeters())));
     }
   }
 

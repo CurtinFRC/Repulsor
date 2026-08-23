@@ -28,6 +28,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Constants;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerCollectObjectiveLoop;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerCollectObjectiveMath;
+import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.ForbiddenBandTuning;
 
 /**
  * Provides field tracker collect pass setup functionality for the Repulsor runtime helper layer
@@ -36,6 +37,8 @@ import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.FieldTrackerCollectO
  * documents robot-relative motion.
  */
 public final class FieldTrackerCollectPassSetup {
+  private static final double DEFAULT_ROBOT_FOOTPRINT_MAX_METERS = 0.85;
+
   private FieldTrackerCollectPassSetup() {}
 
   /**
@@ -48,6 +51,24 @@ public final class FieldTrackerCollectPassSetup {
    */
   public static FieldTrackerCollectPassSetupResult prepare(
       FieldTrackerCollectObjectiveLoop loop, Pose2d robotPoseBlue, double cap) {
+    return prepare(loop, robotPoseBlue, cap, loop.collectPlannerTuning().forbiddenBands());
+  }
+
+  /**
+   * Returns the prepare value maintained by this Repulsor component.
+   *
+   * @param loop value used by this operation.
+   * @param robotPoseBlue value used by this operation.
+   * @param cap value used by this operation.
+   * @param bands forbidden-band tuning sourced from the active field profile
+   * @return field tracker collect pass setup result result for prepare.
+   */
+  public static FieldTrackerCollectPassSetupResult prepare(
+      FieldTrackerCollectObjectiveLoop loop,
+      Pose2d robotPoseBlue,
+      double cap,
+      ForbiddenBandTuning bands) {
+    ForbiddenBandTuning safeBands = bands == null ? ForbiddenBandTuning.defaults() : bands;
     Translation2d[] pts = loop.collectObjectivePoints.get();
 
     if (pts == null || pts.length == 0) {
@@ -55,26 +76,17 @@ public final class FieldTrackerCollectPassSetup {
       return new FieldTrackerCollectPassSetupResult(null, loop.fallbackCollectPose(robotPoseBlue));
     }
 
-    /**
-     * Configuration value for forbid margin m. Distances use meters in WPILib field coordinates and
-     * should be treated as tunable when sourced from profiles.
-     */
-    final double FORBID_MARGIN_M = 0.6;
-
-    final double robotHalf =
-        0.5
-            * Math.max(
-                org.curtinfrc.frc2026.Constants.ROBOT_X, org.curtinfrc.frc2026.Constants.ROBOT_Y);
+    final double robotHalf = 0.5 * DEFAULT_ROBOT_FOOTPRINT_MAX_METERS;
     final double robotWallMargin = robotHalf + 0.03;
 
     double L = Constants.FIELD_LENGTH;
-    double halfW = 1.1938 * 0.5 + FORBID_MARGIN_M;
+    double halfW = safeBands.effectiveHalfWidthMeters();
 
-    double leftSqCx = 4.625594;
-    double leftRectCx = (L * 0.5) - 3.63982;
+    double leftSqCx = safeBands.trenchSquareCenterXMeters();
+    double leftRectCx = (L * 0.5) - safeBands.bumpRectCenterOffsetMeters();
 
-    double rightSqCx = L - 4.625594;
-    double rightRectCx = (L * 0.5) + 3.63982;
+    double rightSqCx = L - safeBands.trenchSquareCenterXMeters();
+    double rightRectCx = (L * 0.5) + safeBands.bumpRectCenterOffsetMeters();
 
     double leftBandX0 = Math.min(leftSqCx, leftRectCx) - halfW;
     double leftBandX1 = Math.max(leftSqCx, leftRectCx) + halfW;

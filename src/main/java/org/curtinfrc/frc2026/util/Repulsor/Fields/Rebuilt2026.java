@@ -53,6 +53,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Shooting.Constraints;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.DragShotPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.Shooting.GamePiecePhysics;
 import org.curtinfrc.frc2026.util.Repulsor.Strategy.RepulsorStrategyPreset;
+import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.ForbiddenBandTuning;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
@@ -92,6 +93,40 @@ public final class Rebuilt2026 implements FieldDefinition {
   private static final Constraints DEFAULT_HUB_SHOT_CONSTRAINTS =
       new Constraints(0, 30, 60, 90.0, Constraints.ShotStyle.ARC);
 
+  /**
+   * Configuration value for trench bump square center x m. Distances use meters in WPILib field
+   * coordinates and should be treated as tunable when sourced from profiles.
+   */
+  public static final double TRENCH_BUMP_SQUARE_CENTER_X_M = 4.625594;
+
+  /**
+   * Configuration value for trench bump rect center offset m. Distances use meters in WPILib field
+   * coordinates and should be treated as tunable when sourced from profiles.
+   */
+  public static final double TRENCH_BUMP_RECT_CENTER_OFFSET_M = 3.63982;
+
+  /**
+   * Configuration value for trench bump band half width m. Distances use meters in WPILib field
+   * coordinates and should be treated as tunable when sourced from profiles.
+   */
+  public static final double TRENCH_BUMP_BAND_HALF_WIDTH_M = 1.1938 * 0.5;
+
+  public static final double FORBID_MARGIN_M = 0.6;
+
+  /**
+   * Returns the forbidden band carrier for this profile, consumed by the generic collect pass
+   * runtime instead of hardcoded season constants.
+   *
+   * @return forbidden band tuning matching the legacy inline values
+   */
+  public static ForbiddenBandTuning forbiddenBandTuning() {
+    return new ForbiddenBandTuning(
+        FORBID_MARGIN_M,
+        TRENCH_BUMP_SQUARE_CENTER_X_M,
+        TRENCH_BUMP_RECT_CENTER_OFFSET_M,
+        TRENCH_BUMP_BAND_HALF_WIDTH_M);
+  }
+
   /** Returns the rebuilt2026 value maintained by this Repulsor component. */
   public Rebuilt2026() {
     this(FieldProfileYamlLoader.loadOrDefault("rebuilt2026", defaultProfileConfig()));
@@ -108,13 +143,17 @@ public final class Rebuilt2026 implements FieldDefinition {
     this.geometry = profile.fieldGeometry(FIELD_LENGTH_M, FIELD_WIDTH_M);
   }
 
-  private static FieldProfileConfig defaultProfileConfig() {
+  static FieldProfileConfig defaultProfileConfig() {
     FieldProfileConfig cfg = new FieldProfileConfig();
     cfg.id = "rebuilt2026";
     cfg.gameName = "REBUILT";
     cfg.gameYear = 2026;
     cfg.geometry.lengthMeters = FIELD_LENGTH_M;
     cfg.geometry.widthMeters = FIELD_WIDTH_M;
+    cfg.collectPlanner.forbidMarginMeters = FORBID_MARGIN_M;
+    cfg.collectPlanner.forbiddenBandSquareCenterXMeters = TRENCH_BUMP_SQUARE_CENTER_X_M;
+    cfg.collectPlanner.forbiddenBandRectCenterOffsetMeters = TRENCH_BUMP_RECT_CENTER_OFFSET_M;
+    cfg.collectPlanner.forbiddenBandHalfWidthMeters = TRENCH_BUMP_BAND_HALF_WIDTH_M;
 
     FieldProfileConfig.ResourceConfig fuel = new FieldProfileConfig.ResourceConfig();
     fuel.radiusMeters = 0.075;
@@ -974,13 +1013,13 @@ public final class Rebuilt2026 implements FieldDefinition {
     double y0 = 0.0;
     double y1 = geometry.widthMeters();
 
-    double half = 1.1938 * 0.5;
+    double half = TRENCH_BUMP_BAND_HALF_WIDTH_M;
 
-    double leftSqCx = 4.625594;
-    double leftRectCx = (geometry.lengthMeters() * 0.5) - 3.63982;
+    double leftSqCx = TRENCH_BUMP_SQUARE_CENTER_X_M;
+    double leftRectCx = (geometry.lengthMeters() * 0.5) - TRENCH_BUMP_RECT_CENTER_OFFSET_M;
 
-    double rightSqCx = geometry.lengthMeters() - 4.625594;
-    double rightRectCx = (geometry.lengthMeters() * 0.5) + 3.63982;
+    double rightSqCx = geometry.lengthMeters() - TRENCH_BUMP_SQUARE_CENTER_X_M;
+    double rightRectCx = (geometry.lengthMeters() * 0.5) + TRENCH_BUMP_RECT_CENTER_OFFSET_M;
 
     double leftBandX0 = Math.min(leftSqCx, leftRectCx) - half;
     double leftBandX1 = Math.max(leftSqCx, leftRectCx) + half;
