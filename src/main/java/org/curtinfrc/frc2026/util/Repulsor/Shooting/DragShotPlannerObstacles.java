@@ -115,7 +115,11 @@ final class DragShotPlannerObstacles {
       double dy = targetFieldPosition.getY() - y;
       Rotation2d yaw = Rotation2d.fromRadians(Math.atan2(dy, dx));
       Translation2d[] rect =
-          FieldPlanner.robotRect(shooterPos, yaw, robotHalfLengthMeters, robotHalfWidthMeters);
+          FieldPlanner.robotRect(
+              shooterPos,
+              yaw,
+              robotHalfLengthMeters * 2.0,
+              robotHalfWidthMeters * 2.0);
 
       for (Obstacle sObs : staticObstacles()) {
         if (sObs.intersectsRectangle(rect)) {

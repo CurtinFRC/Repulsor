@@ -143,8 +143,8 @@ public final class ProjectileCycleRuntime {
     }
     return new SetpointContext(
         Optional.of(robotPose),
-        Math.max(0.0, ctx.robot_x) * 2.0,
-        Math.max(0.0, ctx.robot_y) * 2.0,
+        Math.max(0.0, ctx.robot_x),
+        Math.max(0.0, ctx.robot_y),
         release,
         ctx.vision.getObstacles());
   }
@@ -162,8 +162,8 @@ public final class ProjectileCycleRuntime {
       BehaviourContext ctx, Pose2d robotPose, DoubleSupplier releaseHeightMeters) {
     return new SetpointContext(
         Optional.ofNullable(robotPose),
-        Math.max(0.0, ctx.robot_x) * 2.0,
-        Math.max(0.0, ctx.robot_y) * 2.0,
+        Math.max(0.0, ctx.robot_x),
+        Math.max(0.0, ctx.robot_y),
         Math.max(0.0, releaseHeightMeters.getAsDouble()),
         ctx.vision.getObstacles());
   }
@@ -265,8 +265,8 @@ public final class ProjectileCycleRuntime {
     Translation2d target = profile.target(alliance);
 
     double releaseH = actionReleaseHeightMeters(profile, spCtx);
-    double halfL = Math.max(0.0, spCtx.robotLengthMeters()) / 2.0;
-    double halfW = Math.max(0.0, spCtx.robotWidthMeters()) / 2.0;
+    double robotLengthMeters = Math.max(0.0, spCtx.robotLengthMeters());
+    double robotWidthMeters = Math.max(0.0, spCtx.robotWidthMeters());
 
     double prevFlight =
         lastTimeToPlaneSec.get() == null ? DEFAULT_TIME_TO_PLANE_SEC : lastTimeToPlaneSec.get();
@@ -290,8 +290,8 @@ public final class ProjectileCycleRuntime {
             geometry,
             staticObstacles,
             releaseH,
-            halfL,
-            halfW,
+            robotLengthMeters,
+            robotWidthMeters,
             obstacles,
             alliance);
     Optional<MovingShotSolver.Result> movingShot =
@@ -478,8 +478,8 @@ public final class ProjectileCycleRuntime {
       FieldGeometry geometry,
       List<Obstacle> staticObstacles,
       double shooterReleaseHeightMeters,
-      double halfL,
-      double halfW,
+      double robotLengthMeters,
+      double robotWidthMeters,
       List<? extends Obstacle> obstacles,
       DriverStation.Alliance alliance) {
     Translation2d behind = behindDirection(alliance);
@@ -504,7 +504,13 @@ public final class ProjectileCycleRuntime {
               profile.fieldMarginMeters());
 
       if (!isShooterPoseValid(
-          shooterPos, target, halfL, halfW, staticObstacles, obstacles, geometry)) {
+          shooterPos,
+          target,
+          robotLengthMeters,
+          robotWidthMeters,
+          staticObstacles,
+          obstacles,
+          geometry)) {
         continue;
       }
 
@@ -579,8 +585,8 @@ public final class ProjectileCycleRuntime {
   private static boolean isShooterPoseValid(
       Translation2d shooterPos,
       Translation2d targetFieldPosition,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters,
+      double robotLengthMeters,
+      double robotWidthMeters,
       List<Obstacle> staticObstacles,
       List<? extends Obstacle> dynamicObstacles,
       FieldGeometry geometry) {
@@ -589,7 +595,7 @@ public final class ProjectileCycleRuntime {
     Translation2d delta = targetFieldPosition.minus(shooterPos);
     Rotation2d yaw = Rotation2d.fromRadians(Math.atan2(delta.getY(), delta.getX()));
     Translation2d[] rect =
-        FieldPlanner.robotRect(shooterPos, yaw, robotHalfLengthMeters, robotHalfWidthMeters);
+        FieldPlanner.robotRect(shooterPos, yaw, robotLengthMeters, robotWidthMeters);
 
     for (Obstacle obstacle : staticObstacles) {
       if (obstacle.intersectsRectangle(rect)) return false;

@@ -31,13 +31,22 @@ class ProjectileCycleMakeCtxTest {
   }
 
   @Test
-  void robotDimensionsDoubledFromContext() {
+  void robotDimensionsPassThroughUnchanged() {
     Pose2d pose = new Pose2d(1.0, 2.0, Rotation2d.kZero);
     SetpointContext ctx = ProjectileCycleRuntime.makeCtx(context(0.85, 0.60, pose), pose, () -> 0.0);
 
-    assertEquals(1.7, ctx.robotLengthMeters(), EPS);
-    assertEquals(1.2, ctx.robotWidthMeters(), EPS);
+    assertEquals(0.85, ctx.robotLengthMeters(), EPS);
+    assertEquals(0.60, ctx.robotWidthMeters(), EPS);
     assertEquals(0.0, ctx.shooterReleaseHeightMeters(), EPS);
+  }
+
+  @Test
+  void targetHeightReleaseFlowsIntoContext() {
+    Pose2d pose = new Pose2d(1.0, 2.0, Rotation2d.kZero);
+    SetpointContext ctx = ProjectileCycleRuntime.makeCtx(context(0.85, 0.60, pose), pose);
+
+    assertEquals(0.85, ctx.robotLengthMeters(), EPS);
+    assertEquals(0.60, ctx.robotWidthMeters(), EPS);
   }
 
   @Test

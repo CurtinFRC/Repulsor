@@ -19,8 +19,6 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Behaviours;
 
-import static edu.wpi.first.units.Units.Meters;
-
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -32,13 +30,13 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import org.curtinfrc.frc2026.util.Repulsor.Behaviours.Runtime.ProjectileCycleRuntime;
 import org.curtinfrc.frc2026.util.Repulsor.Diagnostics.RepulsorDecisionEntry;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.RepulsorSample;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
@@ -158,20 +156,7 @@ public class AutoPathBehaviour extends Behaviour {
   }
 
   private static SetpointContext makeCtx(BehaviourContext ctx, Pose2d robotPose) {
-    double release;
-    try {
-      var ht = ctx.repulsor.getTargetHeight();
-      var d = ht != null ? ht.getHeight() : null;
-      release = d != null ? Math.max(0.0, d.in(Meters)) : 0.0;
-    } catch (Exception ignored) {
-      release = 0.0;
-    }
-    return new SetpointContext(
-        Optional.of(robotPose),
-        Math.max(0.0, ctx.robot_x) * 2.0,
-        Math.max(0.0, ctx.robot_y) * 2.0,
-        release,
-        ctx.vision.getObstacles());
+    return ProjectileCycleRuntime.makeCtx(ctx, robotPose);
   }
 
   /**
