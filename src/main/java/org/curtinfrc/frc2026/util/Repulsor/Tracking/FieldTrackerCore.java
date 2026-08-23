@@ -22,7 +22,6 @@ package org.curtinfrc.frc2026.util.Repulsor.Tracking;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.wpilibj.DriverStation;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -68,7 +67,7 @@ public class FieldTrackerCore {
    * Configuration value for field map. The valid range and tuning source are defined by the owning
    * subsystem or field profile.
    */
-  public GameElement[] field_map;
+  public volatile GameElement[] field_map;
 
   private final PredictiveFieldStateRuntime predictor;
   private final ObjectiveCache collectCache;
@@ -547,11 +546,8 @@ public class FieldTrackerCore {
     if (robotPoseBlue == null) {
       return Pose2d.kZero;
     }
-    boolean flipRedToBlue =
-        DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue)
-            == DriverStation.Alliance.Red;
     return FieldTrackerOffloadEntrypoints_Offloaded.nextShuttleRecoveryGoalBlue_offload(
-        robotPoseBlue, ourSpeedCap, goalUnits, flipRedToBlue, snapshotRecoveryDynamics());
+        robotPoseBlue, ourSpeedCap, goalUnits, false, snapshotRecoveryDynamics());
   }
 
   /**

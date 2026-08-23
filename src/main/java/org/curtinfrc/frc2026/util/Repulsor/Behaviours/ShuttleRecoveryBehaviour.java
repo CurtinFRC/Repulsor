@@ -266,19 +266,14 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
 
   private Pose2d chooseRecoveryCollectGoalBlue(
       Pose2d robotPose, double cap, FieldGeometry geometry) {
-    DriverStation.Alliance wpAlliance =
-        DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue);
-    Pose2d robotPoseBlue =
-        wpAlliance == DriverStation.Alliance.Red ? SetpointUtil.flipToRed(robotPose) : robotPose;
-
     Pose2d nextBlue =
         FieldTrackerCore.getInstance()
-            .nextAllianceShuttleRecoveryGoalBlue(robotPoseBlue, cap, RECOVERY_GOAL_UNITS);
+            .nextAllianceShuttleRecoveryGoalBlue(robotPose, cap, RECOVERY_GOAL_UNITS);
     if (nextBlue == null) {
       return new Pose2d(
           geometry.lengthMeters() * 0.25,
           geometry.widthMeters() * 0.5,
-          robotPoseBlue.getRotation());
+          robotPose.getRotation());
     }
     return new Pose2d(nextBlue.getTranslation(), nextBlue.getRotation());
   }
