@@ -42,6 +42,10 @@ public abstract class MutableState implements State {
    */
   @Override
   public State copy() {
-    return this;
+    try {
+      return (State) super.clone();
+    } catch (CloneNotSupportedException e) {
+      return this;
+    }
   }
 }
