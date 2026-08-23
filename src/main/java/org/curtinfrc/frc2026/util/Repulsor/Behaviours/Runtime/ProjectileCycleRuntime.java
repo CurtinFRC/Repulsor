@@ -29,6 +29,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.DoubleSupplier;
 import org.curtinfrc.frc2026.util.Repulsor.Behaviours.BehaviourContext;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.FieldPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
@@ -145,6 +146,25 @@ public final class ProjectileCycleRuntime {
         Math.max(0.0, ctx.robot_x) * 2.0,
         Math.max(0.0, ctx.robot_y) * 2.0,
         release,
+        ctx.vision.getObstacles());
+  }
+
+  /**
+   * Builds a setpoint context from the current behaviour state using an explicit release-height
+   * source instead of the mechanism target height.
+   *
+   * @param ctx behaviour runtime context containing robot dimensions and vision obstacles
+   * @param robotPose current robot {@link Pose2d} in field-relative coordinates
+   * @param releaseHeightMeters supplier of the shooter release height in meters
+   * @return setpoint context for route resolution and shot planning
+   */
+  public static SetpointContext makeCtx(
+      BehaviourContext ctx, Pose2d robotPose, DoubleSupplier releaseHeightMeters) {
+    return new SetpointContext(
+        Optional.ofNullable(robotPose),
+        Math.max(0.0, ctx.robot_x) * 2.0,
+        Math.max(0.0, ctx.robot_y) * 2.0,
+        Math.max(0.0, releaseHeightMeters.getAsDouble()),
         ctx.vision.getObstacles());
   }
 
