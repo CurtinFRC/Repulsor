@@ -646,13 +646,14 @@ public final class Triggers {
     public void wire() {
       if (wired) return;
       wired = true;
-      final boolean[] armedThisTick = {false};
+      final double[] lastFireTime = {Double.NEGATIVE_INFINITY};
       for (Transition<T> tr : transitions) {
         Trigger gated = (tr.from == null) ? tr.when : gate.whenInPhase(tr.when, tr.from);
         gated.onTrue(
             Commands.runOnce(
                     () -> {
-                      if (armedThisTick[0]) return;
+                      double now = Timer.getFPGATimestamp();
+                      if (now - lastFireTime[0] < TICK_PERIOD_SEC) return;
                       T prev = gate.phase();
                       if (tr.from != null && !Objects.equals(prev, tr.from)) return;
                       if (Objects.equals(prev, tr.to)) return;
@@ -664,11 +665,13 @@ public final class Triggers {
                       List<Runnable> enters = enterCbs.get(tr.to);
                       if (enters != null) enters.forEach(Runnable::run);
 
-                      armedThisTick[0] = true;
+                      lastFireTime[0] = now;
                     })
                 .ignoringDisable(true));
       }
     }
+
+    static final double TICK_PERIOD_SEC = 0.02;
   }
 
   /**
