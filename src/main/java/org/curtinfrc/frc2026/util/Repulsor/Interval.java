@@ -46,11 +46,21 @@ public final class Interval<T> {
 
   private Interval(
       T first, T second, Comparator<? super T> cmp, BoundType lowerBound, BoundType upperBound) {
-    this.first = Objects.requireNonNull(first, "first");
-    this.second = Objects.requireNonNull(second, "second");
-    this.cmp = Objects.requireNonNull(cmp, "cmp");
-    this.lowerBound = Objects.requireNonNull(lowerBound, "lowerBound");
-    this.upperBound = Objects.requireNonNull(upperBound, "upperBound");
+    Objects.requireNonNull(first, "first");
+    Objects.requireNonNull(second, "second");
+    Objects.requireNonNull(cmp, "cmp");
+    Objects.requireNonNull(lowerBound, "lowerBound");
+    Objects.requireNonNull(upperBound, "upperBound");
+    if (cmp.compare(first, second) > 0) {
+      T swapped = first;
+      first = second;
+      second = swapped;
+    }
+    this.first = first;
+    this.second = second;
+    this.cmp = cmp;
+    this.lowerBound = lowerBound;
+    this.upperBound = upperBound;
   }
 
   /**
