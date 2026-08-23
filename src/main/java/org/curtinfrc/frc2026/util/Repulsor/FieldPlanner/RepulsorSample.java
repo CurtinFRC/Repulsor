@@ -87,6 +87,7 @@ public class RepulsorSample {
    * @return chassis speeds result for as chassis speeds.
    */
   public ChassisSpeeds asChassisSpeeds(PIDController omegaPID, Rotation2d currentRot) {
+    omegaPID.enableContinuousInput(-Math.PI, Math.PI);
     double desiredYaw = (m_omega == null) ? currentRot.getRadians() : m_omega.in(Radians);
     double omegaCmd = omegaPID.calculate(currentRot.getRadians(), desiredYaw);
     return ChassisSpeeds.fromFieldRelativeSpeeds(
