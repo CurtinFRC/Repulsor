@@ -22,16 +22,16 @@ package org.curtinfrc.frc2026.util.Repulsor.Behaviours;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import java.util.EnumSet;
-import java.util.Optional;
+import org.curtinfrc.frc2026.util.Repulsor.Behaviours.Runtime.ProjectileCycleRuntime;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.RepulsorSample;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
-import org.curtinfrc.frc2026.util.Repulsor.Setpoints.HeightSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointContext;
-import org.curtinfrc.frc2026.util.Repulsor.Setpoints.Setpoints;
+import org.curtinfrc.frc2026.util.Repulsor.Shooting.DragShotPlanner;
 import org.curtinfrc.frc2026.util.Repulsor.Simulation.NetworkTablesValue;
 
 /**
@@ -85,12 +85,7 @@ public final class TestBehaviour extends Behaviour {
   }
 
   private static SetpointContext makeCtx(BehaviourContext ctx, Pose2d robotPose) {
-    return new SetpointContext(
-        Optional.ofNullable(robotPose),
-        Math.max(0.0, ctx.robot_x) * 2.0,
-        Math.max(0.0, ctx.robot_y) * 2.0,
-        0.0,
-        ctx.vision.getObstacles());
+    return ProjectileCycleRuntime.makeCtx(ctx, robotPose, () -> 0.0);
   }
 
   /**
@@ -104,20 +99,39 @@ public final class TestBehaviour extends Behaviour {
     return Commands.run(
             () -> {
               Pose2d robotPose = ctx.robotPose.get();
+              SetpointContext spCtx = makeCtx(ctx, robotPose);
 
               RepulsorSetpoint sp =
-                  new RepulsorSetpoint(Setpoints.Rebuilt2026.HUB_SHOOT, HeightSetpoint.NET);
-              Pose2d goalPose = sp.get(makeCtx(ctx, robotPose));
+                  ctx.repulsor.getFieldDefinition().defaultScoreSetpoint().orElse(null);
+              if (sp == null) {
+                ctx.drive.runVelocity(new ChassisSpeeds());
+                return;
+              }
+              Pose2d goalPose = sp.get(spCtx);
 
               ctx.repulsor.setCurrentGoal(sp);
               ctx.planner.setRequestedGoal(goalPose);
 
-              Setpoints.Rebuilt2026.getHubShotSolution(makeCtx(ctx, robotPose))
+              DriverStation.Alliance alliance =
+                  DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue);
+              ctx.repulsor
+                  .getFieldDefinition()
+                  .actionProfile()
+                  .scoreProjectileShot()
                   .ifPresent(
-                      sol -> {
-                        shotSpeed.set(sol.launchSpeedMetersPerSecond());
-                        shotAngle.set(sol.launchAngle().getDegrees());
-                      });
+                      action ->
+                          DragShotPlanner.calculateStaticShotAngleAndSpeed(
+                                  action.gamePiecePhysics(),
+                                  robotPose.getTranslation(),
+                                  action.target(alliance),
+                                  action.targetHeightMeters(),
+                                  Math.max(0.0, spCtx.shooterReleaseHeightMeters()),
+                                  action.constraints())
+                              .ifPresent(
+                                  sol -> {
+                                    shotSpeed.set(sol.launchSpeedMetersPerSecond());
+                                    shotAngle.set(sol.launchAngle().getDegrees());
+                                  }));
 
               RepulsorSample sample =
                   ctx.planner.calculate(
