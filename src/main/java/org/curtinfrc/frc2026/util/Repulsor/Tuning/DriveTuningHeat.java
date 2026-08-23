@@ -38,7 +38,6 @@ public class DriveTuningHeat extends DriveTuning {
   private double minStep = 0.02;
   private double nearStart = 0.40;
   private double nearEnd = 0.02;
-  private final double MAX_SPEED = 5.14;
 
   private final Heatmap heatmap;
   private final Supplier<Pose2d> robotPoseSupplier;
@@ -142,9 +141,12 @@ public class DriveTuningHeat extends DriveTuning {
    */
   public double maxLinearSpeedMps(Pose2d robotPose) {
     if (robotPose == null) return baseMaxSpeed;
-    double heat = heatmap.heatAt(robotPose.getTranslation());
-    double scale = MathUtil.clamp(heat, 0.0, 1.0);
-    return baseMaxSpeed * scale;
+    return baseMaxSpeed * heatScale(robotPose.getTranslation());
+  }
+
+  private double heatScale(Translation2d p) {
+    if (heatmap.totalHeat() <= 0.0) return 1.0;
+    return MathUtil.clamp(heatmap.heatAt(p), 0.0, 1.0);
   }
 
   /**
@@ -197,14 +199,11 @@ public class DriveTuningHeat extends DriveTuning {
 
     Pose2d pose = getRobotPoseOrNull();
     double vMaxHeat = baseMaxSpeed;
-    double heat = 1.0;
     if (pose != null) {
-      Translation2d p = pose.getTranslation();
-      heat = heatmap.heatAt(p);
-      vMaxHeat = baseMaxSpeed * MathUtil.clamp(heat, 0.0, 1.0);
+      vMaxHeat = baseMaxSpeed * heatScale(pose.getTranslation());
     }
 
-    double vMax = Math.min(vMaxHeat, MAX_SPEED);
+    double vMax = Math.min(vMaxHeat, baseMaxSpeed);
     double aMax = Math.max(0.01, sqrtScale);
 
     double dBrake = vMax * vMax / (2.0 * aMax);
@@ -223,7 +222,7 @@ public class DriveTuningHeat extends DriveTuning {
       v *= s;
     }
 
-    double step = v;
+    double step = v * dt;
 
     if (step < minStep && d > minStep) {
       step = minStep;
