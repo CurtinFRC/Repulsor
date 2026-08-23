@@ -38,10 +38,28 @@ import org.yaml.snakeyaml.constructor.Constructor;
  * robot-relative motion.
  */
 final class DragShotPlannerGamePieceLoader {
-  private static final ConcurrentHashMap<String, GamePiecePhysics> GAME_PIECE_CACHE =
+  private static final ConcurrentHashMap<String, LoadedGamePiece> GAME_PIECE_CACHE =
       new ConcurrentHashMap<>();
 
+  private static volatile YamlResolver resolver = DragShotPlannerGamePieceLoader::loadFromDisk;
+
   private DragShotPlannerGamePieceLoader() {}
+
+  /** Seam for resolving game piece YAML, injectable for tests. */
+  interface YamlResolver {
+    GamePiecePhysics load(String id);
+  }
+
+  private record LoadedGamePiece(GamePiecePhysics piece, String error) {}
+
+  static void setResolverForTest(YamlResolver custom) {
+    resolver = custom != null ? custom : DragShotPlannerGamePieceLoader::loadFromDisk;
+  }
+
+  static void resetForTest() {
+    resolver = DragShotPlannerGamePieceLoader::loadFromDisk;
+    GAME_PIECE_CACHE.clear();
+  }
 
   /**
    * Returns the load game piece from deploy yaml value maintained by this Repulsor component.
@@ -55,14 +73,26 @@ final class DragShotPlannerGamePieceLoader {
       if (id == null || id.isEmpty()) {
         throw new IllegalArgumentException("id must be non-empty");
       }
-      return GAME_PIECE_CACHE.computeIfAbsent(
-          id, DragShotPlannerGamePieceLoader::loadGamePieceFromDeployYamlInternal);
+      LoadedGamePiece loaded =
+          GAME_PIECE_CACHE.computeIfAbsent(id, DragShotPlannerGamePieceLoader::resolve);
+      if (loaded.error() != null) {
+        throw new IllegalStateException(loaded.error());
+      }
+      return loaded.piece();
     } finally {
       DragShotPlannerUtil.closeQuietly(_p);
     }
   }
 
-  private static GamePiecePhysics loadGamePieceFromDeployYamlInternal(String id) {
+  private static LoadedGamePiece resolve(String id) {
+    try {
+      return new LoadedGamePiece(resolver.load(id), null);
+    } catch (RuntimeException ex) {
+      return new LoadedGamePiece(null, ex.getMessage());
+    }
+  }
+
+  private static GamePiecePhysics loadFromDisk(String id) {
     AutoCloseable _p = Profiler.section("DragShotPlanner.loadGamePieceFromDeployYamlInternal");
     try {
       Path deployDir = Filesystem.getDeployDirectory().toPath();
