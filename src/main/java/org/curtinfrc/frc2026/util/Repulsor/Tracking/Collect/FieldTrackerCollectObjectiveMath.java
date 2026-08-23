@@ -296,7 +296,7 @@ public final class FieldTrackerCollectObjectiveMath {
     double t = clamp01((d - STICKY_NEAR_DIST_M) / (STICKY_FAR_DIST_M - STICKY_NEAR_DIST_M));
     double min = lerp(0.70, 0.25, t);
     double max = lerp(3.80, 1.80, t);
-    return Math.max(min, Math.min(max, max));
+    return Math.max(min, Math.min(max, lerp(max, min, 0.5)));
   }
 
   /**
