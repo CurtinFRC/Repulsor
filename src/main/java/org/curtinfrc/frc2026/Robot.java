@@ -77,7 +77,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Fallback.PID;
 import org.curtinfrc.frc2026.util.Repulsor.IntakeFootprint;
 import org.curtinfrc.frc2026.util.Repulsor.Offload.RepulsorOffloadRuntime;
 import org.curtinfrc.frc2026.util.Repulsor.Profiler.Profiler;
-import org.curtinfrc.frc2026.util.Repulsor.Reasoning.Rebuilt2026Reasoner;
+import org.curtinfrc.frc2026.util.Repulsor.Reasoning.Specific.Rebuilt2026Reasoner;
 import org.curtinfrc.frc2026.util.Repulsor.Repulsor;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.HeightSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
