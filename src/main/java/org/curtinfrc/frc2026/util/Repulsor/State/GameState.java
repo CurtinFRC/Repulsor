@@ -30,16 +30,74 @@ import java.util.Optional;
  * motion.
  */
 public class GameState extends StaticState {
-  private final double TELEOP_GAME_LENGTH = 140.0;
-  private final double AUTONOMOUS_PERIOD_LENGTH = 20.0;
-  private final double TRANSITION_PERIOD_LENGTH = 10.0;
-  private final double MATCH_SHIFT_LENGTH = 25.0;
+  /**
+   * Default teleop game length in seconds. Time values use seconds and should be tuned against
+   * measured robot loop and mechanism latency.
+   */
+  public static final double DEFAULT_TELEOP_GAME_LENGTH = 140.0;
+
+  /**
+   * Default autonomous period length in seconds. Time values use seconds and should be tuned
+   * against measured robot loop and mechanism latency.
+   */
+  public static final double DEFAULT_AUTONOMOUS_PERIOD_LENGTH = 20.0;
+
+  /**
+   * Default transition period length in seconds. Time values use seconds and should be tuned
+   * against measured robot loop and mechanism latency.
+   */
+  public static final double DEFAULT_TRANSITION_PERIOD_LENGTH = 10.0;
+
+  /**
+   * Default match shift length in seconds. Time values use seconds and should be tuned against
+   * measured robot loop and mechanism latency.
+   */
+  public static final double DEFAULT_MATCH_SHIFT_LENGTH = 25.0;
+
+  private final double teleopGameLength;
+  private final double autonomousPeriodLength;
+  private final double transitionPeriodLength;
+  private final double matchShiftLength;
 
   private Optional<DriverStation.Alliance> alliance = Optional.empty();
   private Optional<DriverStation.Alliance> inactiveFirst = Optional.empty();
 
   private Alert noAllianceAlert = new Alert("No Alliance Read", AlertType.kWarning);
   private Alert noGameDataAlert = new Alert("No Game Data Read", AlertType.kWarning);
+
+  /** Creates a game state using the default FRC match format timings. */
+  public GameState() {
+    this(
+        DEFAULT_TELEOP_GAME_LENGTH,
+        DEFAULT_AUTONOMOUS_PERIOD_LENGTH,
+        DEFAULT_TRANSITION_PERIOD_LENGTH,
+        DEFAULT_MATCH_SHIFT_LENGTH);
+  }
+
+  /**
+   * Creates a game state with the given match-format timings.
+   *
+   * @param teleopGameLength total teleop length in seconds.
+   * @param autonomousPeriodLength autonomous period length in seconds.
+   * @param transitionPeriodLength transition period length in seconds.
+   * @param matchShiftLength length of one hub shift in seconds.
+   */
+  public GameState(
+      double teleopGameLength,
+      double autonomousPeriodLength,
+      double transitionPeriodLength,
+      double matchShiftLength) {
+    if (!(teleopGameLength > 0.0)
+        || !(autonomousPeriodLength > 0.0)
+        || !(transitionPeriodLength > 0.0)
+        || !(matchShiftLength > 0.0)) {
+      throw new IllegalArgumentException("match format lengths must be positive");
+    }
+    this.teleopGameLength = teleopGameLength;
+    this.autonomousPeriodLength = autonomousPeriodLength;
+    this.transitionPeriodLength = transitionPeriodLength;
+    this.matchShiftLength = matchShiftLength;
+  }
 
   private void updateAlliance() {
     Optional<DriverStation.Alliance> readAlliance = DriverStation.getAlliance();
@@ -70,7 +128,7 @@ public class GameState extends StaticState {
   private double getMatchTime() {
     double gameTime = DriverStation.getMatchTime();
     if (DriverStation.isFMSAttached()) {
-      gameTime = TELEOP_GAME_LENGTH - gameTime;
+      gameTime = teleopGameLength - gameTime;
     }
     return gameTime;
   }
@@ -82,11 +140,10 @@ public class GameState extends StaticState {
     if (!DriverStation.isTeleopEnabled()) {
       gamePeriodNumber = -1;
     } else {
-      if (gameTime <= 10) {
+      if (gameTime <= transitionPeriodLength) {
         gamePeriodNumber = 0;
       } else {
-        gamePeriodNumber =
-            (int) Math.ceil((gameTime - TRANSITION_PERIOD_LENGTH) / MATCH_SHIFT_LENGTH);
+        gamePeriodNumber = (int) Math.ceil((gameTime - transitionPeriodLength) / matchShiftLength);
       }
     }
 
@@ -133,11 +190,11 @@ public class GameState extends StaticState {
     double gameTime = getMatchTime();
     double shiftNumber = getGamePeriodNumber();
     if (shiftNumber == -1) {
-      shiftEndTime = AUTONOMOUS_PERIOD_LENGTH;
+      shiftEndTime = autonomousPeriodLength;
     } else if (shiftNumber == 0) {
-      shiftEndTime = TRANSITION_PERIOD_LENGTH;
+      shiftEndTime = transitionPeriodLength;
     } else {
-      shiftEndTime = shiftNumber * MATCH_SHIFT_LENGTH + TRANSITION_PERIOD_LENGTH;
+      shiftEndTime = shiftNumber * matchShiftLength + transitionPeriodLength;
       shiftEndTime = (shiftNumber < 5) ? shiftEndTime : shiftEndTime + 5;
     }
 
