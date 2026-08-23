@@ -52,8 +52,14 @@ public abstract class TankDriveImpl extends DriveRepulsor {
     double vy = speeds.vyMetersPerSecond;
     double omegaPID = speeds.omegaRadiansPerSecond;
 
-    double theta = Math.atan2(vy, Math.max(1e-9, vx));
-    double omegaArc = getArcAlignGain() * theta;
+    double omegaArc;
+    if (Math.abs(vx) < getInPlaceTurnVXThreshold()) {
+      omegaArc = getArcAlignGain() * Math.signum(vy) * Math.min(1.0, Math.abs(vy));
+    } else if (vx < 0.0) {
+      omegaArc = getArcAlignGain() * Math.atan2(-vy, -vx);
+    } else {
+      omegaArc = getArcAlignGain() * Math.atan2(vy, vx);
+    }
     double omegaEff = omegaPID + omegaArc;
 
     double vFwd = vx;
