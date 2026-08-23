@@ -82,6 +82,19 @@ public abstract class NtRepulsorDriverStation extends RepulsorDriverStation {
   }
 
   /**
+   * Returns the get config bool value maintained by this Repulsor component, falling back to the
+   * supplied default when the key was never declared in the schema.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param defaultValue value used by this operation.
+   * @return value produced by this operation.
+   */
+  public final boolean getConfigBool(String key, boolean defaultValue) {
+    NetworkTablesValue<Boolean> v = configBools.get(normalizeKey(key));
+    return v == null ? defaultValue : Boolean.TRUE.equals(v.get());
+  }
+
+  /**
    * Updates set config bool state or telemetry as part of the Repulsor runtime loop. This may
    * mutate local state, NetworkTables output, planner caches, or command-side runtime state
    * depending on the owning type.
@@ -103,6 +116,20 @@ public abstract class NtRepulsorDriverStation extends RepulsorDriverStation {
     NetworkTablesValue<Double> v = require(configDoubles, key);
     Double d = v.get();
     return d != null ? d : 0.0;
+  }
+
+  /**
+   * Returns the get config double value maintained by this Repulsor component, falling back to the
+   * supplied default when the key was never declared in the schema.
+   *
+   * @param key distance or field-coordinate value in meters.
+   * @param defaultValue value used by this operation.
+   * @return value produced by this operation.
+   */
+  public final double getConfigDouble(String key, double defaultValue) {
+    NetworkTablesValue<Double> v = configDoubles.get(normalizeKey(key));
+    Double d = v == null ? null : v.get();
+    return d != null ? d : defaultValue;
   }
 
   /**
