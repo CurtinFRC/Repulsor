@@ -44,6 +44,14 @@ public class VisionPlanner {
   private static final double DEFAULT_MAX_ASSOCIATION_METERS = 2.0;
 
   /**
+   * Default maximum distance in meters at which a vision obstacle still exerts force. Distances use
+   * meters in WPILib field coordinates.
+   */
+  public static final double DEFAULT_FORCE_CUTOFF_METERS = 3.0;
+
+  private double forceCutoffMeters = DEFAULT_FORCE_CUTOFF_METERS;
+
+  /**
    * Provides vision obstacle functionality for the Repulsor core Repulsor coordination layer. Use
    * this type from robot code, field profiles, or tests when integrating the corresponding Repulsor
    * subsystem. Coordinates are field-relative unless a method documents robot-relative motion.
@@ -74,6 +82,12 @@ public class VisionPlanner {
     public Kind kind;
 
     /**
+     * Maximum distance in meters at which this obstacle still exerts force. Distances use meters in
+     * WPILib field coordinates and should be treated as tunable when sourced from profiles.
+     */
+    public final double forceCutoffMeters;
+
+    /**
      * Returns the vision obstacle value maintained by this Repulsor component.
      *
      * @param loc value used by this operation.
@@ -81,11 +95,28 @@ public class VisionPlanner {
      * @param type value used by this operation.
      */
     public VisionObstacle(Translation2d loc, double strength, ObstacleType type) {
+      this(loc, strength, type, DEFAULT_FORCE_CUTOFF_METERS);
+    }
+
+    /**
+     * Returns the vision obstacle value maintained by this Repulsor component.
+     *
+     * @param loc value used by this operation.
+     * @param strength value used by this operation.
+     * @param type value used by this operation.
+     * @param forceCutoffMeters maximum distance in meters at which this obstacle exerts force.
+     */
+    public VisionObstacle(
+        Translation2d loc, double strength, ObstacleType type, double forceCutoffMeters) {
       super(strength, true);
+      if (!(forceCutoffMeters > 0.0) || !Double.isFinite(forceCutoffMeters)) {
+        throw new IllegalArgumentException("forceCutoffMeters must be finite and positive");
+      }
       this.loc = loc;
       this.sizeX = type.getSize().getFirst();
       this.sizeY = type.getSize().getSecond();
       this.kind = type.getKind();
+      this.forceCutoffMeters = forceCutoffMeters;
     }
 
     /**
@@ -98,7 +129,7 @@ public class VisionPlanner {
     @Override
     public Force getForceAtPosition(Translation2d position, Translation2d target) {
       double distance = loc.getDistance(position);
-      if (distance > 3.0) return new Force();
+      if (distance > forceCutoffMeters) return new Force();
 
       var dsBase = RepulsorDriverStation.getInstance();
       double clearanceScale = 1.0;
@@ -157,6 +188,27 @@ public class VisionPlanner {
 
   /** Returns the vision planner value maintained by this Repulsor component. */
   public VisionPlanner() {}
+
+  /**
+   * Updates the maximum distance in meters at which vision obstacles exert force.
+   *
+   * @param meters maximum distance in meters; must be finite and positive.
+   */
+  public void setForceCutoffMeters(double meters) {
+    if (!(meters > 0.0) || !Double.isFinite(meters)) {
+      throw new IllegalArgumentException("forceCutoffMeters must be finite and positive");
+    }
+    forceCutoffMeters = meters;
+  }
+
+  /**
+   * Returns the force cutoff meters value maintained by this Repulsor component.
+   *
+   * @return distance or field-coordinate value in meters.
+   */
+  public double getForceCutoffMeters() {
+    return forceCutoffMeters;
+  }
 
   /**
    * Returns the with vision value maintained by this Repulsor component.
@@ -224,7 +276,8 @@ public class VisionPlanner {
     return new VisionObstacle(
         new Translation2d(detection.x(), detection.y()),
         DEFAULT_PREDICTION_STRENGTH,
-        detection.type());
+        detection.type(),
+        forceCutoffMeters);
   }
 
   private List<PredictedDynamicObstacleEnvelope> predictedEnvelopes(
