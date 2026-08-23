@@ -24,12 +24,11 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import java.util.EnumSet;
-import java.util.Optional;
 import java.util.function.Supplier;
+import org.curtinfrc.frc2026.util.Repulsor.Behaviours.Runtime.ProjectileCycleRuntime;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.RepulsorSample;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
-import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointContext;
 
 /**
  * Provides defence behaviour functionality for the Repulsor command-behaviour layer that converts
@@ -88,13 +87,21 @@ public final class DefenceBehaviour extends Behaviour {
     return flags.contains(BehaviourFlag.DEFENCE_MODE);
   }
 
-  private static SetpointContext makeCtx(BehaviourContext ctx, Pose2d robotPose) {
-    return new SetpointContext(
-        Optional.ofNullable(robotPose),
-        Math.max(0.0, ctx.robot_x) * 2.0,
-        Math.max(0.0, ctx.robot_y) * 2.0,
-        0.0,
-        ctx.vision.getObstacles());
+  /**
+   * Scales the translational chassis command so its magnitude never exceeds the cap.
+   *
+   * @param speeds chassis command to clamp in place
+   * @param cap maximum allowed translational speed in meters per second
+   * @return clamped chassis speeds
+   */
+  static ChassisSpeeds clampSpeedCap(ChassisSpeeds speeds, double cap) {
+    double mag = Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
+    if (mag > cap && mag > 1e-9) {
+      double scale = cap / mag;
+      speeds.vxMetersPerSecond *= scale;
+      speeds.vyMetersPerSecond *= scale;
+    }
+    return speeds;
   }
 
   /**
@@ -114,7 +121,7 @@ public final class DefenceBehaviour extends Behaviour {
                 return;
               }
 
-              Pose2d goalPose = sp.get(makeCtx(ctx, robotPose));
+              Pose2d goalPose = sp.get(ProjectileCycleRuntime.makeCtx(ctx, robotPose, () -> 0.0));
               ctx.repulsor.setCurrentGoal(sp);
               ctx.planner.setRequestedGoal(goalPose);
 
@@ -133,8 +140,7 @@ public final class DefenceBehaviour extends Behaviour {
                       ctx.repulsor.getDrive().getOmegaPID(), robotPose.getRotation());
 
               double cap = speedCap != null ? Math.max(0.25, speedCap.get()) : 2.8;
-              speeds.vxMetersPerSecond = Math.max(-cap, Math.min(cap, speeds.vxMetersPerSecond));
-              speeds.vyMetersPerSecond = Math.max(-cap, Math.min(cap, speeds.vyMetersPerSecond));
+              speeds = clampSpeedCap(speeds, cap);
 
               ctx.drive.runVelocity(speeds);
             },
