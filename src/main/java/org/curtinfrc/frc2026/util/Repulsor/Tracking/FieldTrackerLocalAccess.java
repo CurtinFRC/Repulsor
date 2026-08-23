@@ -8,6 +8,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.Offload.ShuttleRecoveryDynamicObjectDTO;
 import org.curtinfrc.frc2026.util.Repulsor.Offload.ShuttleRecoveryPointDTO;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceRecoveryProfile;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateLocalAccess;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateRuntime;
 
 /**
@@ -42,7 +43,7 @@ public final class FieldTrackerLocalAccess {
         goalUnits,
         flipRedToBlue,
         dynamicObjects,
-        ResourceRecoveryProfile.fuel2026(Constants.FIELD_GEOMETRY));
+        PredictiveFieldStateLocalAccess.defaultRecoveryProfile());
   }
 
   /**
@@ -67,7 +68,7 @@ public final class FieldTrackerLocalAccess {
       return Pose2d.kZero;
     }
     ResourceRecoveryProfile recoveryProfile =
-        profile != null ? profile : ResourceRecoveryProfile.fuel2026(Constants.FIELD_GEOMETRY);
+        PredictiveFieldStateLocalAccess.activeOrDefault(profile);
 
     PredictiveFieldStateRuntime runtime = new PredictiveFieldStateRuntime();
     ShuttleRecoveryPointDTO point =

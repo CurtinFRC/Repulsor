@@ -889,7 +889,7 @@ public final class PredictiveFieldStateOps {
 
   /** Profile-driven collection/freshness configuration used by the predictive spatial snapshot. */
   public volatile ResourceCollectionProfile collectionProfile =
-      ResourceCollectionProfile.fuel2026(Constants.FIELD_GEOMETRY);
+      PredictiveFieldStateLocalAccess.defaultCollectionProfile();
 
   /**
    * Configuration value for collect resource types. The valid range and tuning source are defined

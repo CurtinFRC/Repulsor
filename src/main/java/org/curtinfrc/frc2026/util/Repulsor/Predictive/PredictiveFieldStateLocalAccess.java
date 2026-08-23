@@ -11,6 +11,7 @@ import org.curtinfrc.frc2026.util.Repulsor.Offload.ShuttleRecoveryDynamicObjectD
 import org.curtinfrc.frc2026.util.Repulsor.Offload.ShuttleRecoveryPointDTO;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.PointCandidate;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceCollectionProfile;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceRecoveryProfile;
 
 /**
@@ -20,7 +21,52 @@ import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceRecoveryProf
  * unless a method documents robot-relative motion.
  */
 public final class PredictiveFieldStateLocalAccess {
+  private static volatile ResourceRecoveryProfile injectedRecoveryProfile;
+  private static volatile ResourceCollectionProfile injectedCollectionProfile;
+
   private PredictiveFieldStateLocalAccess() {}
+
+  public static void setDefaultRecoveryProfile(ResourceRecoveryProfile profile) {
+    if (profile == null) {
+      throw new IllegalArgumentException("profile cannot be null");
+    }
+    injectedRecoveryProfile = profile;
+  }
+
+  public static void clearDefaultRecoveryProfile() {
+    injectedRecoveryProfile = null;
+  }
+
+  public static ResourceRecoveryProfile defaultRecoveryProfile() {
+    ResourceRecoveryProfile profile = injectedRecoveryProfile;
+    return profile != null ? profile : ResourceRecoveryProfile.fuel2026(Constants.FIELD_GEOMETRY);
+  }
+
+  public static ResourceRecoveryProfile activeOrDefault(ResourceRecoveryProfile profile) {
+    return profile != null ? profile : defaultRecoveryProfile();
+  }
+
+  public static void setDefaultCollectionProfile(ResourceCollectionProfile profile) {
+    if (profile == null) {
+      throw new IllegalArgumentException("profile cannot be null");
+    }
+    injectedCollectionProfile = profile;
+  }
+
+  public static void clearDefaultCollectionProfile() {
+    injectedCollectionProfile = null;
+  }
+
+  public static ResourceCollectionProfile defaultCollectionProfile() {
+    ResourceCollectionProfile profile = injectedCollectionProfile;
+    return profile != null
+        ? profile
+        : ResourceCollectionProfile.fuel2026(Constants.FIELD_GEOMETRY);
+  }
+
+  public static ResourceCollectionProfile activeOrDefault(ResourceCollectionProfile profile) {
+    return profile != null ? profile : defaultCollectionProfile();
+  }
 
   /**
    * Computes the select shuttle recovery point local value for the current Repulsor planning state.
@@ -46,7 +92,7 @@ public final class PredictiveFieldStateLocalAccess {
         goalUnits,
         flipRedToBlue,
         dynamicObjects,
-        ResourceRecoveryProfile.fuel2026(Constants.FIELD_GEOMETRY));
+        defaultRecoveryProfile());
   }
 
   /**
@@ -72,8 +118,7 @@ public final class PredictiveFieldStateLocalAccess {
     if (robotPoseBlue == null) {
       return ShuttleRecoveryPointDTO.notFound();
     }
-    ResourceRecoveryProfile recoveryProfile =
-        profile != null ? profile : ResourceRecoveryProfile.fuel2026(Constants.FIELD_GEOMETRY);
+    ResourceRecoveryProfile recoveryProfile = activeOrDefault(profile);
 
     List<DynamicObject> normalized =
         normalizeDynamicObjects(dynamicObjects, flipRedToBlue, recoveryProfile.fieldGeometry());
@@ -170,13 +215,12 @@ public final class PredictiveFieldStateLocalAccess {
    * @return value produced by this operation.
    */
   static Translation2d[] buildAllianceZoneGrid() {
-    return buildAllianceZoneGrid(ResourceRecoveryProfile.fuel2026(Constants.FIELD_GEOMETRY));
+    return buildAllianceZoneGrid(defaultRecoveryProfile());
   }
 
   static Translation2d[] buildAllianceZoneGrid(ResourceRecoveryProfile profile) {
     ArrayList<Translation2d> points = new ArrayList<>();
-    ResourceRecoveryProfile recoveryProfile =
-        profile != null ? profile : ResourceRecoveryProfile.fuel2026(Constants.FIELD_GEOMETRY);
+    ResourceRecoveryProfile recoveryProfile = activeOrDefault(profile);
     double xMin = recoveryProfile.zoneEdgeMarginMeters();
     double xMax =
         recoveryProfile.fieldGeometry().lengthMeters() * recoveryProfile.allianceZoneXMaxFraction();
@@ -200,16 +244,14 @@ public final class PredictiveFieldStateLocalAccess {
    * @return value produced by this operation.
    */
   static Translation2d nearestFuelInZone(List<DynamicObject> objects, Translation2d from) {
-    return nearestResourceInZone(
-        objects, from, ResourceRecoveryProfile.fuel2026(Constants.FIELD_GEOMETRY));
+    return nearestResourceInZone(objects, from, defaultRecoveryProfile());
   }
 
   static Translation2d nearestResourceInZone(
       List<DynamicObject> objects, Translation2d from, ResourceRecoveryProfile profile) {
     Translation2d best = null;
     double bestDist = Double.POSITIVE_INFINITY;
-    ResourceRecoveryProfile recoveryProfile =
-        profile != null ? profile : ResourceRecoveryProfile.fuel2026(Constants.FIELD_GEOMETRY);
+    ResourceRecoveryProfile recoveryProfile = activeOrDefault(profile);
 
     for (DynamicObject object : objects) {
       if (object == null || object.pos == null) {
@@ -238,12 +280,11 @@ public final class PredictiveFieldStateLocalAccess {
    * @return value produced by this operation.
    */
   static boolean inAllianceZoneBlue(Translation2d point) {
-    return inAllianceZoneBlue(point, ResourceRecoveryProfile.fuel2026(Constants.FIELD_GEOMETRY));
+    return inAllianceZoneBlue(point, defaultRecoveryProfile());
   }
 
   static boolean inAllianceZoneBlue(Translation2d point, ResourceRecoveryProfile profile) {
-    ResourceRecoveryProfile recoveryProfile =
-        profile != null ? profile : ResourceRecoveryProfile.fuel2026(Constants.FIELD_GEOMETRY);
+    ResourceRecoveryProfile recoveryProfile = activeOrDefault(profile);
     return point != null
         && point.getX() >= recoveryProfile.zoneEdgeMarginMeters()
         && point.getX()
