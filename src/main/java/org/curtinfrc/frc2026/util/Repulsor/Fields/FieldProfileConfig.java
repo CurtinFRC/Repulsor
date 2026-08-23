@@ -399,6 +399,9 @@ public class FieldProfileConfig {
     if (overlay.forbiddenBandHalfWidthMeters != null) {
       base.forbiddenBandHalfWidthMeters = overlay.forbiddenBandHalfWidthMeters;
     }
+    if (overlay.robotFootprintMaxMeters != null) {
+      base.robotFootprintMaxMeters = overlay.robotFootprintMaxMeters;
+    }
   }
 
   private static void mergePlannerRuntime(PlannerRuntimeConfig base, PlannerRuntimeConfig overlay) {
@@ -784,6 +787,7 @@ public class FieldProfileConfig {
     public Double forbiddenBandSquareCenterXMeters;
     public Double forbiddenBandRectCenterOffsetMeters;
     public Double forbiddenBandHalfWidthMeters;
+    public Double robotFootprintMaxMeters;
 
     public CollectPlannerTuning toCollectPlannerTuning() {
       CollectPlannerTuning defaults = CollectPlannerTuning.defaults();
@@ -838,7 +842,9 @@ public class FieldProfileConfig {
                   forbiddenBandRectCenterOffsetMeters,
                   defaults.forbiddenBands().bumpRectCenterOffsetMeters()),
               finitePositive(
-                  forbiddenBandHalfWidthMeters, defaults.forbiddenBands().bandHalfWidthMeters())));
+                  forbiddenBandHalfWidthMeters, defaults.forbiddenBands().bandHalfWidthMeters()),
+              finitePositive(
+                  robotFootprintMaxMeters, defaults.forbiddenBands().robotFootprintMaxMeters())));
     }
   }
 

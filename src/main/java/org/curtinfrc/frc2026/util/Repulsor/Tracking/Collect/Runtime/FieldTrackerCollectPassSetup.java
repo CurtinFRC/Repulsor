@@ -37,8 +37,6 @@ import org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect.ForbiddenBandTuning;
  * documents robot-relative motion.
  */
 public final class FieldTrackerCollectPassSetup {
-  private static final double DEFAULT_ROBOT_FOOTPRINT_MAX_METERS = 0.85;
-
   private FieldTrackerCollectPassSetup() {}
 
   /**
@@ -76,7 +74,7 @@ public final class FieldTrackerCollectPassSetup {
       return new FieldTrackerCollectPassSetupResult(null, loop.fallbackCollectPose(robotPoseBlue));
     }
 
-    final double robotHalf = 0.5 * DEFAULT_ROBOT_FOOTPRINT_MAX_METERS;
+    final double robotHalf = 0.5 * safeBands.robotFootprintMaxMeters();
     final double robotWallMargin = robotHalf + 0.03;
 
     double L = Constants.FIELD_LENGTH;

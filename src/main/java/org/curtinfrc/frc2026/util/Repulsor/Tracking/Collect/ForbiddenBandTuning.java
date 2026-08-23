@@ -28,12 +28,14 @@ package org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect;
  * @param bumpRectCenterOffsetMeters offset from field mid-length to the rectangular bump region
  *     center
  * @param bandHalfWidthMeters half width of each forbidden band before margin is applied
+ * @param robotFootprintMaxMeters full max robot dimension used for footprint inflation
  */
 public record ForbiddenBandTuning(
     double forbidMarginMeters,
     double trenchSquareCenterXMeters,
     double bumpRectCenterOffsetMeters,
-    double bandHalfWidthMeters) {
+    double bandHalfWidthMeters,
+    double robotFootprintMaxMeters) {
 
   /**
    * Returns carrier defaults matching the legacy hardcoded 2026 trench/bump band values.
@@ -41,7 +43,7 @@ public record ForbiddenBandTuning(
    * @return forbidden band tuning equal to the previous inline constants
    */
   public static ForbiddenBandTuning defaults() {
-    return new ForbiddenBandTuning(0.6, 4.625594, 3.63982, 1.1938 * 0.5);
+    return new ForbiddenBandTuning(0.6, 4.625594, 3.63982, 1.1938 * 0.5, 0.85);
   }
 
   /**

@@ -113,6 +113,9 @@ public final class Rebuilt2026 implements FieldDefinition {
 
   public static final double FORBID_MARGIN_M = 0.6;
 
+  /** Full max robot dimension (bumper-to-bumper) used for collect footprint inflation. */
+  public static final double ROBOT_FOOTPRINT_MAX_M = 0.85;
+
   /**
    * Returns the forbidden band carrier for this profile, consumed by the generic collect pass
    * runtime instead of hardcoded season constants.
@@ -124,7 +127,8 @@ public final class Rebuilt2026 implements FieldDefinition {
         FORBID_MARGIN_M,
         TRENCH_BUMP_SQUARE_CENTER_X_M,
         TRENCH_BUMP_RECT_CENTER_OFFSET_M,
-        TRENCH_BUMP_BAND_HALF_WIDTH_M);
+        TRENCH_BUMP_BAND_HALF_WIDTH_M,
+        ROBOT_FOOTPRINT_MAX_M);
   }
 
   /** Returns the rebuilt2026 value maintained by this Repulsor component. */
