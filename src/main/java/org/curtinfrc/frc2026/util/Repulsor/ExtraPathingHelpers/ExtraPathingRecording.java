@@ -41,7 +41,13 @@ import org.curtinfrc.frc2026.util.Repulsor.VisionPlanner.VisionObstacle;
  * robot-relative motion.
  */
 final class ExtraPathingRecording {
+  private static final boolean TELEMETRY_ENABLED = false;
+
   private ExtraPathingRecording() {}
+
+  static boolean isTelemetryEnabled() {
+    return TELEMETRY_ENABLED;
+  }
 
   /**
    * Updates record ellipse state or telemetry as part of the Repulsor runtime loop. This may mutate
@@ -55,6 +61,7 @@ final class ExtraPathingRecording {
    * @param samples value used by this operation.
    */
   static void recordEllipse(String key, Translation2d c, double rx, double ry, int samples) {
+    if (!TELEMETRY_ENABLED) return;
     List<Translation2d> pts = new ArrayList<>(samples + 1);
     for (int i = 0; i <= samples; i++) {
       double th = 2.0 * Math.PI * i / samples;
@@ -72,6 +79,7 @@ final class ExtraPathingRecording {
    * @param points value used by this operation.
    */
   static void recordPath(String key, List<Translation2d> points) {
+    if (!TELEMETRY_ENABLED) return;
     // Logger.recordOutput(key, polylineToTrajectory(points));
   }
 
@@ -97,6 +105,7 @@ final class ExtraPathingRecording {
       Translation2d goal,
       double goalCaptureRadius) {
 
+    if (!TELEMETRY_ENABLED) return;
     List<Translation2d> blocked = new ArrayList<>();
     List<Translation2d> free = new ArrayList<>();
 
@@ -137,6 +146,7 @@ final class ExtraPathingRecording {
    * @param r value used by this operation.
    */
   static void recordCorridor(String root, Translation2d a, Translation2d b, double r) {
+    if (!TELEMETRY_ENABLED) return;
     Translation2d d = b.minus(a);
     double n = d.getNorm();
     if (n < 1e-9) return;
@@ -156,6 +166,7 @@ final class ExtraPathingRecording {
    * @param corridorR value used by this operation.
    */
   static void renderObstacles(String root, List<? extends Obstacle> obstacles, double corridorR) {
+    if (!TELEMETRY_ENABLED) return;
     int i = 0;
     for (Obstacle ob : obstacles) {
       String k = root + "/#" + (i++);
@@ -198,6 +209,7 @@ final class ExtraPathingRecording {
    * @param samples value used by this operation.
    */
   static void recordCircle(String key, Translation2d c, double r, int samples) {
+    if (!TELEMETRY_ENABLED) return;
     List<Translation2d> pts = new ArrayList<>(samples + 1);
     for (int i = 0; i <= samples; i++) {
       double th = 2.0 * Math.PI * i / samples;
@@ -215,6 +227,7 @@ final class ExtraPathingRecording {
    * @param pts value used by this operation.
    */
   static void recordPoints(String key, List<Translation2d> pts) {
+    if (!TELEMETRY_ENABLED) return;
     Pose2d[] poses = new Pose2d[pts.size()];
     for (int i = 0; i < pts.size(); i++) {
       poses[i] = new Pose2d(pts.get(i), new Rotation2d());
