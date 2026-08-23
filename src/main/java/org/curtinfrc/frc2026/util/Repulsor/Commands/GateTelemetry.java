@@ -29,6 +29,7 @@ import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -161,6 +162,33 @@ public final class GateTelemetry implements AutoCloseable {
     infoDbl.computeIfAbsent(key, k -> root.getDoubleTopic(k).publish()).set(value);
   }
 
+  private static final class Last<T> {
+    T value;
+  }
+
+  private <T> void emit(Last<T> cache, T value, Consumer<T> sink) {
+    if (mode == Mode.PERIODIC || !Objects.equals(cache.value, value)) {
+      cache.value = value;
+      sink.accept(value);
+    }
+  }
+
+  private void emitBool(Last<Boolean> cache, boolean value, BooleanPublisher sink) {
+    emit(cache, value, sink::set);
+  }
+
+  private void emitDouble(Last<Double> cache, double value, DoublePublisher sink) {
+    emit(cache, value, sink::set);
+  }
+
+  private void emitLong(Last<Long> cache, long value, IntegerPublisher sink) {
+    emit(cache, value, sink::set);
+  }
+
+  private void emitString(Last<String> cache, String value, StringPublisher sink) {
+    emit(cache, value, sink::set);
+  }
+
   /**
    * Updates register phase state or telemetry as part of the Repulsor runtime loop. This may mutate
    * local state, NetworkTables output, planner caches, or command-side runtime state depending on
@@ -181,6 +209,9 @@ public final class GateTelemetry implements AutoCloseable {
     Map<String, BooleanPublisher> perState = new HashMap<>();
     Map<String, DoublePublisher> perStateUptime = new HashMap<>();
     Map<String, IntegerPublisher> perStateCount = new HashMap<>();
+    Map<String, Long> stateChangeCounts = new HashMap<>();
+    Map<String, Last<Boolean>> perStateFlagCaches = new HashMap<>();
+    Map<String, Last<Long>> perStateCountCaches = new HashMap<>();
     final Object[] lastObj = {null};
     final String[] lastStr = {""};
     final long[] lastOrdinal = {Long.MIN_VALUE};
@@ -210,6 +241,7 @@ public final class GateTelemetry implements AutoCloseable {
             lastChange.set(now);
             changeCount[0]++;
             changes.set(changeCount[0]);
+            stateChangeCounts.merge(s, 1L, Long::sum);
             enterTimes.put(s, now);
             BooleanPublisher pb =
                 perState.computeIfAbsent(s, k -> tbl.getBooleanTopic("is/" + k).publish());
@@ -224,17 +256,19 @@ public final class GateTelemetry implements AutoCloseable {
                 .computeIfAbsent(st, k -> tbl.getDoubleTopic("uptime/" + k).publish())
                 .set(ut);
           }
-          for (String st : perState.keySet()) {
-            if (!st.equals(s)) perState.get(st).set(false);
+          for (Map.Entry<String, BooleanPublisher> e : perState.entrySet()) {
+            boolean on = e.getKey().equals(s);
+            emitBool(
+                perStateFlagCaches.computeIfAbsent(e.getKey(), k -> new Last<>()),
+                on,
+                e.getValue());
           }
-          perStateCount
-              .computeIfAbsent(s, k -> tbl.getIntegerTopic("changes/" + k).publish())
-              .set(
-                  (int)
-                      perStateCount
-                          .getOrDefault(s, tbl.getIntegerTopic("null").publish())
-                          .getTopic()
-                          .getHandle());
+          IntegerPublisher cntPub =
+              perStateCount.computeIfAbsent(s, k -> tbl.getIntegerTopic("changes/" + k).publish());
+          emitLong(
+              perStateCountCaches.computeIfAbsent(s, k -> new Last<>()),
+              stateChangeCounts.getOrDefault(s, 0L),
+              cntPub);
         });
   }
 
@@ -280,7 +314,7 @@ public final class GateTelemetry implements AutoCloseable {
     updaters.add(
         () -> {
           T p = gate.phase();
-          if (p != lastObj[0]) {
+          if (!Objects.equals(p, lastObj[0])) {
             lastObj[0] = p;
             int v = (p == null) ? -1 : encoder.apply(p);
             if (v != last[0]) {
@@ -317,6 +351,8 @@ public final class GateTelemetry implements AutoCloseable {
     Map<E, DoublePublisher> tagUptimePubs = new EnumMap<>(cls);
     Map<E, Double> tagEnterTimes = new EnumMap<>(cls);
     Map<E, Long> tagChangeCounts = new EnumMap<>(cls);
+    Map<E, Last<Boolean>> tagFlagCaches = new EnumMap<>(cls);
+    Map<E, Last<Double>> tagUptimeCaches = new EnumMap<>(cls);
     for (E e : cls.getEnumConstants()) {
       tagPubs.put(e, tbl.getBooleanTopic("is/" + e.name()).publish());
       tagCountPubs.put(e, tbl.getIntegerTopic("changes/" + e.name()).publish());
@@ -326,6 +362,7 @@ public final class GateTelemetry implements AutoCloseable {
     }
     final long[] lastMask = {Long.MIN_VALUE};
     final String[] lastCsv = {""};
+    final Last<Long> activeCountCache = new Last<>();
 
     updaters.add(
         () -> {
@@ -333,18 +370,30 @@ public final class GateTelemetry implements AutoCloseable {
           double now = Timer.getFPGATimestamp();
           long mask = 0;
           List<String> activeNames = new ArrayList<>();
+          int activeCount = 0;
           for (E e : cls.getEnumConstants()) {
             boolean on = snap.contains(e);
+            boolean wasOn = !Double.isNaN(tagEnterTimes.get(e));
+            if (on != wasOn) {
+              tagEnterTimes.put(e, on ? now : Double.NaN);
+              long cnt = tagChangeCounts.get(e) + 1;
+              tagChangeCounts.put(e, cnt);
+              tagCountPubs.get(e).set(cnt);
+            }
             if (on) {
               mask |= (1L << e.ordinal());
               activeNames.add(e.name());
-              if (Double.isNaN(tagEnterTimes.get(e))) tagEnterTimes.put(e, now);
-              tagUptimePubs.get(e).set(now - tagEnterTimes.get(e));
+              activeCount++;
+              emitDouble(
+                  tagUptimeCaches.computeIfAbsent(e, k -> new Last<>()),
+                  now - tagEnterTimes.get(e),
+                  tagUptimePubs.get(e));
             } else {
-              tagEnterTimes.put(e, Double.NaN);
-              tagUptimePubs.get(e).set(0.0);
+              emitDouble(
+                  tagUptimeCaches.computeIfAbsent(e, k -> new Last<>()), 0.0, tagUptimePubs.get(e));
             }
-            tagPubs.get(e).set(on);
+            emitBool(
+                tagFlagCaches.computeIfAbsent(e, k -> new Last<>()), on, tagPubs.get(e));
           }
           if (mask != lastMask[0]) {
             bitmaskPub.set(mask);
@@ -356,25 +405,7 @@ public final class GateTelemetry implements AutoCloseable {
             csvPub.set(csv);
             lastCsv[0] = csv;
           }
-          countPub.set(activeNames.size());
-          for (E e : cls.getEnumConstants()) {
-            boolean on = snap.contains(e);
-            long cnt = tagChangeCounts.get(e);
-            boolean topicVal = on;
-            tagPubs.get(e).set(topicVal);
-            if (on && Double.isNaN(tagEnterTimes.get(e))) {
-              tagEnterTimes.put(e, now);
-              cnt++;
-              tagChangeCounts.put(e, cnt);
-              tagCountPubs.get(e).set(cnt);
-            }
-            if (!on && !Double.isNaN(tagEnterTimes.get(e))) {
-              tagEnterTimes.put(e, Double.NaN);
-              cnt++;
-              tagChangeCounts.put(e, cnt);
-              tagCountPubs.get(e).set(cnt);
-            }
-          }
+          emitLong(activeCountCache, activeCount, countPub);
         });
   }
 
@@ -398,14 +429,17 @@ public final class GateTelemetry implements AutoCloseable {
     final boolean[] last = {false};
     final long[] rc = {0};
     final long[] fc = {0};
+    final Last<Boolean> levelCache = new Last<>();
+    final Last<Boolean> risingCache = new Last<>();
+    final Last<Boolean> fallingCache = new Last<>();
     updaters.add(
         () -> {
           boolean now = t.getAsBoolean();
-          level.set(now);
+          emitBool(levelCache, now, level);
           boolean r = now && !last[0];
           boolean f = !now && last[0];
-          rising.set(r);
-          falling.set(f);
+          emitBool(risingCache, r, rising);
+          emitBool(fallingCache, f, falling);
           double ts = Timer.getFPGATimestamp();
           if (r) {
             rc[0]++;
@@ -432,7 +466,8 @@ public final class GateTelemetry implements AutoCloseable {
   public void registerDerived(String name, Supplier<Boolean> boolFn) {
     NetworkTable tbl = root.getSubTable(name);
     BooleanPublisher p = tbl.getBooleanTopic("value").publish();
-    updaters.add(() -> p.set(boolFn.get()));
+    final Last<Boolean> cache = new Last<>();
+    updaters.add(() -> emitBool(cache, boolFn.get(), p));
   }
 
   /**
@@ -446,7 +481,8 @@ public final class GateTelemetry implements AutoCloseable {
   public void registerDerivedNumber(String name, DoubleSupplier dblFn) {
     NetworkTable tbl = root.getSubTable(name);
     DoublePublisher p = tbl.getDoubleTopic("value").publish();
-    updaters.add(() -> p.set(dblFn.getAsDouble()));
+    final Last<Double> cache = new Last<>();
+    updaters.add(() -> emitDouble(cache, dblFn.getAsDouble(), p));
   }
 
   /**
