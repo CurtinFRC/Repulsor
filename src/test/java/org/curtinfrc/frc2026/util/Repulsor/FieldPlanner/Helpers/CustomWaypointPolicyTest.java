@@ -22,7 +22,8 @@ class CustomWaypointPolicyTest {
     FieldPlannerWaypointPolicy policy =
         context -> {
           if (!context.currentlyStaging() && context.robotPosition().getX() < 6.0) {
-            return List.of(FieldPlannerWaypointProposal.at("crossing", new Translation2d(6.0, 5.0)));
+            return List.of(
+                FieldPlannerWaypointProposal.at("crossing", new Translation2d(6.0, 5.0)));
           }
           return List.of();
         };
@@ -42,8 +43,7 @@ class CustomWaypointPolicyTest {
 
     FieldPlannerWaypointStatus status = manager.getWaypointStatus();
     assertEquals(
-        FieldPlannerWaypointDecision.Mode.USE_DEFAULT,
-        status.lastStrategyDecision().mode());
+        FieldPlannerWaypointDecision.Mode.USE_DEFAULT, status.lastStrategyDecision().mode());
     assertEquals("custom_policy_stage", status.transitionReason());
     assertTrue(status.activeStage());
     assertEquals(6.0, status.stagedAttractor().getX(), EPS);
@@ -94,8 +94,7 @@ class CustomWaypointPolicyTest {
     FieldPlannerWaypointPolicy policy =
         context -> {
           if (!context.currentlyStaging() && context.robotPosition().getX() < 9.0) {
-            return List.of(
-                FieldPlannerWaypointProposal.at("custom", new Translation2d(10.5, 6.5)));
+            return List.of(FieldPlannerWaypointProposal.at("custom", new Translation2d(10.5, 6.5)));
           }
           return List.of();
         };
@@ -167,8 +166,7 @@ class CustomWaypointPolicyTest {
         context ->
             List.of(
                 FieldPlannerWaypointProposal.at(
-                    "off-field",
-                    new Translation2d(Constants.FIELD_LENGTH + 2.0, 4.0)));
+                    "off-field", new Translation2d(Constants.FIELD_LENGTH + 2.0, 4.0)));
     FieldPlannerGoalManager manager =
         new FieldPlannerGoalManager(
             List.of(),
@@ -214,8 +212,7 @@ class CustomWaypointPolicyTest {
     FieldPlannerWaypointPolicy policy =
         context ->
             List.of(
-                FieldPlannerWaypointProposal.at(
-                    "clear-of-hazard", new Translation2d(7.5, 4.0)));
+                FieldPlannerWaypointProposal.at("clear-of-hazard", new Translation2d(7.5, 4.0)));
     FieldPlannerGoalManager manager =
         new FieldPlannerGoalManager(
             List.of(),

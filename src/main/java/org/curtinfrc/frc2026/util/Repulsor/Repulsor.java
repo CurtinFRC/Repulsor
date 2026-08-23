@@ -426,7 +426,8 @@ public class Repulsor {
    */
   public Repulsor withInitialHP(RepulsorSetpoint setpoint) {
     if (setpoint != null && setpoint.point().type() != SetpointType.kHumanPlayer) {
-      throw new IllegalArgumentException("Next collect setpoint must be a human-player/collect one");
+      throw new IllegalArgumentException(
+          "Next collect setpoint must be a human-player/collect one");
     }
     m_currentGoal = setpoint;
     return this;

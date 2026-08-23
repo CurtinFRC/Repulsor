@@ -39,19 +39,43 @@ public record FieldPlannerWaypointProposal(
 
   public FieldPlannerWaypointProposal withPriority(int priority) {
     return new FieldPlannerWaypointProposal(
-        name, entryPoint, exitPoint, gate, role, robotZone, goalZone, preference, priority,
+        name,
+        entryPoint,
+        exitPoint,
+        gate,
+        role,
+        robotZone,
+        goalZone,
+        preference,
+        priority,
         forceStage);
   }
 
   public FieldPlannerWaypointProposal withExitPoint(Translation2d exitPoint) {
     return new FieldPlannerWaypointProposal(
-        name, entryPoint, exitPoint, gate, role, robotZone, goalZone, preference, priority,
+        name,
+        entryPoint,
+        exitPoint,
+        gate,
+        role,
+        robotZone,
+        goalZone,
+        preference,
+        priority,
         forceStage);
   }
 
   public FieldPlannerWaypointProposal withPreference(double preference) {
     return new FieldPlannerWaypointProposal(
-        name, entryPoint, exitPoint, gate, role, robotZone, goalZone, preference, priority,
+        name,
+        entryPoint,
+        exitPoint,
+        gate,
+        role,
+        robotZone,
+        goalZone,
+        preference,
+        priority,
         forceStage);
   }
 

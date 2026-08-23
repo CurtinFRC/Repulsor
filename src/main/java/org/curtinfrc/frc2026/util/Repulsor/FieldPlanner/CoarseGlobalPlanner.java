@@ -936,8 +936,7 @@ public final class CoarseGlobalPlanner {
         p, fieldLengthMeters, fieldWidthMeters, robotLengthMeters, robotWidthMeters)) {
       return false;
     }
-    return !rectIntersects(
-        p, Rotation2d.kZero, obstacles, robotLengthMeters, robotWidthMeters);
+    return !rectIntersects(p, Rotation2d.kZero, obstacles, robotLengthMeters, robotWidthMeters);
   }
 
   private boolean pointInsideField(
@@ -1002,15 +1001,10 @@ public final class CoarseGlobalPlanner {
         Translation2d point = toPoint(node, fieldLengthMeters, fieldWidthMeters, nx, ny);
         int idx = index(node, ny);
         obstacleClearance[idx] =
-            nearestObstacleClearanceMeters(
-                point, obstacles, robotLengthMeters, robotWidthMeters);
+            nearestObstacleClearanceMeters(point, obstacles, robotLengthMeters, robotWidthMeters);
         wallClearance[idx] =
             wallClearanceMeters(
-                point,
-                fieldLengthMeters,
-                fieldWidthMeters,
-                robotLengthMeters,
-                robotWidthMeters);
+                point, fieldLengthMeters, fieldWidthMeters, robotLengthMeters, robotWidthMeters);
       }
     }
     return new ClearanceField(obstacleClearance, wallClearance, ny);
@@ -1032,10 +1026,7 @@ public final class CoarseGlobalPlanner {
   }
 
   private double obstacleClearanceMeters(
-      Translation2d point,
-      Obstacle obstacle,
-      double robotLengthMeters,
-      double robotWidthMeters) {
+      Translation2d point, Obstacle obstacle, double robotLengthMeters, double robotWidthMeters) {
     if (obstacle instanceof PredictedDynamicObstacleEnvelope prediction) {
       return prediction.clearanceMeters(
           point,
@@ -1043,8 +1034,7 @@ public final class CoarseGlobalPlanner {
           0.5 * robotWidthMeters + config.clearanceBufferMeters());
     }
     if (obstacle instanceof RectangleObstacle rectangle) {
-      return rectangleClearanceMeters(
-          point, rectangle, robotLengthMeters, robotWidthMeters);
+      return rectangleClearanceMeters(point, rectangle, robotLengthMeters, robotWidthMeters);
     }
     return Double.POSITIVE_INFINITY;
   }

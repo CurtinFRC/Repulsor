@@ -748,8 +748,7 @@ public final class FieldPlannerGoalManager {
     Translation2d exit = proposal.exitPoint();
     if (exit != null && (!isFiniteTranslation(exit) || !withinFieldBounds(exit))) return false;
     if (!proposal.role().matches(context.objectiveRole())) return false;
-    if (proposal.robotZone() != null
-        && !proposal.robotZone().contains(context.robotPosition())) {
+    if (proposal.robotZone() != null && !proposal.robotZone().contains(context.robotPosition())) {
       return false;
     }
     if (proposal.goalZone() != null
@@ -861,8 +860,7 @@ public final class FieldPlannerGoalManager {
     return null;
   }
 
-  private boolean gateIsBehind(
-      Translation2d pos, Translation2d goal, GatedAttractorObstacle gate) {
+  private boolean gateIsBehind(Translation2d pos, Translation2d goal, GatedAttractorObstacle gate) {
     if (pos == null || goal == null || gate == null || gate.center == null) return false;
     Translation2d toGoal = goal.minus(pos);
     double n = toGoal.getNorm();

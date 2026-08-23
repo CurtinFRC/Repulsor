@@ -333,7 +333,8 @@ public class FieldPlanner {
       this.fieldLengthMeters = Constants.FIELD_LENGTH;
       this.fieldWidthMeters = Constants.FIELD_WIDTH;
     }
-    this.fieldObstacles = wireFieldGeometry(new ArrayList<>(this.obstacleProvider.fieldObstacles()));
+    this.fieldObstacles =
+        wireFieldGeometry(new ArrayList<>(this.obstacleProvider.fieldObstacles()));
     this.walls = wireFieldGeometry(new ArrayList<>(this.obstacleProvider.walls()));
 
     for (Obstacle obs : this.fieldObstacles) {

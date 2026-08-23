@@ -31,10 +31,7 @@ class DriveTuningHeatStepTest {
     DriveTuningHeat tuning =
         new DriveTuningHeat(() -> new Pose2d(), (Heatmap) null).withBaseMaxSpeed(3.5);
     assertEquals(
-        3.5,
-        tuning.maxLinearSpeedMps(new Pose2d()),
-        1e-9,
-        "empty heatmap must scale speed by 1.0");
+        3.5, tuning.maxLinearSpeedMps(new Pose2d()), 1e-9, "empty heatmap must scale speed by 1.0");
   }
 
   @Test

@@ -100,8 +100,7 @@ class ActiveProfileDefaultTest {
 
     assertSame(custom, PredictiveFieldStateLocalAccess.defaultRecoveryProfile());
     assertSame(
-        custom,
-        PredictiveFieldStateLocalAccess.activeOrDefault((ResourceRecoveryProfile) null));
+        custom, PredictiveFieldStateLocalAccess.activeOrDefault((ResourceRecoveryProfile) null));
     ResourceRecoveryProfile explicit = ResourceRecoveryProfile.fuel2026(Constants.FIELD_GEOMETRY);
     assertSame(explicit, PredictiveFieldStateLocalAccess.activeOrDefault(explicit));
     assertTrue(PredictiveFieldStateLocalAccess.inAllianceZoneBlue(deepBluePoint));
@@ -124,8 +123,7 @@ class ActiveProfileDefaultTest {
 
     assertSame(custom, PredictiveFieldStateLocalAccess.defaultCollectionProfile());
     assertSame(
-        custom,
-        PredictiveFieldStateLocalAccess.activeOrDefault((ResourceCollectionProfile) null));
+        custom, PredictiveFieldStateLocalAccess.activeOrDefault((ResourceCollectionProfile) null));
     ResourceCollectionProfile explicit =
         ResourceCollectionProfile.fuel2026(Constants.FIELD_GEOMETRY);
     assertSame(explicit, PredictiveFieldStateLocalAccess.activeOrDefault(explicit));

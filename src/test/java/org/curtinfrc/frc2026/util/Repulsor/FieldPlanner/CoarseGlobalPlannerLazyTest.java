@@ -50,12 +50,12 @@ class CoarseGlobalPlannerLazyTest {
 
     var waypoint = planner.nextWaypoint(START, GOAL, walledBoxAroundGoal(), 0.18, 0.18, 6.0, 4.0);
 
-    assertTrue(waypoint.isPresent(), "partial route should make safe progress, stats="
-        + planner.lastStats());
+    assertTrue(
+        waypoint.isPresent(),
+        "partial route should make safe progress, stats=" + planner.lastStats());
     assertTrue(planner.lastStats().found());
     assertEquals(
-        CoarseGlobalPlannerFailureReason.PARTIAL_ROUTE_USED,
-        planner.lastStats().failureReason());
+        CoarseGlobalPlannerFailureReason.PARTIAL_ROUTE_USED, planner.lastStats().failureReason());
     assertTrue(
         waypoint.get().getTranslation().getDistance(GOAL.getTranslation())
             < START.getDistance(GOAL.getTranslation()),

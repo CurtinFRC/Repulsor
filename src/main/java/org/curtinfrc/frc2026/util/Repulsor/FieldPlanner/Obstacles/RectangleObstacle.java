@@ -1538,12 +1538,7 @@ public class RectangleObstacle extends Obstacle {
                   CORNER_CLEAR_PUSH_SOFTEN));
     }
 
-    Translation2d sum =
-        primaryWorld
-            .plus(cornerBoost)
-            .plus(tearVec)
-            .plus(handoff)
-            .plus(clearPush);
+    Translation2d sum = primaryWorld.plus(cornerBoost).plus(tearVec).plus(handoff).plus(clearPush);
 
     sum = applyEdgeConveyor(sum, pLocal, gLocal, ax, ay, edgeDist, wCorner);
 

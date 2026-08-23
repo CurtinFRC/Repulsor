@@ -66,8 +66,7 @@ public record FieldPlannerRuntimeConfig(
             "repulsor.fieldplanner.forceThrough.wallDistanceMeters",
             DEFAULT_FORCE_THROUGH_WALL_DISTANCE_METERS),
         doubleProperty(
-            "repulsor.fieldplanner.reroute.radiusMeters",
-            DEFAULT_REROUTE_CANDIDATE_RADIUS_METERS),
+            "repulsor.fieldplanner.reroute.radiusMeters", DEFAULT_REROUTE_CANDIDATE_RADIUS_METERS),
         (int)
             doubleProperty(
                 "repulsor.fieldplanner.reroute.candidateCount", DEFAULT_REROUTE_CANDIDATE_COUNT),

@@ -43,8 +43,7 @@ class DefenceSpeedCapTest {
   @Test
   void directionPreservedWhenScaling() {
     double cap = 1.0;
-    ChassisSpeeds clamped =
-        DefenceBehaviour.clampSpeedCap(new ChassisSpeeds(-3.0, 4.0, 0.0), cap);
+    ChassisSpeeds clamped = DefenceBehaviour.clampSpeedCap(new ChassisSpeeds(-3.0, 4.0, 0.0), cap);
 
     assertEquals(cap, Math.hypot(clamped.vxMetersPerSecond, clamped.vyMetersPerSecond), EPS);
     assertEquals(-0.6, clamped.vxMetersPerSecond, EPS);

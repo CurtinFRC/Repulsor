@@ -15,10 +15,12 @@ class HubShotCacheKeyTest {
     Obstacle a = new RadialObstacle(new Translation2d(5.0, 4.0), 0.30, 1.5);
     Obstacle b = new RadialObstacle(new Translation2d(5.0, 4.0), 0.30, 1.5);
 
-    assertEquals(_Rebuilt2026.obstaclesStableHash(List.of(a)), _Rebuilt2026.obstaclesStableHash(List.of(b)));
+    assertEquals(
+        _Rebuilt2026.obstaclesStableHash(List.of(a)), _Rebuilt2026.obstaclesStableHash(List.of(b)));
     assertEquals(
         _Rebuilt2026.obstaclesStableHash(List.of(a)),
-        _Rebuilt2026.obstaclesStableHash(List.of(new RadialObstacle(new Translation2d(5.0, 4.0), 0.30, 1.5))));
+        _Rebuilt2026.obstaclesStableHash(
+            List.of(new RadialObstacle(new Translation2d(5.0, 4.0), 0.30, 1.5))));
     assertEquals(0, _Rebuilt2026.obstaclesStableHash(List.of()));
     assertEquals(0, _Rebuilt2026.obstaclesStableHash(null));
   }
@@ -29,26 +31,32 @@ class HubShotCacheKeyTest {
     Obstacle b = new RadialObstacle(new Translation2d(9.5, 3.0), 0.25, 1.2);
 
     assertEquals(
-        _Rebuilt2026.obstaclesStableHash(List.of(a, b)), _Rebuilt2026.obstaclesStableHash(List.of(b, a)));
+        _Rebuilt2026.obstaclesStableHash(List.of(a, b)),
+        _Rebuilt2026.obstaclesStableHash(List.of(b, a)));
   }
 
   @Test
   void movedObstacleChangesHash() {
     double baseline =
-        _Rebuilt2026.obstaclesStableHash(List.of(new RadialObstacle(new Translation2d(5.0, 4.0), 0.30, 1.5)));
+        _Rebuilt2026.obstaclesStableHash(
+            List.of(new RadialObstacle(new Translation2d(5.0, 4.0), 0.30, 1.5)));
 
     assertNotEquals(
         baseline,
-        _Rebuilt2026.obstaclesStableHash(List.of(new RadialObstacle(new Translation2d(5.05, 4.0), 0.30, 1.5))));
+        _Rebuilt2026.obstaclesStableHash(
+            List.of(new RadialObstacle(new Translation2d(5.05, 4.0), 0.30, 1.5))));
     assertNotEquals(
         baseline,
-        _Rebuilt2026.obstaclesStableHash(List.of(new RadialObstacle(new Translation2d(5.0, 4.05), 0.30, 1.5))));
+        _Rebuilt2026.obstaclesStableHash(
+            List.of(new RadialObstacle(new Translation2d(5.0, 4.05), 0.30, 1.5))));
     assertNotEquals(
         baseline,
-        _Rebuilt2026.obstaclesStableHash(List.of(new RadialObstacle(new Translation2d(5.0, 4.0), 0.35, 1.5))));
+        _Rebuilt2026.obstaclesStableHash(
+            List.of(new RadialObstacle(new Translation2d(5.0, 4.0), 0.35, 1.5))));
     assertNotEquals(
         baseline,
-        _Rebuilt2026.obstaclesStableHash(List.of(new RadialObstacle(new Translation2d(5.0, 4.0), 0.30, 1.7))));
+        _Rebuilt2026.obstaclesStableHash(
+            List.of(new RadialObstacle(new Translation2d(5.0, 4.0), 0.30, 1.7))));
   }
 
   @Test
@@ -56,7 +64,8 @@ class HubShotCacheKeyTest {
     Obstacle a = new RadialObstacle(new Translation2d(5.0, 4.0), 0.30, 1.5);
 
     assertNotEquals(
-        _Rebuilt2026.obstaclesStableHash(List.of(a)), _Rebuilt2026.obstaclesStableHash(List.of(a, a)));
+        _Rebuilt2026.obstaclesStableHash(List.of(a)),
+        _Rebuilt2026.obstaclesStableHash(List.of(a, a)));
   }
 
   private static final class RadialObstacle extends Obstacle {

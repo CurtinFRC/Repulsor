@@ -838,8 +838,7 @@ public class FieldProfileConfig {
                   forbiddenBandRectCenterOffsetMeters,
                   defaults.forbiddenBands().bumpRectCenterOffsetMeters()),
               finitePositive(
-                  forbiddenBandHalfWidthMeters,
-                  defaults.forbiddenBands().bandHalfWidthMeters())));
+                  forbiddenBandHalfWidthMeters, defaults.forbiddenBands().bandHalfWidthMeters())));
     }
   }
 

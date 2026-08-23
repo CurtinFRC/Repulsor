@@ -15,14 +15,14 @@ class ProjectileCycleMakeCtxTest {
   private static final double EPS = 1e-9;
 
   private static BehaviourContext context(double robotX, double robotY, Pose2d pose) {
-    return new BehaviourContext(
-        null, null, new VisionPlanner(), null, robotX, robotY, () -> pose);
+    return new BehaviourContext(null, null, new VisionPlanner(), null, robotX, robotY, () -> pose);
   }
 
   @Test
   void suppliedReleaseHeightFlowsIntoContext() {
     Pose2d pose = new Pose2d(3.1, 4.2, Rotation2d.fromDegrees(30.0));
-    SetpointContext ctx = ProjectileCycleRuntime.makeCtx(context(0.85, 0.85, pose), pose, () -> 1.2);
+    SetpointContext ctx =
+        ProjectileCycleRuntime.makeCtx(context(0.85, 0.85, pose), pose, () -> 1.2);
 
     assertEquals(1.2, ctx.shooterReleaseHeightMeters(), EPS);
     assertTrue(ctx.robotPose().isPresent());
@@ -33,7 +33,8 @@ class ProjectileCycleMakeCtxTest {
   @Test
   void robotDimensionsPassThroughUnchanged() {
     Pose2d pose = new Pose2d(1.0, 2.0, Rotation2d.kZero);
-    SetpointContext ctx = ProjectileCycleRuntime.makeCtx(context(0.85, 0.60, pose), pose, () -> 0.0);
+    SetpointContext ctx =
+        ProjectileCycleRuntime.makeCtx(context(0.85, 0.60, pose), pose, () -> 0.0);
 
     assertEquals(0.85, ctx.robotLengthMeters(), EPS);
     assertEquals(0.60, ctx.robotWidthMeters(), EPS);
@@ -52,7 +53,8 @@ class ProjectileCycleMakeCtxTest {
   @Test
   void negativeInputsClampedToZero() {
     Pose2d pose = new Pose2d(0.0, 0.0, Rotation2d.kZero);
-    SetpointContext ctx = ProjectileCycleRuntime.makeCtx(context(-0.5, -0.5, pose), pose, () -> -2.0);
+    SetpointContext ctx =
+        ProjectileCycleRuntime.makeCtx(context(-0.5, -0.5, pose), pose, () -> -2.0);
 
     assertEquals(0.0, ctx.robotLengthMeters(), EPS);
     assertEquals(0.0, ctx.robotWidthMeters(), EPS);

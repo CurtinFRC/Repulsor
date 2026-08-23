@@ -59,9 +59,7 @@ public final class PredictiveFieldStateLocalAccess {
 
   public static ResourceCollectionProfile defaultCollectionProfile() {
     ResourceCollectionProfile profile = injectedCollectionProfile;
-    return profile != null
-        ? profile
-        : ResourceCollectionProfile.fuel2026(Constants.FIELD_GEOMETRY);
+    return profile != null ? profile : ResourceCollectionProfile.fuel2026(Constants.FIELD_GEOMETRY);
   }
 
   public static ResourceCollectionProfile activeOrDefault(ResourceCollectionProfile profile) {

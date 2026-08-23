@@ -25,7 +25,8 @@ package org.curtinfrc.frc2026.util.Repulsor.Tracking.Collect;
  *
  * @param forbidMarginMeters extra clearance added outside each band half width
  * @param trenchSquareCenterXMeters blue-side x center of the square resource region
- * @param bumpRectCenterOffsetMeters offset from field mid-length to the rectangular bump region center
+ * @param bumpRectCenterOffsetMeters offset from field mid-length to the rectangular bump region
+ *     center
  * @param bandHalfWidthMeters half width of each forbidden band before margin is applied
  */
 public record ForbiddenBandTuning(

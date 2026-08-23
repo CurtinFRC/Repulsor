@@ -93,24 +93,8 @@ class WaypointConfigDefaultsTest {
 
     FieldPlannerWaypointConfig normalized =
         new FieldPlannerWaypointConfig(
-            true,
-            true,
-            true,
-            3.648981,
-            1.5,
-            0.25,
-            0.28,
-            0.45,
-            1.05,
-            1.40,
-            3.0,
-            4.2,
-            0.70,
-            2.40,
-            2.0,
-            0.35,
-            null,
-            null);
+            true, true, true, 3.648981, 1.5, 0.25, 0.28, 0.45, 1.05, 1.40, 3.0, 4.2, 0.70, 2.40,
+            2.0, 0.35, null, null);
     assertTrue(normalized.customPolicies().isEmpty());
     assertEquals(FieldPlannerWaypointPlacement.defaults(), normalized.placement());
   }
@@ -119,7 +103,15 @@ class WaypointConfigDefaultsTest {
   void placementNormalizationFallsBackToDefaultsOnInvalidValues() {
     FieldPlannerWaypointPlacement invalid =
         new FieldPlannerWaypointPlacement(
-            Double.NaN, -1.0, -0.01, Double.NaN, -1.0, Double.NaN, -1.0, Double.NaN, -1.0,
+            Double.NaN,
+            -1.0,
+            -0.01,
+            Double.NaN,
+            -1.0,
+            Double.NaN,
+            -1.0,
+            Double.NaN,
+            -1.0,
             Double.NaN);
     assertEquals(FieldPlannerWaypointPlacement.defaults(), invalid);
 

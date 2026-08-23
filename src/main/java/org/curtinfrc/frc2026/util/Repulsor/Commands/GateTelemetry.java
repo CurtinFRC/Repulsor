@@ -392,8 +392,7 @@ public final class GateTelemetry implements AutoCloseable {
               emitDouble(
                   tagUptimeCaches.computeIfAbsent(e, k -> new Last<>()), 0.0, tagUptimePubs.get(e));
             }
-            emitBool(
-                tagFlagCaches.computeIfAbsent(e, k -> new Last<>()), on, tagPubs.get(e));
+            emitBool(tagFlagCaches.computeIfAbsent(e, k -> new Last<>()), on, tagPubs.get(e));
           }
           if (mask != lastMask[0]) {
             bitmaskPub.set(mask);

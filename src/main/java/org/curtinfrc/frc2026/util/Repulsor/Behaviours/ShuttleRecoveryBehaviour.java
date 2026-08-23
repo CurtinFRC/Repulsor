@@ -271,9 +271,7 @@ public final class ShuttleRecoveryBehaviour extends Behaviour {
             .nextAllianceShuttleRecoveryGoalBlue(robotPose, cap, RECOVERY_GOAL_UNITS);
     if (nextBlue == null) {
       return new Pose2d(
-          geometry.lengthMeters() * 0.25,
-          geometry.widthMeters() * 0.5,
-          robotPose.getRotation());
+          geometry.lengthMeters() * 0.25, geometry.widthMeters() * 0.5, robotPose.getRotation());
     }
     return new Pose2d(nextBlue.getTranslation(), nextBlue.getRotation());
   }

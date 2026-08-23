@@ -27,8 +27,7 @@ class ForbiddenBandCarrierTest {
 
     assertEquals(legacy.forbidMarginMeters(), provided.forbidMarginMeters(), EPS);
     assertEquals(legacy.trenchSquareCenterXMeters(), provided.trenchSquareCenterXMeters(), EPS);
-    assertEquals(
-        legacy.bumpRectCenterOffsetMeters(), provided.bumpRectCenterOffsetMeters(), EPS);
+    assertEquals(legacy.bumpRectCenterOffsetMeters(), provided.bumpRectCenterOffsetMeters(), EPS);
     assertEquals(legacy.bandHalfWidthMeters(), provided.bandHalfWidthMeters(), EPS);
   }
 
@@ -64,16 +63,7 @@ class ForbiddenBandCarrierTest {
   @Test
   void nullCarrierFallsBackToLegacyDefaults() {
     ForbiddenBandTuning bands =
-        new CollectPlannerTuning(
-                0.40,
-                2.2,
-                0.30,
-                0.25,
-                0.40,
-                0.70,
-                0.14,
-                null,
-                null)
+        new CollectPlannerTuning(0.40, 2.2, 0.30, 0.25, 0.40, 0.70, 0.14, null, null)
             .forbiddenBands();
     ForbiddenBandTuning legacy = ForbiddenBandTuning.defaults();
 
