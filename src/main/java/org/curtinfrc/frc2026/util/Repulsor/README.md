@@ -344,3 +344,17 @@ See `LICENCE.md` for the full licence text.
 
 Repulsor's earliest vector-field prototype was inspired by a widely shared community approach used across many FRC codebases.
 The current implementation has since been rewritten and expanded substantially.
+
+## Adapting To A New Game
+
+1. Extend `Fields/AbstractSeasonDefinition.java`; it implements `FieldDefinition` with safe game-neutral defaults (resource/score-target/station vocabulary only). Its constructor takes game name and year, field length/width meters, AprilTag layout, and one resource model (resource type string, radius, unit value, sigma, blue-side recovery zone fraction).
+2. Implement `build(FieldTrackerCore)` with `FieldMapBuilder`, tagging elements `CategorySpec.kScore`, `CategorySpec.kCollect`, or `CategorySpec.kEndgame`.
+3. Geometry needs no code: `geometry()`, `fieldLengthMeters()`, `fieldWidthMeters()`, `aprilTagLayout()`, and `fieldModel()` derive from constructor values.
+4. Optional obstacles/walls: populate the lists returned by `fieldObstaclesHook()` / `wallsHook()` before any planner consumes them.
+5. Optional heatmap: override `getHeatmap()`; leaving it null means unrestricted speed everywhere because `DriveTuningHeat` treats missing heat as empty.
+6. Tracker wiring is automatic in `configureTracker(...)`: collect planner defaults (`CollectPlannerTuning.defaults()`), the resource spec via `FieldTrackerCore.configureCollectResourceProfile(...)`, and collection/recovery profiles installed through `PredictiveFieldStateLocalAccess`. Override and call `super` for scoring-specific wiring.
+7. One generic projectile action (default role `TRANSFER_TO_SCORE`) is preconfigured in `actionProfile()`, giving working transfer-to-score plumbing with no action class; override `projectileAction()` to retune it.
+8. Default setpoints: pass blue poses to the constructor to back `defaultScoreSetpoint()` / `defaultCollectSetpoint()`, or override them. Game-specific mechanism constants belong in the `Setpoints/Specific` package.
+9. Register the season before first use with `RepulsorSeason.setDefaultFieldProvider(MySeason::new)`, or select a built-in with `-Drepulsor.field=...`.
+10. Optional custom waypoint policies: override `waypointConfig()` and merge in `FieldPlannerWaypointConfig.withCustomPolicies(...)` proposals.
+11. Tune values without recompiling through YAML profile overrides (`FieldProfileYamlLoader`, `-Drepulsor.profile.path=...`).
