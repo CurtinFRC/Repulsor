@@ -32,8 +32,8 @@ class FieldPlannerPlanningResultTest {
         new RepulsorPlanningRequest(
             new Pose2d(1.0, 1.0, Rotation2d.kZero),
             List.of(),
-            0.18,
-            0.18,
+            0.36,
+            0.36,
             CategorySpec.kScore,
             false,
             0.0,
@@ -72,8 +72,8 @@ class FieldPlannerPlanningResultTest {
             planner.calculate(
                 new Pose2d(1.0, 2.0, Rotation2d.kZero),
                 List.of(),
-                0.18,
-                0.18,
+                0.36,
+                0.36,
                 CategorySpec.kScore,
                 false,
                 0.0));
@@ -89,8 +89,8 @@ class FieldPlannerPlanningResultTest {
                     new RepulsorPlanningRequest(
                         new Pose2d(1.0, 2.0, Rotation2d.kZero),
                         List.of(block),
-                        0.18,
-                        0.18,
+                        0.36,
+                        0.36,
                         CategorySpec.kScore,
                         false,
                         0.0,
@@ -134,8 +134,8 @@ class FieldPlannerPlanningResultTest {
                     new RepulsorPlanningRequest(
                         new Pose2d(1.0, 2.0, Rotation2d.kZero),
                         List.of(block),
-                        0.18,
-                        0.18,
+                        0.36,
+                        0.36,
                         CategorySpec.kScore,
                         false,
                         0.0,
@@ -167,8 +167,8 @@ class FieldPlannerPlanningResultTest {
             new PlannerCalculationRequest(
                 new Pose2d(1.0, 1.0, Rotation2d.kZero),
                 dynamicObstacles,
-                0.18,
-                0.18,
+                0.36,
+                0.36,
                 CategorySpec.kCollect,
                 false,
                 0.3));

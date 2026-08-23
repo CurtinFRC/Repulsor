@@ -84,8 +84,8 @@ public final class RepulsorPlannerScenarioRunner {
     return new RepulsorPlanningRequest(
         pose,
         scenario.dynamicObstacles(),
-        scenario.robotHalfLengthMeters(),
-        scenario.robotHalfWidthMeters(),
+        scenario.robotLengthMeters(),
+        scenario.robotWidthMeters(),
         scenario.category(),
         scenario.suppressFallback(),
         scenario.shooterReleaseHeightMeters(),

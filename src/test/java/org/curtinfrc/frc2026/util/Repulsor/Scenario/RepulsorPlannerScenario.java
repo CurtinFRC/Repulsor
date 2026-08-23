@@ -14,8 +14,8 @@ public record RepulsorPlannerScenario(
     Pose2d startPose,
     Pose2d requestedGoal,
     List<? extends Obstacle> dynamicObstacles,
-    double robotHalfLengthMeters,
-    double robotHalfWidthMeters,
+    double robotLengthMeters,
+    double robotWidthMeters,
     CategorySpec category,
     boolean suppressFallback,
     double shooterReleaseHeightMeters,
@@ -29,8 +29,8 @@ public record RepulsorPlannerScenario(
     if (startPose == null) startPose = Pose2d.kZero;
     if (requestedGoal == null) requestedGoal = startPose;
     dynamicObstacles = dynamicObstacles == null ? List.of() : List.copyOf(dynamicObstacles);
-    robotHalfLengthMeters = Math.max(0.0, robotHalfLengthMeters);
-    robotHalfWidthMeters = Math.max(0.0, robotHalfWidthMeters);
+    robotLengthMeters = Math.max(0.0, robotLengthMeters);
+    robotWidthMeters = Math.max(0.0, robotWidthMeters);
     category = category == null ? CategorySpec.kScore : category;
     shooterReleaseHeightMeters = Math.max(0.0, shooterReleaseHeightMeters);
     if (fallbackAlliance == null) fallbackAlliance = Alliance.kBlue;
@@ -47,8 +47,8 @@ public record RepulsorPlannerScenario(
         startPose,
         requestedGoal,
         List.of(),
-        0.18,
-        0.18,
+        0.36,
+        0.36,
         CategorySpec.kScore,
         false,
         0.0,
