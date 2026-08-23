@@ -1,6 +1,7 @@
 package org.curtinfrc.frc2026.util.Repulsor.State;
 
 import edu.wpi.first.hal.AllianceStationID;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 
 /**
@@ -21,6 +22,9 @@ public final class SimMatchDriver {
    * @param runAuto value used by this operation.
    */
   public static void simInit(boolean runAuto) {
+    if (!RobotBase.isSimulation()) {
+      return;
+    }
     SimMatchDriver.runAuto = runAuto;
     DriverStationSim.resetData();
     DriverStationSim.setDsAttached(true);
@@ -44,6 +48,9 @@ public final class SimMatchDriver {
    * @param dt value used by this operation.
    */
   public static void simPeriodic(double dt) {
+    if (!RobotBase.isSimulation()) {
+      return;
+    }
     if (DriverStationSim.getEnabled() == false) {
       return;
     }
