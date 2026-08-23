@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import org.curtinfrc.frc2026.util.Repulsor.Constants;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
+import org.curtinfrc.frc2026.util.Repulsor.Force;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.GameSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointContext;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointType;
@@ -596,9 +597,27 @@ public class _Rebuilt2026 {
         (int) Math.round(halfW * 1000.0));
   }
 
-  private static int obstaclesStableHash(List<? extends Obstacle> obs) {
+  private static final double[] HUB_OBS_PROBE_X_M = {1.5, 4.5, 7.5, 10.5, 13.5, 16.5};
+  private static final double[] HUB_OBS_PROBE_Y_M = {1.0, 3.0, 5.0, 7.0};
+
+  static int obstaclesStableHash(List<? extends Obstacle> obs) {
     if (obs == null || obs.isEmpty()) return 0;
-    return (System.identityHashCode(obs) * 31) ^ obs.size();
+    int total = 31 * obs.size();
+    for (Obstacle o : obs) {
+      if (o == null) continue;
+      int h = o.positive ? 1 : 0;
+      h = h * 31 + (int) Math.round(o.strength * 1000.0);
+      for (double px : HUB_OBS_PROBE_X_M) {
+        for (double py : HUB_OBS_PROBE_Y_M) {
+          Translation2d probe = new Translation2d(px, py);
+          Force f = o.sampleForceAtPosition(probe, probe);
+          h = h * 31 + (int) Math.round(f.getX() * 1000.0);
+          h = h * 31 + (int) Math.round(f.getY() * 1000.0);
+        }
+      }
+      total += h;
+    }
+    return total;
   }
 
   private static final class ApproachFromTagSetpoint extends GameSetpoint {
