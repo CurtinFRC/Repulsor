@@ -152,11 +152,15 @@ public final class RuleReasoner<F extends Enum<F>, C> implements Reasoner<F, C> 
   @Override
   public EnumSet<F> update(C ctx) {
     Rule<F, C> best = null;
-    int bestP = Integer.MIN_VALUE;
-    for (Rule<F, C> r : rules) {
-      if (r.condition.test(ctx, signals) && r.priority > bestP) {
+    int bestPriority = Integer.MIN_VALUE;
+    int bestIndex = Integer.MAX_VALUE;
+    for (int i = 0; i < rules.size(); i++) {
+      Rule<F, C> r = rules.get(i);
+      if (!r.condition.test(ctx, signals)) continue;
+      if (r.priority > bestPriority || (r.priority == bestPriority && i < bestIndex)) {
         best = r;
-        bestP = r.priority;
+        bestPriority = r.priority;
+        bestIndex = i;
       }
     }
     return best != null ? EnumSet.copyOf(best.flags) : EnumSet.copyOf(fallback);
