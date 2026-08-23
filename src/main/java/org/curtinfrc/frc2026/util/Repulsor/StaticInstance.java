@@ -10,7 +10,7 @@ public class StaticInstance {
    * Configuration value for repulsor. The valid range and tuning source are defined by the owning
    * subsystem or field profile.
    */
-  public static Repulsor repulsor;
+  public static volatile Repulsor repulsor;
 
   /**
    * Returns the get instance value maintained by this Repulsor component.

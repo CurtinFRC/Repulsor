@@ -300,10 +300,7 @@ public class Repulsor {
       throw new IllegalArgumentException("collectingTags and scoringTags must be non-empty");
     }
 
-    Supplier<Boolean> scoringAllOn =
-        () ->
-            collectingTags.stream().allMatch(gate::isOn)
-                && scoringTags.stream().allMatch(gate::isOn);
+    Supplier<Boolean> scoringAllOn = () -> scoringTags.stream().allMatch(gate::isOn);
     Supplier<Boolean> collectingAllOn = () -> collectingTags.stream().allMatch(gate::isOn);
 
     Trigger inScoring = new Trigger(scoringAllOn::get);
@@ -415,7 +412,7 @@ public class Repulsor {
    */
   public Repulsor withInitialNext(RepulsorSetpoint setpoint) {
     if (setpoint != null && setpoint.point().type() == SetpointType.kHumanPlayer) {
-      throw new Error("Next score setpoint cannot be a human-player one");
+      throw new IllegalArgumentException("Next score setpoint cannot be a human-player one");
     }
     m_nextScore = setpoint;
     return this;
@@ -429,9 +426,9 @@ public class Repulsor {
    */
   public Repulsor withInitialHP(RepulsorSetpoint setpoint) {
     if (setpoint != null && setpoint.point().type() != SetpointType.kHumanPlayer) {
-      throw new Error("Next collect setpoint must be a human-player/collect one");
+      throw new IllegalArgumentException("Next collect setpoint must be a human-player/collect one");
     }
-    m_nextScore = setpoint;
+    m_currentGoal = setpoint;
     return this;
   }
 
@@ -444,7 +441,7 @@ public class Repulsor {
    */
   public void setNextScore(RepulsorSetpoint next) {
     if (next != null && next.point().type() == SetpointType.kHumanPlayer) {
-      throw new Error("Next score setpoint cannot be a human-player one");
+      throw new IllegalArgumentException("Next score setpoint cannot be a human-player one");
     }
     m_nextScore = next;
   }
@@ -614,10 +611,16 @@ public class Repulsor {
 
     m_visionPlanner.tick();
 
-    boolean enabled = true;
-    RepulsorDriverStation dsBase = RepulsorDriverStation.getInstance();
-    if (dsBase instanceof NtRepulsorDriverStation ds) {
-      enabled = ds.getConfigBool("force_controller_override");
+    boolean enabled = false;
+    if (RepulsorDriverStation.isInitialized()) {
+      RepulsorDriverStation dsBase = RepulsorDriverStation.getInstance();
+      if (dsBase instanceof NtRepulsorDriverStation ds) {
+        try {
+          enabled = ds.getConfigBool("force_controller_override");
+        } catch (RuntimeException ignored) {
+          enabled = false;
+        }
+      }
     }
 
     if (!m_usageType.equals(UsageType.kFullAuto)) {
