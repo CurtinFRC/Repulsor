@@ -134,7 +134,7 @@ public class VisionPlanner {
       var dsBase = RepulsorDriverStation.getInstance();
       double clearanceScale = 1.0;
       if (dsBase instanceof NtRepulsorDriverStation ds) {
-        clearanceScale = ds.getConfigDouble("clearance_scale");
+        clearanceScale = ds.getConfigDouble("clearance_scale", 1.0);
       }
 
       double scaledRadius = Math.max(sizeX, sizeY) * 0.5 * clearanceScale;
