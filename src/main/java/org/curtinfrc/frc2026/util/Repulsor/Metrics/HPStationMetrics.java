@@ -21,6 +21,7 @@ package org.curtinfrc.frc2026.util.Repulsor.Metrics;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Provides hpstation metrics functionality for the Repulsor metric aggregation and NetworkTables
@@ -29,7 +30,48 @@ import java.util.concurrent.ConcurrentHashMap;
  * robot-relative motion.
  */
 public final class HPStationMetrics {
+  public static final String DEFAULT_TOPIC_PREFIX = "hp";
+
+  public static final String DEFAULT_PICKUP_TIME_LABEL = "pickupTimeSeconds";
+
   private static final Map<String, MetricRecorder<Double>> byKey = new ConcurrentHashMap<>();
+  private static final AtomicReference<Labels> labels = new AtomicReference<>(Labels.defaults());
+
+  /**
+   * Topic vocabulary used when composing recorder names. Defaults preserve the historical
+   * {@code hp/<station>/pickupTimeSeconds} layout; another season can install different labels
+   * through {@link #configure(Labels)} without code changes at call sites.
+   *
+   * @param topicPrefix root segment of composed recorder names, defaulting to {@code hp}
+   * @param pickupTimeLabel leaf segment for pickup-time recorders, defaulting to {@code
+   *     pickupTimeSeconds}
+   */
+  public record Labels(String topicPrefix, String pickupTimeLabel) {
+    public Labels {
+      topicPrefix = normalized(topicPrefix, DEFAULT_TOPIC_PREFIX);
+      pickupTimeLabel = normalized(pickupTimeLabel, DEFAULT_PICKUP_TIME_LABEL);
+    }
+
+    public static Labels defaults() {
+      return new Labels(DEFAULT_TOPIC_PREFIX, DEFAULT_PICKUP_TIME_LABEL);
+    }
+
+    private static String normalized(String value, String fallback) {
+      return value == null || value.isBlank() ? fallback : value.trim();
+    }
+  }
+
+  public static void configure(Labels custom) {
+    labels.set(custom == null ? Labels.defaults() : custom);
+  }
+
+  public static void resetToDefaults() {
+    labels.set(Labels.defaults());
+  }
+
+  public static Labels labels() {
+    return labels.get();
+  }
 
   /**
    * Updates recorder state or telemetry as part of the Repulsor runtime loop. This may mutate local
@@ -40,8 +82,10 @@ public final class HPStationMetrics {
    * @return metric recorder of double result for recorder.
    */
   public static MetricRecorder<Double> recorder(String stationKey) {
-    return byKey.computeIfAbsent(
-        stationKey, k -> new DoubleMeanNTRecorder("hp/" + k + "/pickupTimeSeconds"));
+    Labels current = labels.get();
+    String topic =
+        current.topicPrefix() + "/" + stationKey + "/" + current.pickupTimeLabel();
+    return byKey.computeIfAbsent(topic, t -> new DoubleMeanNTRecorder(t));
   }
 
   private HPStationMetrics() {}
