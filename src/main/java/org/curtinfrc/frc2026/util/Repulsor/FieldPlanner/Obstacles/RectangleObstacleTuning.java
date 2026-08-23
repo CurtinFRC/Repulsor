@@ -13,7 +13,7 @@ public record RectangleObstacleTuning(
 
   public static RectangleObstacleTuning defaults() {
     return new RectangleObstacleTuning(
-        Math.toRadians(18.0), 0.18, 0.52, 0.50, 0.65, 0.70, 0.24, 0.30);
+        Math.toRadians(18.0), 0.18, 0.45, 0.50, 0.65, 0.70, 0.24, 0.30);
   }
 
   public RectangleObstacleTuning {
