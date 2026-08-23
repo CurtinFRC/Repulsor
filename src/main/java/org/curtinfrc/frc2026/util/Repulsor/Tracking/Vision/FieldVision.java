@@ -74,6 +74,8 @@ public class FieldVision {
   private final String host;
   private final NetworkTable table;
 
+  private volatile double latencySeconds = 0.0;
+
   private final HashMap<String, FieldVisionData> objects = new HashMap<>(256);
 
   /**
@@ -111,6 +113,26 @@ public class FieldVision {
   }
 
   /**
+   * Returns the configured sensor-to-NT latency used to backdate observation timestamps.
+   *
+   * @return latency seconds value maintained by this Repulsor component.
+   */
+  public double getLatencySeconds() {
+    return latencySeconds;
+  }
+
+  /**
+   * Updates set latency seconds state or telemetry as part of the Repulsor runtime loop. This may
+   * mutate local state, NetworkTables output, planner caches, or command-side runtime state
+   * depending on the owning type.
+   *
+   * @param seconds distance or field-coordinate value in meters.
+   */
+  public void setLatencySeconds(double seconds) {
+    latencySeconds = Double.isFinite(seconds) && seconds > 0.0 ? seconds : 0.0;
+  }
+
+  /**
    * Updates update state or telemetry as part of the Repulsor runtime loop. This may mutate local
    * state, NetworkTables output, planner caches, or command-side runtime state depending on the
    * owning type.
@@ -142,10 +164,19 @@ public class FieldVision {
             new Transform3d(robot_T_camera.getTranslation(), robot_T_camera.getRotation()));
 
     objects.clear();
-    Set<String> keys = table.getKeys();
+    Set<String> keys = new java.util.LinkedHashSet<>();
+    for (String key : table.getKeys()) {
+      if (key.startsWith("object_")) keys.add(key);
+    }
+    for (String sub : table.getSubTables()) {
+      if (sub.startsWith("object_")) keys.add(sub);
+    }
     int seen = 0;
 
     long nowNs = System.nanoTime();
+    double ntLatency = table.getEntry("extrinsics/latency_seconds").getDouble(latencySeconds);
+    double latency = Double.isFinite(ntLatency) && ntLatency > 0.0 ? ntLatency : latencySeconds;
+    long stampNs = nowNs - (long) (latency * 1e9);
 
     for (String key : keys) {
       if (seen >= MAX_OBJECTS_PER_TICK) break;
@@ -189,7 +220,7 @@ public class FieldVision {
       }
 
       objects.put(objectId, new FieldVisionData(fieldPose, type));
-      owner.ingestTracked(objectId, type, fieldPose, nowNs);
+      owner.ingestTracked(objectId, type, fieldPose, stampNs);
       seen++;
     }
 
