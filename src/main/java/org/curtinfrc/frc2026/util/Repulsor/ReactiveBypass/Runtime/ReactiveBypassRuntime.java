@@ -189,7 +189,7 @@ public class ReactiveBypassRuntime {
             side = freer;
           }
         } else {
-          side = Math.max(+1, state.preferredSide == 0 ? +1 : state.preferredSide);
+          side = state.preferredSide == 0 ? +1 : state.preferredSide;
         }
         double lat =
             ReactiveBypassMath.clamp(
