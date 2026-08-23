@@ -56,14 +56,21 @@ final class ReactiveBypassVibrationTracker {
     Translation2d p = pose.getTranslation();
     double cos = Math.cos(heading.getRadians());
     double sin = Math.sin(heading.getRadians());
-    double sPara = p.getX() * cos + p.getY() * sin;
-    double sPerp = -p.getX() * sin + p.getY() * cos;
+    double sPara;
+    double sPerp;
     int signPara = 0;
     int signPerp = 0;
-    if (!vib.isEmpty()) {
+    if (vib.isEmpty()) {
+      sPara = 0.0;
+      sPerp = 0.0;
+    } else {
       ReactiveBypassSample last = vib.getLast();
-      double dPara = sPara - last.sPara;
-      double dPerp = sPerp - last.sPerp;
+      double dx = p.getX() - last.pos.getX();
+      double dy = p.getY() - last.pos.getY();
+      double dPara = dx * cos + dy * sin;
+      double dPerp = -dx * sin + dy * cos;
+      sPara = last.sPara + dPara;
+      sPerp = last.sPerp + dPerp;
       if (Math.abs(dPara) > 1e-4) signPara = dPara > 0 ? +1 : -1;
       if (Math.abs(dPerp) > 1e-4) signPerp = dPerp > 0 ? +1 : -1;
     }
