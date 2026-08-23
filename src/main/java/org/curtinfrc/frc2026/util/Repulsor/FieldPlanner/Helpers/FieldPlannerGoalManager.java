@@ -462,7 +462,6 @@ public final class FieldPlannerGoalManager {
       stagedModeTicks++;
 
       Translation2d liveTarget = stagedAttractor;
-      if (liveTarget == null) liveTarget = stagedAttractor;
       double passedProjMeters =
           stagedExitPhase ? STAGED_EXIT_PASSED_PROJ_M : STAGED_ENTRY_PASSED_PROJ_M;
       boolean passedLiveTargetTowardGoal =
@@ -606,12 +605,7 @@ public final class FieldPlannerGoalManager {
         return true;
       }
 
-      if (liveTarget.getDistance(stagedAttractor) > 0.02) {
-        stagedAttractor = liveTarget;
-        goal = new Pose2d(stagedAttractor, requestedGoal.getRotation());
-      } else {
-        goal = new Pose2d(stagedAttractor, requestedGoal.getRotation());
-      }
+      goal = new Pose2d(stagedAttractor, requestedGoal.getRotation());
 
       waypointTransitionReason = stagedExitPhase ? "stage_exit_holding" : "stage_entry_holding";
       return false;
@@ -1095,7 +1089,7 @@ public final class FieldPlannerGoalManager {
       }
     }
 
-    Logger.recordOutput("ChosenStagedGate", best.center);
+    Logger.recordOutput("ChosenStagedGate", best == null ? null : best.center);
     return best;
   }
 
