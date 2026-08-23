@@ -24,11 +24,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
-import org.curtinfrc.frc2026.util.Repulsor.Constants;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.DynamicObject;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceCollectionProfile;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateLocalAccess;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.PredictiveFieldStateOps;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
@@ -69,7 +69,7 @@ public final class PredictiveCollectConfigRuntime {
       PredictiveFieldStateOps ops, ResourceCollectionProfile profile) {
     if (ops == null) return;
     ResourceCollectionProfile next =
-        profile != null ? profile : ResourceCollectionProfile.fuel2026(Constants.FIELD_GEOMETRY);
+        profile != null ? profile : PredictiveFieldStateLocalAccess.defaultCollectionProfile();
     ops.collectionProfile = next;
     ops.resourceSpecs.put(next.defaultResourceType(), next.defaultResourceSpec());
     ops.collectResourceTypes.clear();
