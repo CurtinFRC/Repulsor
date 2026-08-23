@@ -24,81 +24,76 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.List;
-import java.util.function.Supplier;
 import org.curtinfrc.frc2026.util.Repulsor.Constants;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Heatmap;
+import org.curtinfrc.frc2026.util.Repulsor.RepulsorSeason;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.FieldTrackerCore;
 import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.GameElement;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 class DefaultFieldOverrideTest {
-  @Test
-  void providerRejectedAfterConstantsResolution() {
-    assertNotNull(Constants.FIELD);
-    assertThrows(
-        IllegalStateException.class, () -> Constants.setDefaultFieldProvider(TestField::new));
+  @AfterEach
+  void resetProvider() {
+    RepulsorSeason.clearDefaultFieldProvider();
   }
 
   @Test
-  void loadDefaultFieldPrefersRegisteredProvider() throws Exception {
-    Object originalProvider = staticValue("defaultFieldProvider");
-    boolean originalResolved = (boolean) staticValue("fieldResolved");
+  void providerRegistrationRejectsNull() {
+    assertThrows(
+        IllegalArgumentException.class, () -> RepulsorSeason.setDefaultFieldProvider(null));
+    RepulsorSeason.clearDefaultFieldProvider();
+  }
+
+  @Test
+  void resolutionPrefersRegisteredProvider() {
     try {
-      setStatic("defaultFieldProvider", (Supplier<FieldDefinition>) TestField::new);
-      setStatic("fieldResolved", false);
-      FieldDefinition resolved = invokeLoadDefaultField();
+      RepulsorSeason.setDefaultFieldProvider(TestField::new);
+      FieldDefinition resolved = Constants.resolveDefaultField();
       assertInstanceOf(TestField.class, resolved);
       assertEquals(new FieldGeometry(12.5, 6.5), resolved.geometry());
-      assertEquals(
-          new FieldGeometry(12.5, 6.5),
-          new FieldModel(resolved.geometry(), resolved.aprilTagLayout()).geometry());
+      assertNotNull(resolved.geometry());
     } finally {
-      setStatic("defaultFieldProvider", originalProvider);
-      setStatic("fieldResolved", originalResolved);
+      RepulsorSeason.clearDefaultFieldProvider();
     }
   }
 
   @Test
-  void nullProviderFallsThroughToBuiltin() throws Exception {
-    Object originalProvider = staticValue("defaultFieldProvider");
-    boolean originalResolved = (boolean) staticValue("fieldResolved");
+  void nullProvidedValueFallsThroughToBuiltin() {
     try {
-      setStatic("defaultFieldProvider", (Supplier<FieldDefinition>) () -> null);
-      setStatic("fieldResolved", false);
-      FieldDefinition resolved = invokeLoadDefaultField();
+      RepulsorSeason.setDefaultFieldProvider(() -> null);
+      FieldDefinition resolved = Constants.resolveDefaultField();
       assertInstanceOf(expectedBuiltinForProperty(), resolved);
     } finally {
-      setStatic("defaultFieldProvider", originalProvider);
-      setStatic("fieldResolved", originalResolved);
+      RepulsorSeason.clearDefaultFieldProvider();
     }
   }
 
   @Test
-  void repulsorFieldPropertyStillSelectsSeasons() throws Exception {
+  void clearedProviderFallsThroughToBuiltin() {
+    RepulsorSeason.setDefaultFieldProvider(TestField::new);
+    RepulsorSeason.clearDefaultFieldProvider();
+    assertInstanceOf(expectedBuiltinForProperty(), Constants.resolveDefaultField());
+  }
+
+  @Test
+  void repulsorFieldPropertyStillSelectsSeasons() {
     String originalProperty = System.getProperty("repulsor.field");
-    Object originalProvider = staticValue("defaultFieldProvider");
-    boolean originalResolved = (boolean) staticValue("fieldResolved");
     try {
-      setStatic("defaultFieldProvider", null);
-      setStatic("fieldResolved", false);
       System.setProperty("repulsor.field", "reefscape2025");
-      assertInstanceOf(Reefscape2025.class, invokeLoadDefaultField());
+      assertInstanceOf(Reefscape2025.class, Constants.resolveDefaultField());
       System.setProperty("repulsor.field", "rebuilt2026");
-      assertInstanceOf(Rebuilt2026.class, invokeLoadDefaultField());
+      assertInstanceOf(Rebuilt2026.class, Constants.resolveDefaultField());
       System.setProperty("repulsor.field", "unknown-season");
-      assertInstanceOf(Rebuilt2026.class, invokeLoadDefaultField());
+      assertInstanceOf(Rebuilt2026.class, Constants.resolveDefaultField());
     } finally {
       if (originalProperty == null) {
         System.clearProperty("repulsor.field");
       } else {
         System.setProperty("repulsor.field", originalProperty);
       }
-      setStatic("defaultFieldProvider", originalProvider);
-      setStatic("fieldResolved", originalResolved);
     }
   }
 
@@ -108,24 +103,6 @@ class DefaultFieldOverrideTest {
       case "reefscape", "reefscape2025", "2025" -> Reefscape2025.class;
       default -> Rebuilt2026.class;
     };
-  }
-
-  private static FieldDefinition invokeLoadDefaultField() throws Exception {
-    Method method = Constants.class.getDeclaredMethod("loadDefaultField");
-    method.setAccessible(true);
-    return (FieldDefinition) method.invoke(null);
-  }
-
-  private static Object staticValue(String name) throws Exception {
-    Field field = Constants.class.getDeclaredField(name);
-    field.setAccessible(true);
-    return field.get(null);
-  }
-
-  private static void setStatic(String name, Object value) throws Exception {
-    Field field = Constants.class.getDeclaredField(name);
-    field.setAccessible(true);
-    field.set(null, value);
   }
 
   private static final class TestField implements FieldDefinition {

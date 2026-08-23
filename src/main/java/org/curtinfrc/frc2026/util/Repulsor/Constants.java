@@ -31,9 +31,6 @@ import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldModel;
  * Coordinates are field-relative unless a method documents robot-relative motion.
  */
 public final class Constants {
-  private static volatile Supplier<FieldDefinition> defaultFieldProvider;
-  private static volatile boolean fieldResolved;
-
   public static final FieldDefinition FIELD = loadDefaultField();
   public static final FieldModel FIELD_MODEL = FIELD.fieldModel();
   public static final AprilTagFieldLayout aprilTagLayout = FIELD_MODEL.aprilTagLayout();
@@ -41,23 +38,12 @@ public final class Constants {
   public static final double FIELD_LENGTH = FIELD_GEOMETRY.lengthMeters();
   public static final double FIELD_WIDTH = FIELD_GEOMETRY.widthMeters();
 
-  static {
-    fieldResolved = true;
-  }
-
-  public static void setDefaultFieldProvider(Supplier<FieldDefinition> provider) {
-    if (provider == null) {
-      throw new IllegalArgumentException("provider cannot be null");
-    }
-    if (fieldResolved) {
-      throw new IllegalStateException(
-          "Default field already resolved; register a provider before first Constants access");
-    }
-    defaultFieldProvider = provider;
+  public static FieldDefinition resolveDefaultField() {
+    return loadDefaultField();
   }
 
   private static FieldDefinition loadDefaultField() {
-    Supplier<FieldDefinition> provider = defaultFieldProvider;
+    Supplier<FieldDefinition> provider = RepulsorSeason.peekProvider();
     if (provider != null) {
       FieldDefinition provided = provider.get();
       if (provided != null) {
