@@ -157,7 +157,9 @@ Repulsor is game-agnostic at its core; seasons plug in through these seams:
   `PredictiveFieldStateLocalAccess.setDefaultRecoveryProfile` /
   `setDefaultCollectionProfile`; unset falls back to the built-in 2026 profile.
 - Robot footprint scalars (`robot_x`, `robot_y`) mean **full** length/width everywhere;
-  corner builders halve internally exactly once.
+  corner builders halve internally exactly once. The one deliberate exception is the
+  `DragShotPlanner*` family, whose public API takes half-extents (`robotHalfLengthMeters`)
+  and converts once at its single obstacle boundary.
 - Vision feeds accept sensor latency via `FieldVision.setLatencySeconds(...)` so observation
   ages reflect capture time rather than receipt time.
 
