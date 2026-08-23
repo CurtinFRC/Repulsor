@@ -146,6 +146,41 @@ If you need to rebuild the behaviour set at runtime, call `repulsor.clearBehavio
 
 This allows the planner and predictive layers to ask for mode-specific candidates while reusing one field map.
 
+## Season Abstraction Seams
+
+Repulsor is game-agnostic at its core; seasons plug in through these seams:
+
+- `Constants.setDefaultFieldProvider(Supplier<FieldDefinition>)` registers a season before first
+  use (or `-Drepulsor.field=...` selects a built-in). Concrete season classes are loaded
+  reflectively, so the core never statically links them.
+- `ResourceRecoveryProfile` / `ResourceCollectionProfile` defaults flow through
+  `PredictiveFieldStateLocalAccess.setDefaultRecoveryProfile` /
+  `setDefaultCollectionProfile`; unset falls back to the built-in 2026 profile.
+- Robot footprint scalars (`robot_x`, `robot_y`) mean **full** length/width everywhere;
+  corner builders halve internally exactly once.
+- Vision feeds accept sensor latency via `FieldVision.setLatencySeconds(...)` so observation
+  ages reflect capture time rather than receipt time.
+
+## Custom Waypoint Policies
+
+`FieldPlannerWaypointConfig.customPolicies` accepts `FieldPlannerWaypointPolicy` lambdas that
+propose `FieldPlannerWaypointProposal`s (entry point, optional exit point, role, zones,
+priority). Proposals pass through the same candidate scoring and safety validation as built-in
+staging strategies. Built-in strategies (band staging, occluding-gate staging, center return)
+can each be disabled from config so a season can replace rather than stack behavior.
+Placement geometry used by built-ins is exposed as `FieldPlannerWaypointPlacement`.
+
+Register policies from your field definition:
+
+```java
+FieldPlannerWaypointConfig config =
+    FieldPlannerWaypointConfig.defaults()
+        .withCustomPolicies(List.of(
+            (ctx) -> ctx.requestedGoal() != null && crossesMyLane(ctx)
+                ? List.of(FieldPlannerWaypointProposal.at(name, laneEntry))
+                : List.of()));
+```
+
 ## YAML Game Profile Tuning
 
 Game-tunable values can be overridden from YAML in `src/main/deploy/repulsor/profiles`.
