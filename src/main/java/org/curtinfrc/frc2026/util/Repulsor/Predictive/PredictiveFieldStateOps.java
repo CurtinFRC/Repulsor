@@ -410,23 +410,27 @@ public final class PredictiveFieldStateOps {
   public static final double COLLECT_SPREAD_MAX = 0.65;
 
   /**
-   * Configuration value for shoot x end band m. The valid range and tuning source are defined by
-   * the owning subsystem or field profile.
+   * Season-specific x-band geometry for the default 2026 field profile. Consolidated here so a
+   * next-season swap is a single-line change; the generic runtime only consumes the derived bands.
    */
-  public static final double SHOOT_X_END_BAND_M = 12.5631260802;
+  public static final class Rebuilt2026FieldBands {
+    /** Raw band end coordinate in meters along the blue x axis for the 2026 field profile. */
+    public static final double SHOOT_X_END_BAND_M = 12.5631260802;
 
-  /**
-   * Configuration value for band width m. Distances use meters in WPILib field coordinates and
-   * should be treated as tunable when sourced from profiles.
-   */
-  public static final double BAND_WIDTH_M = 2.167294751;
+    /** Raw band width in meters for the 2026 field profile. */
+    public static final double BAND_WIDTH_M = 2.167294751;
+
+    private Rebuilt2026FieldBands() {}
+  }
 
   /**
    * Configuration value for x left band. The valid range and tuning source are defined by the
    * owning subsystem or field profile.
    */
   public static final Interval<Double> X_LEFT_BAND =
-      Interval.closed(SHOOT_X_END_BAND_M - BAND_WIDTH_M, SHOOT_X_END_BAND_M);
+      Interval.closed(
+          Rebuilt2026FieldBands.SHOOT_X_END_BAND_M - Rebuilt2026FieldBands.BAND_WIDTH_M,
+          Rebuilt2026FieldBands.SHOOT_X_END_BAND_M);
 
   /**
    * Configuration value for x right band. The valid range and tuning source are defined by the
@@ -434,8 +438,9 @@ public final class PredictiveFieldStateOps {
    */
   public static final Interval<Double> X_RIGHT_BAND =
       Interval.closed(
-          Constants.FIELD_LENGTH - SHOOT_X_END_BAND_M,
-          Constants.FIELD_LENGTH - (SHOOT_X_END_BAND_M - BAND_WIDTH_M));
+          Constants.FIELD_LENGTH - Rebuilt2026FieldBands.SHOOT_X_END_BAND_M,
+          Constants.FIELD_LENGTH
+              - (Rebuilt2026FieldBands.SHOOT_X_END_BAND_M - Rebuilt2026FieldBands.BAND_WIDTH_M));
 
   /**
    * Configuration value for default collect resource type. The valid range and tuning source are
