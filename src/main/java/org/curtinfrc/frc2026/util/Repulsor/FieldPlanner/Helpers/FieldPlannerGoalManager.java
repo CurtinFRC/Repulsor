@@ -23,9 +23,11 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import java.util.ArrayList;
 import java.util.List;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.GatedAttractorObstacle;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.PointObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
 import org.littletonrobotics.junction.Logger;
 
@@ -34,6 +36,11 @@ import org.littletonrobotics.junction.Logger;
  * combines goals, obstacles, and force samples. Use this type from robot code, field profiles, or
  * tests when integrating the corresponding Repulsor subsystem. Coordinates are field-relative
  * unless a method documents robot-relative motion.
+ *
+ * <p>Seasons can extend waypointing without editing this class by registering {@link
+ * FieldPlannerWaypointPolicy} instances on {@link FieldPlannerWaypointConfig}: policies run after
+ * the configured strategy, ordered by proposal priority, and their proposals pass through the same
+ * candidate scoring and validation as built-in waypoint rules.
  */
 public final class FieldPlannerGoalManager {
   private static final double STAGED_CENTER_BAND_M = 3.648981;
@@ -42,14 +49,7 @@ public final class FieldPlannerGoalManager {
   private static final double STAGED_SAME_GOAL_ROT_DEG = 5.0;
 
   private static final int STAGED_ENTRY_MIN_TICKS_BEFORE_PASS = 3;
-  private static final double STAGED_ENTRY_PASS_MUST_BE_WITHIN_M = 0.85;
 
-  private static final double STAGED_REACH_EXIT_M = 0.55;
-  private static final double STAGED_ENTRY_REACH_ENTER_M = 0.50;
-  private static final double STAGED_ENTRY_PASSED_PROJ_M = 0.06;
-  private static final double STAGED_EXIT_REACH_ENTER_M = 0.45;
-  private static final double STAGED_EXIT_PASSED_PROJ_M = 0.10;
-  private static final double STAGED_GATE_CLEAR_EXIT_M = 0.40;
   private static final int STAGED_ENTRY_REACH_TICKS = 1;
   private static final int STAGED_EXIT_REACH_TICKS = 1;
   private static final int STAGED_GATE_CLEAR_TICKS = 2;
@@ -62,8 +62,6 @@ public final class FieldPlannerGoalManager {
   private static final double STAGED_LANE_LOCK_MAX_DELTA_M = 3.0;
 
   private static final double STAGED_GATE_PAD_M = 0.25;
-  private static final double STAGED_PASSED_X_HYST_M = 0.35;
-  private static final double STAGED_GOAL_SIDE_PROJ_M = 0.05;
   private static final double STAGED_LEAD_THROUGH_SCALE = 0.28;
   private static final double STAGED_LEAD_THROUGH_MIN_M = 0.45;
   private static final double STAGED_LEAD_THROUGH_MAX_M = 1.05;
@@ -363,6 +361,12 @@ public final class FieldPlannerGoalManager {
       return true;
     }
 
+    if (decision.usesDefaultPolicy() && tryApplyCustomPolicyPlan(context, curPos)) {
+      return false;
+    }
+
+    FieldPlannerWaypointPlacement placement = waypointConfig.placement();
+
     if (gatedAttractors.isEmpty() && stagedAttractor == null) {
       goal = requestedGoal;
       clearStagedState(false);
@@ -428,7 +432,7 @@ public final class FieldPlannerGoalManager {
         if (pick != null
             && (mustStageForOccludingGate
                 || shouldStage
-                || curPos.getDistance(pick) > STAGED_REACH_EXIT_M)) {
+                || curPos.getDistance(pick) > placement.reachExitMeters())) {
           stagedAttractor = pick;
           lastStagedPoint = pick;
           stagedReachTicks = 0;
@@ -463,23 +467,26 @@ public final class FieldPlannerGoalManager {
 
       Translation2d liveTarget = stagedAttractor;
       double passedProjMeters =
-          stagedExitPhase ? STAGED_EXIT_PASSED_PROJ_M : STAGED_ENTRY_PASSED_PROJ_M;
+          stagedExitPhase
+              ? placement.exitPassedProjectionMeters()
+              : placement.entryPassedProjectionMeters();
       boolean passedLiveTargetTowardGoal =
           hasPassedPointTowardGoal(curPos, liveTarget, reqT, passedProjMeters);
 
       double d = curPos.getDistance(liveTarget);
 
-      double reachEnter = stagedExitPhase ? STAGED_EXIT_REACH_ENTER_M : STAGED_ENTRY_REACH_ENTER_M;
+      double reachEnter =
+          stagedExitPhase ? placement.exitReachEnterMeters() : placement.entryReachEnterMeters();
       int reachTicksRequired = stagedExitPhase ? STAGED_EXIT_REACH_TICKS : STAGED_ENTRY_REACH_TICKS;
 
       if (d <= reachEnter) stagedReachTicks++;
-      else if (d >= STAGED_REACH_EXIT_M) stagedReachTicks = 0;
+      else if (d >= placement.reachExitMeters()) stagedReachTicks = 0;
 
       boolean reached = stagedReachTicks >= reachTicksRequired;
 
       if (!reached && !stagedExitPhase && passedLiveTargetTowardGoal) {
         boolean committed =
-            (d <= STAGED_ENTRY_PASS_MUST_BE_WITHIN_M)
+            (d <= placement.entryPassWithinMeters())
                 || (stagedModeTicks >= STAGED_ENTRY_MIN_TICKS_BEFORE_PASS);
         if (committed) reached = true;
       }
@@ -506,7 +513,7 @@ public final class FieldPlannerGoalManager {
       if (!reached
           && stagedGate != null
           && stagedGateClearTicks >= STAGED_GATE_CLEAR_TICKS
-          && (passedLiveTargetTowardGoal || d <= STAGED_GATE_CLEAR_EXIT_M)) {
+          && (passedLiveTargetTowardGoal || d <= placement.gateClearExitMeters())) {
         reached = true;
       }
       if (!reached && stagedGate == null && passedLiveTargetTowardGoal) reached = true;
@@ -554,7 +561,7 @@ public final class FieldPlannerGoalManager {
           && !stagedExitPhase
           && stagedExitPoint != null
           && (stagedAttractor == null
-              || stagedAttractor.getDistance(stagedExitPoint) > STAGED_REACH_EXIT_M)) {
+              || stagedAttractor.getDistance(stagedExitPoint) > placement.reachExitMeters())) {
         stagedExitPhase = true;
         stagedAttractor = stagedExitPoint;
         lastStagedPoint = stagedExitPoint;
@@ -653,7 +660,9 @@ public final class FieldPlannerGoalManager {
       return false;
     }
 
-    if (!plan.forceStage() && curPos != null && curPos.getDistance(pick) <= STAGED_REACH_EXIT_M) {
+    if (!plan.forceStage()
+        && curPos != null
+        && curPos.getDistance(pick) <= waypointConfig.placement().reachExitMeters()) {
       waypointTransitionReason = "strategy_stage_suppressed_near_entry";
       return false;
     }
@@ -678,6 +687,100 @@ public final class FieldPlannerGoalManager {
     waypointTransitionReason =
         plan.centerReturn() ? "strategy_center_return_stage" : "strategy_stage";
     return true;
+  }
+
+  /**
+   * Evaluates registered custom waypoint policies and stages the winning proposal. Proposals are
+   * grouped into priority tiers (highest first; equal priorities keep registration order). Within a
+   * tier the shared candidate scorer picks the best proposal; the first tier whose winner passes
+   * application validation wins. Returns false when no proposal applies so built-in staging can
+   * proceed unchanged.
+   */
+  private boolean tryApplyCustomPolicyPlan(
+      FieldPlannerWaypointContext context, Translation2d curPos) {
+    List<FieldPlannerWaypointProposal> proposals = collectValidCustomProposals(context);
+    while (!proposals.isEmpty()) {
+      int topTier = Integer.MIN_VALUE;
+      for (FieldPlannerWaypointProposal proposal : proposals) {
+        topTier = Math.max(topTier, proposal.priority());
+      }
+      List<FieldPlannerWaypointCandidate> tier = new ArrayList<>();
+      List<FieldPlannerWaypointProposal> remaining = new ArrayList<>();
+      for (FieldPlannerWaypointProposal proposal : proposals) {
+        if (proposal.priority() == topTier) tier.add(proposal.toCandidate());
+        else remaining.add(proposal);
+      }
+      var best =
+          FieldPlannerWaypointCandidateScorer.best(
+              context, tier, FieldPlannerWaypointScoringConfig.defaults());
+      if (best.isPresent()) {
+        FieldPlannerWaypointPlan plan = best.get().candidate().toPlan();
+        if (shouldApplyWaypointPlan(plan) && applyWaypointPlan(plan, curPos)) {
+          waypointTransitionReason = "custom_policy_stage";
+          return true;
+        }
+      }
+      proposals = remaining;
+    }
+    return false;
+  }
+
+  private List<FieldPlannerWaypointProposal> collectValidCustomProposals(
+      FieldPlannerWaypointContext context) {
+    List<FieldPlannerWaypointPolicy> policies = waypointConfig.customPolicies();
+    if (policies == null || policies.isEmpty()) return List.of();
+    List<FieldPlannerWaypointProposal> valid = new ArrayList<>();
+    for (FieldPlannerWaypointPolicy policy : policies) {
+      if (policy == null) continue;
+      List<FieldPlannerWaypointProposal> proposed = policy.propose(context);
+      if (proposed == null) continue;
+      for (FieldPlannerWaypointProposal proposal : proposed) {
+        if (proposal != null && isValidProposal(proposal, context)) valid.add(proposal);
+      }
+    }
+    return valid;
+  }
+
+  private boolean isValidProposal(
+      FieldPlannerWaypointProposal proposal, FieldPlannerWaypointContext context) {
+    Translation2d entry = proposal.entryPoint();
+    if (entry == null || !isFiniteTranslation(entry) || !withinFieldBounds(entry)) return false;
+    Translation2d exit = proposal.exitPoint();
+    if (exit != null && (!isFiniteTranslation(exit) || !withinFieldBounds(exit))) return false;
+    if (!proposal.role().matches(context.objectiveRole())) return false;
+    if (proposal.robotZone() != null
+        && !proposal.robotZone().contains(context.robotPosition())) {
+      return false;
+    }
+    if (proposal.goalZone() != null
+        && !proposal.goalZone().contains(context.requestedGoal().getTranslation())) {
+      return false;
+    }
+    return !intersectsObstacleRadius(entry, context.obstacles());
+  }
+
+  private static boolean isFiniteTranslation(Translation2d point) {
+    return Double.isFinite(point.getX()) && Double.isFinite(point.getY());
+  }
+
+  private boolean withinFieldBounds(Translation2d point) {
+    return point.getX() >= 0.0
+        && point.getX() <= fieldLengthMeters
+        && point.getY() >= 0.0
+        && point.getY() <= fieldWidthMeters;
+  }
+
+  private static boolean intersectsObstacleRadius(
+      Translation2d point, List<? extends Obstacle> obstacles) {
+    if (point == null || obstacles == null) return false;
+    for (Obstacle obstacle : obstacles) {
+      if (obstacle instanceof PointObstacle pointObstacle
+          && pointObstacle.loc != null
+          && point.getDistance(pointObstacle.loc) <= Math.max(0.0, pointObstacle.radius)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static Translation2d polyCentroid(Translation2d[] poly) {
@@ -758,7 +861,7 @@ public final class FieldPlannerGoalManager {
     return null;
   }
 
-  private static boolean gateIsBehind(
+  private boolean gateIsBehind(
       Translation2d pos, Translation2d goal, GatedAttractorObstacle gate) {
     if (pos == null || goal == null || gate == null || gate.center == null) return false;
     Translation2d toGoal = goal.minus(pos);
@@ -767,10 +870,10 @@ public final class FieldPlannerGoalManager {
     Translation2d dir = toGoal.div(n);
     Translation2d toGate = gate.center.minus(pos);
     double proj = toGate.getX() * dir.getX() + toGate.getY() * dir.getY();
-    return proj < -STAGED_PASSED_X_HYST_M;
+    return proj < -waypointConfig.placement().passedGateHysteresisMeters();
   }
 
-  private static boolean gateOnGoalSide(
+  private boolean gateOnGoalSide(
       Translation2d pos, Translation2d goal, GatedAttractorObstacle gate) {
     if (pos == null || goal == null || gate == null || gate.center == null) return false;
     Translation2d gateToGoal = goal.minus(gate.center);
@@ -778,7 +881,7 @@ public final class FieldPlannerGoalManager {
     if (n <= 1e-6) return false;
     Translation2d gateToPos = pos.minus(gate.center);
     double proj = (gateToPos.getX() * gateToGoal.getX() + gateToPos.getY() * gateToGoal.getY()) / n;
-    return proj >= STAGED_GOAL_SIDE_PROJ_M;
+    return proj >= waypointConfig.placement().goalSideProjectionMeters();
   }
 
   private GatedAttractorObstacle firstOccludingGateAlongSegment(
@@ -897,7 +1000,7 @@ public final class FieldPlannerGoalManager {
 
     double advance =
         MathUtil.clamp(
-            Math.abs(dx) * 0.45,
+            Math.abs(dx) * waypointConfig.placement().centerReturnExitAdvanceScale(),
             waypointConfig.centerReturnExitMinMeters(),
             waypointConfig.centerReturnExitMaxMeters());
 
