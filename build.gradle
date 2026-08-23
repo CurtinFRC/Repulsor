@@ -124,6 +124,14 @@ test {
     systemProperty 'junit.jupiter.extensions.autodetection.enabled', 'true'
 }
 
+def testJdkDir = layout.buildDirectory.dir("test-jdk")
+def testJdkJava = testJdkDir.map { it.file("bin/java.exe") }
+tasks.withType(Test).configureEach {
+    if (org.gradle.internal.os.OperatingSystem.current().isWindows() && testJdkJava.get().asFile.exists()) {
+        executable = testJdkJava.get().asFile.absolutePath
+    }
+}
+
 // Simulation configuration (e.g. environment variables).
 //
 // The sim GUI is *disabled* by default to support running
