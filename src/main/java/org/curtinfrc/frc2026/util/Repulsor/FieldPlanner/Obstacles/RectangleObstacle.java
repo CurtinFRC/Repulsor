@@ -196,9 +196,7 @@ public class RectangleObstacle extends Obstacle {
   }
 
   private final FlowTeardrop tearA_CCW;
-  private final FlowTeardrop tearA_CW;
   private final FlowTeardrop tearB_CCW;
-  private final FlowTeardrop tearB_CW;
   private final boolean longAxisX;
   private final int shortSignA;
   private final int shortSignB;
@@ -1134,24 +1132,18 @@ public class RectangleObstacle extends Obstacle {
     Translation2d locAWorld = locALocal.rotateBy(this.rot).plus(this.center);
     Translation2d locBWorld = locBLocal.rotateBy(this.rot).plus(this.center);
 
-    Translation2d tA_CCW_L, tA_CW_L, tB_CCW_L, tB_CW_L;
+    Translation2d tA_CCW_L, tB_CCW_L;
 
     if (longAxisX) {
       tA_CCW_L = new Translation2d(-1.0, 0.0);
-      tA_CW_L = new Translation2d(1.0, 0.0);
       tB_CCW_L = new Translation2d(1.0, 0.0);
-      tB_CW_L = new Translation2d(-1.0, 0.0);
     } else {
       tA_CCW_L = new Translation2d(0.0, 1.0);
-      tA_CW_L = new Translation2d(0.0, -1.0);
       tB_CCW_L = new Translation2d(0.0, -1.0);
-      tB_CW_L = new Translation2d(0.0, 1.0);
     }
 
     Rotation2d dirA_CCW_W = tA_CCW_L.rotateBy(this.rot).getAngle();
-    Rotation2d dirA_CW_W = tA_CW_L.rotateBy(this.rot).getAngle();
     Rotation2d dirB_CCW_W = tB_CCW_L.rotateBy(this.rot).getAngle();
-    Rotation2d dirB_CW_W = tB_CW_L.rotateBy(this.rot).getAngle();
 
     this.tearA_CCW =
         new FlowTeardrop(
@@ -1162,28 +1154,10 @@ public class RectangleObstacle extends Obstacle {
             primaryRadius,
             tailStrength,
             tailLenParam);
-    this.tearA_CW =
-        new FlowTeardrop(
-            locAWorld,
-            dirA_CW_W,
-            primaryStrength,
-            primaryMaxRange,
-            primaryRadius,
-            tailStrength,
-            tailLenParam);
     this.tearB_CCW =
         new FlowTeardrop(
             locBWorld,
             dirB_CCW_W,
-            primaryStrength,
-            primaryMaxRange,
-            primaryRadius,
-            tailStrength,
-            tailLenParam);
-    this.tearB_CW =
-        new FlowTeardrop(
-            locBWorld,
-            dirB_CW_W,
             primaryStrength,
             primaryMaxRange,
             primaryRadius,
