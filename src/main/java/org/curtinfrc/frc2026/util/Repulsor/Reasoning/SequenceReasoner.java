@@ -314,6 +314,7 @@ public final class SequenceReasoner<F extends Enum<F>, C> implements Reasoner<F,
   private final Clock clock;
   private final Signals signals;
   private final List<Phase<F, C>> phases;
+  private final int startIndex;
 
   private int phaseIndex;
   private double phaseStartSec;
@@ -333,7 +334,8 @@ public final class SequenceReasoner<F extends Enum<F>, C> implements Reasoner<F,
     this.clock = Objects.requireNonNull(clock);
     this.signals = Objects.requireNonNull(signals);
     this.phases = List.copyOf(Objects.requireNonNull(phases));
-    this.phaseIndex = Math.max(0, Math.min(startIndex, this.phases.size() - 1));
+    this.startIndex = Math.max(0, Math.min(startIndex, this.phases.size() - 1));
+    this.phaseIndex = this.startIndex;
     this.phaseStartSec = Double.NaN;
   }
 
@@ -431,7 +433,7 @@ public final class SequenceReasoner<F extends Enum<F>, C> implements Reasoner<F,
   @Override
   public void reset() {
     signals.clear();
-    phaseIndex = 0;
+    phaseIndex = startIndex;
     phaseStartSec = Double.NaN;
   }
 }
