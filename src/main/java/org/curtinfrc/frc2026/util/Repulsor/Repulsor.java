@@ -616,7 +616,7 @@ public class Repulsor {
       RepulsorDriverStation dsBase = RepulsorDriverStation.getInstance();
       if (dsBase instanceof NtRepulsorDriverStation ds) {
         try {
-          enabled = ds.getConfigBool("force_controller_override");
+          enabled = ds.getConfigBool("force_controller_override", false);
         } catch (RuntimeException ignored) {
           enabled = false;
         }
@@ -683,8 +683,6 @@ public class Repulsor {
                     activeRef.set(supplier.get());
                     initialized.set(true);
                   }
-
-                  m_planner.pollChosenSetpoint().ifPresent(activeRef::set);
 
                   RepulsorSetpoint effective = activeRef.get();
                   if (effective == null) return;
