@@ -19,6 +19,17 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.Setpoints;
 
-public class Setpoints extends Seasons {
-  private Setpoints() {}
+import org.curtinfrc.frc2026.util.Repulsor.Setpoints.Specific._Rebuilt2026;
+import org.curtinfrc.frc2026.util.Repulsor.Setpoints.Specific._Reefscape2025;
+
+public class Seasons {
+  public static class Rebuilt2026 extends _Rebuilt2026 {
+    private Rebuilt2026() {}
+  }
+
+  public static class Reefscape2025 extends _Reefscape2025 {
+    private Reefscape2025() {}
+  }
+
+  protected Seasons() {}
 }
