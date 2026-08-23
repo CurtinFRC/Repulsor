@@ -93,7 +93,7 @@ public class TeardropObstacle extends Obstacle {
     this.primaryMaxRange = primaryMaxRange;
     this.primaryRadius = primaryRadius;
     this.tailStrength = tailStrength;
-    this.tailLength = tailLength + primaryMaxRange;
+    this.tailLength = Math.max(tiny, tailLength + primaryMaxRange);
   }
 
   /**

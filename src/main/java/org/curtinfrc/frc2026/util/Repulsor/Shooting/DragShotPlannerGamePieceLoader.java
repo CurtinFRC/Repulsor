@@ -88,7 +88,8 @@ final class DragShotPlannerGamePieceLoader {
     try {
       return new LoadedGamePiece(resolver.load(id), null);
     } catch (RuntimeException ex) {
-      return new LoadedGamePiece(null, ex.getMessage());
+      String message = ex.getMessage() != null ? ex.getMessage() : ex.toString();
+      return new LoadedGamePiece(null, message);
     }
   }
 
@@ -161,7 +162,6 @@ final class DragShotPlannerGamePieceLoader {
       this.airDensityKgPerM3 = airDensityKgPerM3;
     }
 
-    @SuppressWarnings("unused")
     /**
      * Returns the name value maintained by this Repulsor component.
      *

@@ -175,7 +175,8 @@ public class FieldVision {
 
     long nowNs = System.nanoTime();
     double ntLatency = table.getEntry("extrinsics/latency_seconds").getDouble(latencySeconds);
-    double latency = Double.isFinite(ntLatency) && ntLatency > 0.0 ? ntLatency : latencySeconds;
+    double latency =
+        Double.isFinite(ntLatency) && ntLatency > 0.0 ? Math.min(ntLatency, 0.5) : latencySeconds;
     long stampNs = nowNs - (long) (latency * 1e9);
 
     for (String key : keys) {
