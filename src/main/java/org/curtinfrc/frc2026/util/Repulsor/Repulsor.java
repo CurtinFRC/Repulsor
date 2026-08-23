@@ -661,8 +661,8 @@ public class Repulsor {
   }
 
   private SetpointContext ctxFor(Pose2d robotPose, List<? extends Obstacle> dyn) {
-    double len = Math.max(0.0, robot_x) * 2.0;
-    double wid = Math.max(0.0, robot_y) * 2.0;
+    double len = Math.max(0.0, robot_x);
+    double wid = Math.max(0.0, robot_y);
     double release =
         shooterReleaseHeightMeters == null ? 0.0 : Math.max(0.0, shooterReleaseHeightMeters.get());
     return new SetpointContext(Optional.ofNullable(robotPose), len, wid, release, dyn);

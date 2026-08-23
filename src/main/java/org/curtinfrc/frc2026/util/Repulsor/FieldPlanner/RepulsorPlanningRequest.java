@@ -10,8 +10,8 @@ import org.curtinfrc.frc2026.util.Repulsor.Tracking.Model.Alliance;
 public record RepulsorPlanningRequest(
     Pose2d pose,
     List<? extends Obstacle> dynamicObstacles,
-    double robotHalfLengthMeters,
-    double robotHalfWidthMeters,
+    double robotLengthMeters,
+    double robotWidthMeters,
     CategorySpec category,
     boolean suppressFallback,
     double shooterReleaseHeightMeters,
@@ -20,8 +20,8 @@ public record RepulsorPlanningRequest(
   public RepulsorPlanningRequest {
     if (pose == null) pose = Pose2d.kZero;
     dynamicObstacles = dynamicObstacles == null ? List.of() : List.copyOf(dynamicObstacles);
-    robotHalfLengthMeters = Math.max(0.0, robotHalfLengthMeters);
-    robotHalfWidthMeters = Math.max(0.0, robotHalfWidthMeters);
+    robotLengthMeters = Math.max(0.0, robotLengthMeters);
+    robotWidthMeters = Math.max(0.0, robotWidthMeters);
     category = category == null ? CategorySpec.kScore : category;
     shooterReleaseHeightMeters = Math.max(0.0, shooterReleaseHeightMeters);
     fallbackAllianceOverride =
@@ -32,8 +32,8 @@ public record RepulsorPlanningRequest(
   public RepulsorPlanningRequest(
       Pose2d pose,
       List<? extends Obstacle> dynamicObstacles,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters,
+      double robotLengthMeters,
+      double robotWidthMeters,
       CategorySpec category,
       boolean suppressFallback,
       double shooterReleaseHeightMeters,
@@ -42,8 +42,8 @@ public record RepulsorPlanningRequest(
     this(
         pose,
         dynamicObstacles,
-        robotHalfLengthMeters,
-        robotHalfWidthMeters,
+        robotLengthMeters,
+        robotWidthMeters,
         category,
         suppressFallback,
         shooterReleaseHeightMeters,
@@ -67,8 +67,8 @@ public record RepulsorPlanningRequest(
     return new RepulsorPlanningRequest(
         request.pose(),
         request.dynamicObstacles(),
-        request.robotHalfLengthMeters(),
-        request.robotHalfWidthMeters(),
+        request.robotLengthMeters(),
+        request.robotWidthMeters(),
         request.category(),
         request.suppressFallback(),
         request.shooterReleaseHeightMeters(),
@@ -80,8 +80,8 @@ public record RepulsorPlanningRequest(
     return new PlannerCalculationRequest(
         pose,
         dynamicObstacles,
-        robotHalfLengthMeters,
-        robotHalfWidthMeters,
+        robotLengthMeters,
+        robotWidthMeters,
         category,
         suppressFallback,
         shooterReleaseHeightMeters);

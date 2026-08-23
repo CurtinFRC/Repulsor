@@ -161,17 +161,18 @@ public abstract class TurnTuning extends Tuning {
       CollisionChecker checker);
 
   /**
-   * Returns the robot rect value maintained by this Repulsor component.
+   * Returns the robot rect value maintained by this Repulsor component. Inputs are FULL footprint
+   * length and width; half-extents are derived internally exactly once.
    *
    * @param center value used by this operation.
    * @param yaw value used by this operation.
-   * @param rx distance or field-coordinate value in meters.
-   * @param ry distance or field-coordinate value in meters.
+   * @param lengthMeters full robot footprint length in meters.
+   * @param widthMeters full robot footprint width in meters.
    * @return value produced by this operation.
    */
   public static Translation2d[] robotRect(
-      Translation2d center, Rotation2d yaw, double rx, double ry) {
-    double hx = rx * 0.5, hy = ry * 0.5;
+      Translation2d center, Rotation2d yaw, double lengthMeters, double widthMeters) {
+    double hx = lengthMeters * 0.5, hy = widthMeters * 0.5;
     Translation2d[] local =
         new Translation2d[] {
           new Translation2d(+hx, +hy),
