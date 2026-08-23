@@ -33,6 +33,12 @@ import org.curtinfrc.frc2026.util.Repulsor.Force;
  */
 public class PointObstacle extends Obstacle {
   /**
+   * Default maximum distance in meters at which the obstacle exerts force. Distances use meters in
+   * WPILib field coordinates.
+   */
+  public static final double DEFAULT_ACTIVATION_RANGE_METERS = 4.0;
+
+  /**
    * Configuration value for loc. The valid range and tuning source are defined by the owning
    * subsystem or field profile.
    */
@@ -45,6 +51,12 @@ public class PointObstacle extends Obstacle {
   public double radius = 0.5;
 
   /**
+   * Maximum distance in meters at which this obstacle exerts force. Distances use meters in WPILib
+   * field coordinates and should be treated as tunable when sourced from profiles.
+   */
+  public final double activationRangeMeters;
+
+  /**
    * Returns the point obstacle value maintained by this Repulsor component.
    *
    * @param loc value used by this operation.
@@ -52,8 +64,25 @@ public class PointObstacle extends Obstacle {
    * @param positive value used by this operation.
    */
   public PointObstacle(Translation2d loc, double strength, boolean positive) {
+    this(loc, strength, positive, DEFAULT_ACTIVATION_RANGE_METERS);
+  }
+
+  /**
+   * Returns the point obstacle value maintained by this Repulsor component.
+   *
+   * @param loc value used by this operation.
+   * @param strength value used by this operation.
+   * @param positive value used by this operation.
+   * @param activationRangeMeters maximum distance in meters at which the obstacle exerts force.
+   */
+  public PointObstacle(
+      Translation2d loc, double strength, boolean positive, double activationRangeMeters) {
     super(strength, positive);
+    if (!(activationRangeMeters > 0.0) || !Double.isFinite(activationRangeMeters)) {
+      throw new IllegalArgumentException("activationRangeMeters must be finite and positive");
+    }
     this.loc = loc;
+    this.activationRangeMeters = activationRangeMeters;
   }
 
   /**
@@ -65,7 +94,7 @@ public class PointObstacle extends Obstacle {
    */
   public Force getForceAtPosition(Translation2d position, Translation2d target) {
     var dist = loc.getDistance(position);
-    if (dist > 4) return new Force();
+    if (dist > activationRangeMeters) return new Force();
     if (dist < EPS) return new Force();
 
     var outwardsMag = distToForceMag(dist - radius);
