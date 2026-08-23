@@ -25,6 +25,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.ArrayList;
 import java.util.List;
+import org.curtinfrc.frc2026.util.Repulsor.Constants;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.GatedAttractorObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.PointObstacle;
@@ -72,8 +73,6 @@ public final class FieldPlannerGoalManager {
   private static final double STAGED_CENTER_RETURN_EXIT_MAX_M = 2.40;
   private static final double STAGED_CENTER_RETURN_GATE_MIN_OFFSET_M = 2.0;
   private static final double STAGED_FIELD_EDGE_MARGIN_M = 0.35;
-  private static final FieldGeometry COMPATIBILITY_FIELD_GEOMETRY =
-      new FieldGeometry(16.540988, 8.211236);
 
   private FieldPlannerWaypointConfig waypointConfig;
   private FieldPlannerWaypointStrategy waypointStrategy;
@@ -110,7 +109,7 @@ public final class FieldPlannerGoalManager {
    * @param gatedAttractors value used by this operation.
    */
   public FieldPlannerGoalManager(List<GatedAttractorObstacle> gatedAttractors) {
-    this(gatedAttractors, COMPATIBILITY_FIELD_GEOMETRY);
+    this(gatedAttractors, new FieldGeometry(Constants.FIELD_LENGTH, Constants.FIELD_WIDTH));
   }
 
   /**
@@ -845,7 +844,19 @@ public final class FieldPlannerGoalManager {
 
     double eps = 1e-9;
     if (Math.abs(rxs) < eps) {
-      return null;
+      double rNorm = Math.hypot(rpx, rpy);
+      double sNorm = Math.hypot(spx, spy);
+      if (rNorm < eps || sNorm < eps) return null;
+      if (Math.abs(qpxr) >= eps * rNorm * Math.max(rNorm, sNorm)) return null;
+      double invR2 = 1.0 / (rNorm * rNorm);
+      double tc = (qpx * rpx + qpy * rpy) * invR2;
+      double td = ((dx - ax) * rpx + (dy - ay) * rpy) * invR2;
+      double lo = Math.min(tc, td);
+      double hi = Math.max(tc, td);
+      if (hi < -eps || lo > 1.0 + eps) return null;
+      double t = Math.max(lo, 0.0);
+      if (t > 1.0) t = 1.0;
+      return t;
     }
 
     double t = (qpx * spy - qpy * spx) / rxs;
