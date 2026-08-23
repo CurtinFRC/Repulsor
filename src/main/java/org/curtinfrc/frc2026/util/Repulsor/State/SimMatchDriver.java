@@ -10,6 +10,8 @@ import edu.wpi.first.wpilibj.simulation.DriverStationSim;
  * robot-relative motion.
  */
 public final class SimMatchDriver {
+  private static final double AUTO_LENGTH_SEC = 20.0;
+  private static final double TELEOP_LENGTH_SEC = 140.0;
   private static double matchTimeSec = 0.0;
   private static boolean runAuto = false;
 
@@ -31,7 +33,7 @@ public final class SimMatchDriver {
     // DriverStationSim.setEnabled(true);
 
     matchTimeSec = 0.0;
-    DriverStationSim.setMatchTime(matchTimeSec);
+    DriverStationSim.setMatchTime(remainingMatchTime());
 
     DriverStationSim.notifyNewData();
   }
@@ -47,13 +49,23 @@ public final class SimMatchDriver {
     }
 
     matchTimeSec += dt;
-    DriverStationSim.setMatchTime(matchTimeSec);
+    DriverStationSim.setMatchTime(remainingMatchTime());
 
-    if (matchTimeSec >= 20.0 && runAuto) {
+    if (matchTimeSec >= AUTO_LENGTH_SEC && runAuto) {
       DriverStationSim.setAutonomous(false);
       DriverStationSim.setEnabled(true);
     }
 
     DriverStationSim.notifyNewData();
+  }
+
+  /**
+   * Returns the remaining match time value maintained by this Repulsor component.
+   *
+   * @return value produced by this operation.
+   */
+  public static double remainingMatchTime() {
+    double total = AUTO_LENGTH_SEC + TELEOP_LENGTH_SEC - matchTimeSec;
+    return Math.min(TELEOP_LENGTH_SEC, Math.max(0.0, total));
   }
 }
