@@ -164,7 +164,6 @@ public final class ExtraPathingClearPath {
             if (obs instanceof HorizontalObstacle h) {
               double t = ExtraPathingMath.paramForYOnSegment(h.y, a, b);
               if (!Double.isNaN(t) && t >= 0.0 && t <= 1.0) {
-                if (t <= terminalT) return false;
                 return false;
               }
               double md = Math.min(Math.abs(a.getY() - h.y), Math.abs(b.getY() - h.y));
@@ -175,7 +174,6 @@ public final class ExtraPathingClearPath {
             if (obs instanceof VerticalObstacle v) {
               double t = ExtraPathingMath.paramForXOnSegment(v.x, a, b);
               if (!Double.isNaN(t) && t >= 0.0 && t <= 1.0) {
-                if (t <= terminalT) return false;
                 return false;
               }
               double md = Math.min(Math.abs(a.getX() - v.x), Math.abs(b.getX() - v.x));
@@ -187,7 +185,6 @@ public final class ExtraPathingClearPath {
               double eff = tdrop.primaryMaxRange + corridorR;
               ExtraPathingMath.DistParam dp = ExtraPathingMath.pointToSegDistParam(tdrop.loc, a, b);
               if (dp.dist() <= eff) {
-                if (dp.t() <= terminalT) return false;
                 return false;
               }
               Translation2d aa = a.minus(tdrop.loc);
@@ -220,7 +217,10 @@ public final class ExtraPathingClearPath {
               continue;
             }
 
-            return false;
+            if (unknownObstacleBlocksSegment(obs, a, b, robotLengthMeters, robotWidthMeters)) {
+              return false;
+            }
+            continue;
           }
           return true;
         };
@@ -339,8 +339,10 @@ public final class ExtraPathingClearPath {
         continue;
       }
 
-      directClear = false;
-      break;
+      if (unknownObstacleBlocksSegment(obs, start, goalEff, robotLengthMeters, robotWidthMeters)) {
+        directClear = false;
+        break;
+      }
     }
 
     if (directClear) {
@@ -407,6 +409,26 @@ public final class ExtraPathingClearPath {
       }
     }
 
+    return false;
+  }
+
+  private static final int UNKNOWN_OBSTACLE_SAMPLES = 16;
+
+  private static boolean unknownObstacleBlocksSegment(
+      Obstacle obs,
+      Translation2d a,
+      Translation2d b,
+      double robotLengthMeters,
+      double robotWidthMeters) {
+    for (int i = 0; i <= UNKNOWN_OBSTACLE_SAMPLES; i++) {
+      double s = i / (double) UNKNOWN_OBSTACLE_SAMPLES;
+      Translation2d p =
+          new Translation2d(
+              a.getX() + (b.getX() - a.getX()) * s, a.getY() + (b.getY() - a.getY()) * s);
+      Translation2d[] rect =
+          ExtraPathingCollision.rectCorners(p, robotLengthMeters, robotWidthMeters);
+      if (obs.intersectsRectangle(rect)) return true;
+    }
     return false;
   }
 }
