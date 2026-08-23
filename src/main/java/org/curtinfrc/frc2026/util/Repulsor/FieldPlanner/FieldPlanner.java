@@ -22,6 +22,7 @@ package org.curtinfrc.frc2026.util.Repulsor.FieldPlanner;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.Radians;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -197,6 +198,10 @@ public class FieldPlanner {
 
   private int stuckStepCount = 0;
   private static final int MAX_STUCK_STEPS = 40;
+  private boolean headingGateResetPending = false;
+
+  private static final double GOAL_CHANGE_POS_EPS_M = 0.05;
+  private static final double GOAL_CHANGE_ROT_EPS_RAD = Math.toRadians(5.0);
 
   /**
    * Returns the get obstacle provider value maintained by this Repulsor component.
@@ -546,8 +551,23 @@ public class FieldPlanner {
    * @param requested value used by this operation.
    */
   public void setRequestedGoal(Pose2d requested) {
+    Pose2d previous = goalManager.getRequestedGoalPose();
     goalManager.setRequestedGoal(requested);
     lastChosenSetpoint = Optional.empty();
+    if (!isSameRequestedGoal(previous, requested)) {
+      stuckStepCount = 0;
+      turnTuning.reset();
+      headingGateResetPending = true;
+    }
+  }
+
+  private static boolean isSameRequestedGoal(Pose2d a, Pose2d b) {
+    if (a == null || b == null) return false;
+    if (a.getTranslation().getDistance(b.getTranslation()) > GOAL_CHANGE_POS_EPS_M) return false;
+    double rotRad =
+        Math.abs(
+            MathUtil.angleModulus(a.getRotation().getRadians() - b.getRotation().getRadians()));
+    return rotRad <= GOAL_CHANGE_ROT_EPS_RAD;
   }
 
   /**
@@ -1020,6 +1040,10 @@ public class FieldPlanner {
           false);
     }
 
+    if (headingGateResetPending) {
+      headingGate.reset(pose.getRotation());
+      headingGateResetPending = false;
+    }
     Rotation2d desiredHeadingRaw =
         (cat == CategorySpec.kCollect) ? effectiveGoal.getRotation() : netForce.getAngle();
     Rotation2d desiredHeading =
