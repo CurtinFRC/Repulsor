@@ -42,13 +42,10 @@ public class GameState extends StaticState {
   private Alert noGameDataAlert = new Alert("No Game Data Read", AlertType.kWarning);
 
   private void updateAlliance() {
-    noAllianceAlert.set(false);
     Optional<DriverStation.Alliance> readAlliance = DriverStation.getAlliance();
+    noAllianceAlert.set(readAlliance.isEmpty());
     if (alliance.isEmpty() && readAlliance.isPresent()) {
       alliance = readAlliance;
-      noAllianceAlert.set(false);
-    } else {
-      noAllianceAlert.set(true);
     }
   }
 
@@ -64,7 +61,9 @@ public class GameState extends StaticState {
     if (inactiveFirst.isEmpty() && !noGameDataAlert.get()) {
       inactiveFirst =
           Optional.of(
-              ("B".equals(gameData)) ? DriverStation.Alliance.Blue : DriverStation.Alliance.Red);
+              (gameData.charAt(0) == 'B')
+                  ? DriverStation.Alliance.Blue
+                  : DriverStation.Alliance.Red);
     }
   }
 
