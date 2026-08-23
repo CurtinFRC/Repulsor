@@ -295,6 +295,7 @@ public class AutoPathBehaviour extends Behaviour {
   }
 
   private Command resetCommand = null;
+  private boolean trackerResetScheduled = false;
 
   /**
    * Builds the WPILib command sequence for the current behaviour context.
@@ -304,6 +305,9 @@ public class AutoPathBehaviour extends Behaviour {
    */
   @Override
   public Command build(BehaviourContext ctx) {
+    resetCommand = null;
+    trackerResetScheduled = false;
+
     Supplier<AutoPathRuntimeConfig> autoPathConfig = ctx.repulsor::autoPathRuntimeConfig;
 
     AtomicReference<RepulsorSetpoint> lastActive = new AtomicReference<>(null);
@@ -410,14 +414,13 @@ public class AutoPathBehaviour extends Behaviour {
                   desired = fromNT;
                 } else {
                   RepulsorSetpoint pred = pickPredicted(ctx);
-                  FieldTrackerCore.getInstance().resetAll();
                   desired = pred != null ? pred : scoreFallback;
                 }
 
               } else {
-                if (resetCommand == null || (resetCommand != null && !resetCommand.isScheduled())) {
+                if (!trackerResetScheduled) {
+                  trackerResetScheduled = true;
                   resetCommand = Commands.waitSeconds(5).andThen(buildResetCommand());
-
                   CommandScheduler.getInstance().schedule(resetCommand);
                 }
 
@@ -634,6 +637,9 @@ public class AutoPathBehaviour extends Behaviour {
             interrupted -> {
               if (shootReadyCmd != null && shootReadyCmd.isScheduled()) {
                 shootReadyCmd.cancel();
+              }
+              if (resetCommand != null && resetCommand.isScheduled()) {
+                resetCommand.cancel();
               }
               shooterPassthrough.set(false);
               if (lastEpisodeGoal.get() != null) {
