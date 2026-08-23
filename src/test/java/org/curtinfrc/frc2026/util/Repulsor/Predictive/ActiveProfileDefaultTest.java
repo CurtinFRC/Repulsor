@@ -26,11 +26,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.List;
+import java.util.Set;
 import org.curtinfrc.frc2026.util.Repulsor.Constants;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceCollectionProfile;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceRecoveryProfile;
 import org.curtinfrc.frc2026.util.Repulsor.Predictive.Model.ResourceSpec;
+import org.curtinfrc.frc2026.util.Repulsor.Predictive.Runtime.PredictiveCollectConfigRuntime;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -80,6 +82,7 @@ class ActiveProfileDefaultTest {
     assertEquals(
         collection.observationHardMaxAgeSeconds(),
         ops.collectionProfile.observationHardMaxAgeSeconds());
+    assertEquals(Set.of(collection.defaultResourceType()), ops.collectResourceTypes);
   }
 
   @Test
@@ -135,5 +138,32 @@ class ActiveProfileDefaultTest {
     assertEquals(
         Constants.FIELD_GEOMETRY,
         PredictiveFieldStateLocalAccess.defaultCollectionProfile().fieldGeometry());
+  }
+
+  @Test
+  void seededCollectResourceTypesFollowInjectedCollectionProfile() {
+    ResourceCollectionProfile custom =
+        new ResourceCollectionProfile(
+            "pipe",
+            new ResourceSpec(0.08, 0.9, 0.9),
+            1.2,
+            0.5,
+            new FieldGeometry(18.0, 9.0),
+            List.of());
+    PredictiveFieldStateLocalAccess.setDefaultCollectionProfile(custom);
+
+    PredictiveFieldStateOps ops = new PredictiveFieldStateOps();
+    assertEquals(Set.of(custom.defaultResourceType()), ops.collectResourceTypes);
+    assertSame(custom, ops.collectionProfile);
+
+    PredictiveCollectConfigRuntime.configureCollectionProfile(ops, null);
+    assertEquals(Set.of("pipe"), ops.collectResourceTypes);
+    assertSame(custom, ops.collectionProfile);
+
+    PredictiveFieldStateLocalAccess.clearDefaultCollectionProfile();
+    PredictiveCollectConfigRuntime.configureCollectionProfile(ops, null);
+    assertEquals(Set.of("fuel"), ops.collectResourceTypes);
+    assertEquals(
+        "fuel", PredictiveFieldStateLocalAccess.defaultCollectionProfile().defaultResourceType());
   }
 }

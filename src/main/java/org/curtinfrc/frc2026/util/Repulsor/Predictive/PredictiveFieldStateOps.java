@@ -896,7 +896,7 @@ public final class PredictiveFieldStateOps {
    * by the owning subsystem or field profile.
    */
   public final HashSet<String> collectResourceTypes =
-      new HashSet<>(Set.of(DEFAULT_COLLECT_RESOURCE_TYPE));
+      new HashSet<>(Set.of(collectionProfile.defaultResourceType()));
 
   /**
    * Configuration value for collect resource position filter. The valid range and tuning source are
