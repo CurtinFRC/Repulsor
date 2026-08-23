@@ -21,6 +21,8 @@ package org.curtinfrc.frc2026.util.Repulsor;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 /**
  * Provides repulsor log functionality for the Repulsor core Repulsor coordination layer. Use this
@@ -40,6 +42,23 @@ public class RepulsorLog {
 
   private static LogType logType = LogType.kNT4;
   private static boolean enabled = true;
+  private static final int MAX_ACCUMULATED_MESSAGES = 50;
+
+  private static void appendAccumulatedLog(String message) {
+    NetworkTableInstance inst = NetworkTableInstance.getDefault();
+    String previousLogs = inst.getEntry("/Repulsor/Logs").getString("");
+    Deque<String> history = new ArrayDeque<>();
+    for (String line : previousLogs.split("\n", -1)) {
+      if (!line.isEmpty()) {
+        history.addLast(line);
+      }
+    }
+    history.addLast(message);
+    while (history.size() > MAX_ACCUMULATED_MESSAGES) {
+      history.removeFirst();
+    }
+    inst.getEntry("/Repulsor/Logs").setString(String.join("\n", history) + "\n");
+  }
 
   /**
    * Updates set log type state or telemetry as part of the Repulsor runtime loop. This may mutate
@@ -133,13 +152,7 @@ public class RepulsorLog {
         System.out.println(message);
         break;
       case kNT4:
-        String previousLogs =
-            NetworkTableInstance.getDefault()
-                .getTable("RepulsorLogs")
-                .getEntry("Logs")
-                .getString("");
-        String newLogs = previousLogs + message + "\n";
-        NetworkTableInstance.getDefault().getTable("Repulsor").getEntry("Logs").setString(newLogs);
+        appendAccumulatedLog(message);
         break;
       default:
         System.err.println("Unknown log type: " + logType);
@@ -161,13 +174,7 @@ public class RepulsorLog {
         System.out.println(message);
         break;
       case kNT4:
-        String previousLogs =
-            NetworkTableInstance.getDefault()
-                .getTable("RepulsorLogs")
-                .getEntry("Logs")
-                .getString("");
-        String newLogs = previousLogs + message + "\n";
-        NetworkTableInstance.getDefault().getTable("Repulsor").getEntry("Logs").setString(newLogs);
+        appendAccumulatedLog(message);
         break;
       default:
         System.err.println("Unknown log type: " + logType);
