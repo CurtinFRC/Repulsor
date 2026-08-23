@@ -33,6 +33,8 @@ import org.curtinfrc.frc2026.util.Repulsor.Tracking.Internal.TrackedObj;
  * documents robot-relative motion.
  */
 final class FieldTrackerDynamicTracker {
+  private static final double STALE_EVICT_S = 2.0;
+
   private final ConcurrentHashMap<String, TrackedObj> tracked = new ConcurrentHashMap<>();
 
   /**
@@ -45,6 +47,7 @@ final class FieldTrackerDynamicTracker {
    */
   void ingestTracked(String id, String type, Pose3d p, long nowNs) {
     if (id == null || id.isEmpty() || p == null) return;
+    evictStale(nowNs);
     TrackedObj st = tracked.computeIfAbsent(id, TrackedObj::new);
     Pose3d prev = st.pos;
     long t0 = st.tNs;
@@ -59,6 +62,17 @@ final class FieldTrackerDynamicTracker {
         st.vx = (p.getX() - prev.getX()) / dt;
         st.vy = (p.getY() - prev.getY()) / dt;
         st.vz = (p.getZ() - prev.getZ()) / dt;
+      }
+    }
+  }
+
+  private void evictStale(long nowNs) {
+    double staleNs = STALE_EVICT_S * 1e9;
+    for (java.util.Map.Entry<String, TrackedObj> e : tracked.entrySet()) {
+      TrackedObj o = e.getValue();
+      if (o == null || o.tNs == 0L) continue;
+      if (nowNs - o.tNs > staleNs) {
+        tracked.remove(e.getKey());
       }
     }
   }

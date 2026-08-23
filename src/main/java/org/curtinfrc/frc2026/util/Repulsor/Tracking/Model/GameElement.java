@@ -157,7 +157,7 @@ public class GameElement {
    */
   public GameObject[] getContained() {
     if (!dirtyCache && cachedExact.length == containedCount) {
-      return cachedExact;
+      return cachedExact.clone();
     }
     GameObject[] out = new GameObject[containedCount];
     if (containedCount > 0) {
@@ -165,7 +165,7 @@ public class GameElement {
     }
     cachedExact = out;
     dirtyCache = false;
-    return out;
+    return out.clone();
   }
 
   /**
