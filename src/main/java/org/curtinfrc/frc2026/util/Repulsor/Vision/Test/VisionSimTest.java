@@ -31,9 +31,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.Random;
-import org.curtinfrc.frc2026.Constants;
+import org.curtinfrc.frc2026.util.Repulsor.Constants;
 import org.curtinfrc.frc2026.util.Repulsor.Setpoints.GameSetpoint;
-import org.curtinfrc.frc2026.util.Repulsor.Setpoints.Setpoints;
+import org.curtinfrc.frc2026.util.Repulsor.Setpoints.RepulsorSetpoint;
+import org.curtinfrc.frc2026.util.Repulsor.Setpoints.SetpointType;
+import org.curtinfrc.frc2026.util.Repulsor.Setpoints.StaticPoseSetpoint;
 import org.curtinfrc.frc2026.util.Repulsor.Vision.RepulsorVision;
 
 /**
@@ -47,6 +49,8 @@ public class VisionSimTest implements RepulsorVision {
   private static final int ROBOT_COUNT = 6;
   private static final double STUCK_SPEED_THRESH = 0.08;
   private static final double STUCK_TIME = 1.0;
+  private static final double ROBOT_X = 0.85;
+  private static final double ROBOT_Y = 0.85;
 
   private final Random rng;
   private final VisionSimWorld.Agent[] agents;
@@ -65,7 +69,7 @@ public class VisionSimTest implements RepulsorVision {
   /** Returns the vision sim test value maintained by this Repulsor component. */
   public VisionSimTest() {
     ArrayList<GameSetpoint> scoreTargets = new ArrayList<>();
-    scoreTargets.add(Setpoints.Rebuilt2026.HUB_SHOOT);
+    scoreTargets.add(defaultScoreTarget());
 
     if (USE_CONTROLLER) {
       rng = null;
@@ -116,6 +120,21 @@ public class VisionSimTest implements RepulsorVision {
     timeInitialized = false;
   }
 
+  private static GameSetpoint defaultScoreTarget() {
+    return Constants.FIELD
+        .defaultScoreSetpoint()
+        .map(RepulsorSetpoint::point)
+        .orElseGet(
+            () ->
+                new StaticPoseSetpoint(
+                    "SIM_SCORE_TARGET",
+                    SetpointType.kScore,
+                    new Pose2d(
+                        Constants.FIELD_LENGTH / 2.0,
+                        Constants.FIELD_WIDTH / 2.0,
+                        Rotation2d.kZero)));
+  }
+
   private void resetAgent(int index) {
     VisionSimWorld.Agent old = agents[index];
     VisionSimWorld.Agent repl =
@@ -158,13 +177,14 @@ public class VisionSimTest implements RepulsorVision {
     }
 
     Obstacle[] out = new Obstacle[1];
+    Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
     out[0] =
         new RepulsorVision.Obstacle(
             rPose,
             new RepulsorVision.ObstacleType(
                 0.8,
                 0.8,
-                DriverStation.getAlliance().get() == Alliance.Blue
+                (alliance.isPresent() && alliance.get() == Alliance.Blue)
                     ? RepulsorVision.Kind.kRobotRed
                     : RepulsorVision.Kind.kRobotBlue));
     return out;
@@ -265,8 +285,8 @@ public class VisionSimTest implements RepulsorVision {
     double candDx = candidate.getX() - centerX;
     double candDy = candidate.getY() - centerY;
 
-    double halfX = Constants.ROBOT_X * 1.1;
-    double halfY = Constants.ROBOT_Y * 1.1;
+    double halfX = ROBOT_X * 1.1;
+    double halfY = ROBOT_Y * 1.1;
 
     boolean prevInside = Math.abs(prevDx) <= halfX && Math.abs(prevDy) <= halfY;
     boolean candInside = Math.abs(candDx) <= halfX && Math.abs(candDy) <= halfY;
