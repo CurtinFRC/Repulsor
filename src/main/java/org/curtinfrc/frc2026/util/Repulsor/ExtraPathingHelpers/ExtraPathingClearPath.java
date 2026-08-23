@@ -19,6 +19,7 @@
 
 package org.curtinfrc.frc2026.util.Repulsor.ExtraPathingHelpers;
 
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.ArrayList;
 import java.util.List;
@@ -187,8 +188,9 @@ public final class ExtraPathingClearPath {
               if (dp.dist() <= eff) {
                 return false;
               }
-              Translation2d aa = a.minus(tdrop.loc);
-              Translation2d bb = b.minus(tdrop.loc);
+              Rotation2d tailInverse = tdrop.tailAngle().unaryMinus();
+              Translation2d aa = a.minus(tdrop.loc).rotateBy(tailInverse);
+              Translation2d bb = b.minus(tdrop.loc).rotateBy(tailInverse);
               double minXSeg = Math.min(aa.getX(), bb.getX());
               double maxXSeg = Math.max(aa.getX(), bb.getX());
               boolean xOverlap = maxXSeg >= 0.0 && minXSeg <= tdrop.tailLength;
@@ -305,7 +307,9 @@ public final class ExtraPathingClearPath {
           directClear = false;
           break;
         }
-        Translation2d a = start.minus(tdrop.loc), b = goalEff.minus(tdrop.loc);
+        Rotation2d tailInverse = tdrop.tailAngle().unaryMinus();
+        Translation2d a = start.minus(tdrop.loc).rotateBy(tailInverse);
+        Translation2d b = goalEff.minus(tdrop.loc).rotateBy(tailInverse);
         double minXSeg = Math.min(a.getX(), b.getX()), maxXSeg = Math.max(a.getX(), b.getX());
         boolean xOverlap = maxXSeg >= 0.0 && minXSeg <= tdrop.tailLength;
         if (xOverlap) {

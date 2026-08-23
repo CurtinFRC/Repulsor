@@ -69,6 +69,8 @@ public class TeardropObstacle extends Obstacle {
    */
   final double tiny = EPS;
 
+  private volatile Rotation2d lastTailDirection = Rotation2d.kZero;
+
   /**
    * Returns the teardrop obstacle value maintained by this Repulsor component.
    *
@@ -131,6 +133,7 @@ public class TeardropObstacle extends Obstacle {
   public Force getForceAtPosition(Translation2d position, Translation2d target) {
     var targetToLoc = new Translation2d(loc.getX() - target.getX(), loc.getY() - target.getY());
     var targetToLocAngle = angleFromVec(targetToLoc, Rotation2d.kZero);
+    lastTailDirection = targetToLocAngle;
     var sidewaysPoint = new Translation2d(tailLength, targetToLocAngle).plus(loc);
 
     var posToLoc = new Translation2d(position.getX() - loc.getX(), position.getY() - loc.getY());
@@ -198,6 +201,16 @@ public class TeardropObstacle extends Obstacle {
   }
 
   /**
+   * Returns the current tail direction, derived from the last target used in force calculation.
+   * Defaults to world +X when no force has been sampled yet.
+   *
+   * @return value produced by this operation.
+   */
+  public Rotation2d tailAngle() {
+    return lastTailDirection;
+  }
+
+  /**
    * Returns the intersects rectangle value maintained by this Repulsor component.
    *
    * @param rectCorners value used by this operation.
@@ -214,7 +227,7 @@ public class TeardropObstacle extends Obstacle {
       if (FieldPlanner.distanceFromPointToSegment(loc, a, b) < primaryMaxRange) return true;
     }
 
-    Rotation2d tailDir = new Rotation2d();
+    Rotation2d tailDir = lastTailDirection;
     Translation2d tailStart = loc;
     Translation2d tailEnd = tailStart.plus(new Translation2d(tailLength, tailDir));
 
