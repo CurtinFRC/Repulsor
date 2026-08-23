@@ -28,7 +28,6 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.RobotBase;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -52,6 +51,7 @@ import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWayp
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointStatus;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Helpers.FieldPlannerWaypointStrategy;
 import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.GatedAttractorObstacle;
+import org.curtinfrc.frc2026.util.Repulsor.FieldPlanner.Obstacles.RectangleObstacle;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldGeometry;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldLayoutProvider;
 import org.curtinfrc.frc2026.util.Repulsor.Fields.FieldMapBuilder.CategorySpec;
@@ -173,6 +173,7 @@ public class FieldPlanner {
   private final ObstacleProvider obstacleProvider;
   private final List<Obstacle> fieldObstacles;
   private final List<Obstacle> walls;
+  private final ArrayList<Obstacle> globalFallbackObstacles = new ArrayList<>();
   private final List<GatedAttractorObstacle> gatedAttractors = new ArrayList<>();
   private final double fieldLengthMeters;
   private final double fieldWidthMeters;
@@ -202,6 +203,7 @@ public class FieldPlanner {
 
   private static final double GOAL_CHANGE_POS_EPS_M = 0.05;
   private static final double GOAL_CHANGE_ROT_EPS_RAD = Math.toRadians(5.0);
+  private static final double EFFECTIVE_GOAL_FORCE_REUSE_EPSILON_METERS = 1e-9;
 
   /**
    * Returns the get obstacle provider value maintained by this Repulsor component.
@@ -271,6 +273,15 @@ public class FieldPlanner {
     return FieldPlannerRuntimeConfig.defaults();
   }
 
+  private List<Obstacle> wireFieldGeometry(List<Obstacle> obstacles) {
+    for (int i = 0; i < obstacles.size(); i++) {
+      if (obstacles.get(i) instanceof RectangleObstacle rectangle) {
+        obstacles.set(i, rectangle.withFieldGeometry(fieldLengthMeters, fieldWidthMeters));
+      }
+    }
+    return obstacles;
+  }
+
   public FieldPlanner(
       TurnTuning turnTuning,
       DriveTuning driveTuning,
@@ -322,8 +333,8 @@ public class FieldPlanner {
       this.fieldLengthMeters = Constants.FIELD_LENGTH;
       this.fieldWidthMeters = Constants.FIELD_WIDTH;
     }
-    this.fieldObstacles = new ArrayList<>(this.obstacleProvider.fieldObstacles());
-    this.walls = new ArrayList<>(this.obstacleProvider.walls());
+    this.fieldObstacles = wireFieldGeometry(new ArrayList<>(this.obstacleProvider.fieldObstacles()));
+    this.walls = wireFieldGeometry(new ArrayList<>(this.obstacleProvider.walls()));
 
     for (Obstacle obs : this.fieldObstacles) {
       if (obs instanceof GatedAttractorObstacle gated) {
@@ -363,17 +374,26 @@ public class FieldPlanner {
   }
 
   /**
-   * Returns the robot rect value maintained by this Repulsor component.
+   * Returns the robot rect value maintained by this Repulsor component. Inputs are FULL footprint
+   * length and width; half-extents are derived internally exactly once.
    *
    * @param center value used by this operation.
    * @param yaw value used by this operation.
-   * @param rx distance or field-coordinate value in meters.
-   * @param ry distance or field-coordinate value in meters.
+   * @param lengthMeters full robot footprint length in meters.
+   * @param widthMeters full robot footprint width in meters.
    * @return value produced by this operation.
    */
   public static Translation2d[] robotRect(
-      Translation2d center, Rotation2d yaw, double rx, double ry) {
-    return TurnTuning.robotRect(center, yaw, rx, ry);
+      Translation2d center, Rotation2d yaw, double lengthMeters, double widthMeters) {
+    return TurnTuning.robotRect(center, yaw, lengthMeters, widthMeters);
+  }
+
+  private List<Obstacle> combineGlobalObstacles(List<? extends Obstacle> dynamics) {
+    globalFallbackObstacles.clear();
+    globalFallbackObstacles.addAll(fieldObstacles);
+    globalFallbackObstacles.addAll(walls);
+    globalFallbackObstacles.addAll(dynamics);
+    return globalFallbackObstacles;
   }
 
   private boolean rectIntersectsDynamic(Translation2d[] rect, List<? extends Obstacle> dynamics) {
@@ -641,8 +661,8 @@ public class FieldPlanner {
     return calculate(
         request.pose(),
         request.dynamicObstacles(),
-        request.robotHalfLengthMeters(),
-        request.robotHalfWidthMeters(),
+        request.robotLengthMeters(),
+        request.robotWidthMeters(),
         request.category(),
         request.suppressFallback(),
         request.shooterReleaseHeightMeters());
@@ -658,8 +678,8 @@ public class FieldPlanner {
           calculate(
               safeRequest.pose(),
               safeRequest.dynamicObstacles(),
-              safeRequest.robotHalfLengthMeters(),
-              safeRequest.robotHalfWidthMeters(),
+              safeRequest.robotLengthMeters(),
+              safeRequest.robotWidthMeters(),
               safeRequest.category(),
               safeRequest.suppressFallback(),
               safeRequest.shooterReleaseHeightMeters());
@@ -816,13 +836,19 @@ public class FieldPlanner {
         Alliance preferred = preferredAllianceForFallback();
 
         var cands =
-            FieldTrackerCore.getInstance().getPredictedSetpoints(preferred, curTrans, 3.5, cat, 8);
+            FieldTrackerCore.getInstance()
+                .getPredictedSetpoints(
+                    preferred,
+                    curTrans,
+                    runtimeConfig.rerouteCandidateRadiusMeters(),
+                    cat,
+                    runtimeConfig.rerouteCandidateCount());
 
         SetpointContext spCtx =
             new SetpointContext(
                 Optional.of(pose),
-                Math.max(0.0, robot_x) * 2.0,
-                Math.max(0.0, robot_y) * 2.0,
+                Math.max(0.0, robot_x),
+                Math.max(0.0, robot_y),
                 shooterReleaseHeightMeters,
                 effectiveDynamics);
 
@@ -853,11 +879,7 @@ public class FieldPlanner {
         }
 
         if (pathBlocked && runtimeConfig.globalFallbackEnabled()) {
-          ArrayList<Obstacle> globalObstacles =
-              new ArrayList<>(fieldObstacles.size() + walls.size() + effectiveDynamics.size());
-          globalObstacles.addAll(fieldObstacles);
-          globalObstacles.addAll(walls);
-          globalObstacles.addAll(effectiveDynamics);
+          List<Obstacle> globalObstacles = combineGlobalObstacles(effectiveDynamics);
           Optional<Pose2d> waypoint =
               globalPlanner.nextWaypoint(
                   curTrans,
@@ -983,25 +1005,33 @@ public class FieldPlanner {
     Pose2d effectiveGoal = maybeBypass.orElse(calculationGoalFinal);
     reactiveBypassActive = maybeBypass.isPresent();
 
-    var obstacleForce =
-        getObstacleForce(curTrans, effectiveGoal.getTranslation(), effectiveDynamicsFinal)
-            .plus(getWallForce(curTrans, effectiveGoal.getTranslation()));
-    boolean clearPathToEffectiveGoal =
-        !suppressIsClearPath
-            && (!maybeBypass.isPresent()
-                ? clearPathToGoalForForce
-                : isClearPath(
-                    "Repulsor/ClearEffectiveGoal",
-                    curTrans,
-                    effectiveGoal.getTranslation(),
-                    effectiveDynamicsFinal,
-                    robot_x,
-                    robot_y,
-                    false));
-    obstacleForce =
-        removeBackwardObstacleForceWhenClear(
-            obstacleForce, curTrans, effectiveGoal.getTranslation(), clearPathToEffectiveGoal);
-    var netForce = getGoalForce(curTrans, effectiveGoal.getTranslation()).plus(obstacleForce);
+    Force netForce;
+    Force obstacleForce;
+    if (!maybeBypass.isPresent()
+        || effectiveGoal.getTranslation().getDistance(calculationGoalTranslationFinal)
+            < EFFECTIVE_GOAL_FORCE_REUSE_EPSILON_METERS) {
+      obstacleForce = obstacleForceToGoal;
+      netForce = netForceToGoal;
+    } else {
+      Translation2d effectiveGoalTranslation = effectiveGoal.getTranslation();
+      obstacleForce =
+          getObstacleForce(curTrans, effectiveGoalTranslation, effectiveDynamicsFinal)
+              .plus(getWallForce(curTrans, effectiveGoalTranslation));
+      boolean clearPathToEffectiveGoal =
+          !suppressIsClearPath
+              && isClearPath(
+                  "Repulsor/ClearEffectiveGoal",
+                  curTrans,
+                  effectiveGoalTranslation,
+                  effectiveDynamicsFinal,
+                  robot_x,
+                  robot_y,
+                  false);
+      obstacleForce =
+          removeBackwardObstacleForceWhenClear(
+              obstacleForce, curTrans, effectiveGoalTranslation, clearPathToEffectiveGoal);
+      netForce = getGoalForce(curTrans, effectiveGoalTranslation).plus(obstacleForce);
+    }
     boolean localForceStabilizationEnabled =
         !globalFallbackActive && !reactiveBypassActive && !forceThrough;
     var stabilizedForce =
@@ -1061,10 +1091,6 @@ public class FieldPlanner {
             rect -> rectIntersectsAny(rect, effectiveDynamicsFinal));
 
     step = step.times(turn.speedScale);
-
-    if (!isOffloadWorkerThread() && !RobotBase.isReal()) {
-      Pose2d arrowPose = new Pose2d(curTrans, netForce.getAngle());
-    }
 
     return finishPlanningResult(
         planningRequest,
@@ -1571,10 +1597,11 @@ public class FieldPlanner {
       String forced = System.getProperty("repulsor.offload.fieldplanner.fallbackAlliance", "blue");
       return "red".equalsIgnoreCase(forced) ? Alliance.kRed : Alliance.kBlue;
     }
-    return DriverStation.getAlliance().isPresent()
-            && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue
-        ? Alliance.kBlue
-        : Alliance.kRed;
+    if (DriverStation.getAlliance().isPresent()
+        && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue) {
+      return Alliance.kBlue;
+    }
+    return runtimeConfig.fallbackAllianceWhenUnknown();
   }
 
   private static boolean isOffloadWorkerThread() {

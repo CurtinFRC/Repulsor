@@ -71,6 +71,9 @@ public class RectangleObstacle extends Obstacle {
   private final boolean flowAssist;
   private final RectangleObstacleTuning tuning;
 
+  private double fieldLengthMeters = Constants.FIELD_LENGTH;
+  private double fieldWidthMeters = Constants.FIELD_WIDTH;
+
   private static final double CORNER_RANGE_M = 1.15;
   private static final double CORNER_FORCE_SCALE = 14.0;
   private static final double CORNER_FORCE_SOFTEN = 0.07;
@@ -335,6 +338,42 @@ public class RectangleObstacle extends Obstacle {
     return Math.max(0.0, Math.min(1.0, x));
   }
 
+  /**
+   * Wires planner field geometry into this obstacle so wall-aware forces use the real field bounds
+   * instead of global constants. Existing providers default to {@link Constants} values.
+   *
+   * @param lengthMeters full field length in meters.
+   * @param widthMeters full field width in meters.
+   * @return this obstacle, for fluent wiring by the owning planner.
+   */
+  public RectangleObstacle withFieldGeometry(double lengthMeters, double widthMeters) {
+    if (Double.isFinite(lengthMeters) && lengthMeters > 0.0) {
+      this.fieldLengthMeters = lengthMeters;
+    }
+    if (Double.isFinite(widthMeters) && widthMeters > 0.0) {
+      this.fieldWidthMeters = widthMeters;
+    }
+    return this;
+  }
+
+  /**
+   * Returns the field length meters value used by wall-aware logic for this obstacle.
+   *
+   * @return value produced by this operation.
+   */
+  public double fieldLengthMeters() {
+    return fieldLengthMeters;
+  }
+
+  /**
+   * Returns the field width meters value used by wall-aware logic for this obstacle.
+   *
+   * @return value produced by this operation.
+   */
+  public double fieldWidthMeters() {
+    return fieldWidthMeters;
+  }
+
   private static double smooth01(double x) {
     x = clamp01(x);
     return x * x * (3.0 - 2.0 * x);
@@ -352,9 +391,9 @@ public class RectangleObstacle extends Obstacle {
     return new Translation2d(m, f.getAngle());
   }
 
-  private static double wallMovePenalty(Translation2d pos, Translation2d cand) {
-    double L = Constants.FIELD_LENGTH;
-    double W = Constants.FIELD_WIDTH;
+  private double wallMovePenalty(Translation2d pos, Translation2d cand) {
+    double L = fieldLengthMeters;
+    double W = fieldWidthMeters;
 
     double edge = 0.95;
     double dy = cand.getY() - pos.getY();
@@ -456,7 +495,7 @@ public class RectangleObstacle extends Obstacle {
     return out;
   }
 
-  private static Translation2d stablePick(
+  private Translation2d stablePick(
       Translation2d pos,
       Translation2d goal,
       Translation2d centerWorld,
@@ -754,10 +793,10 @@ public class RectangleObstacle extends Obstacle {
     return flowU.getAngle();
   }
 
-  private static Rotation2d wallSideDir(Translation2d locWorld) {
+  private Rotation2d wallSideDir(Translation2d locWorld) {
     double y = locWorld.getY();
     double distLow = y;
-    double distHigh = Constants.FIELD_WIDTH - y;
+    double distHigh = fieldWidthMeters - y;
     double sign = (distLow <= distHigh) ? -1.0 : 1.0;
     Translation2d dir = new Translation2d(0.0, sign);
     return dir.getAngle();
@@ -1351,8 +1390,6 @@ public class RectangleObstacle extends Obstacle {
       return new Force(n, sum.getAngle());
     }
 
-    Translation2d escapeWorld = Translation2d.kZero;
-
     double engageR = Math.max(0.9, falloffMeters + 0.65);
 
     boolean nearObstacle = edgeDist <= Math.max(1.25, falloffMeters + 0.95);
@@ -1361,50 +1398,17 @@ public class RectangleObstacle extends Obstacle {
     Translation2d[] polyExpForTug = expandedCorners(padForTug);
     boolean occludesExpForTug = segmentIntersectsPolygon(position, target, polyExpForTug);
 
-    if (edgeDist <= engageR) {
+    if (edgeDist <= engageR && commitDir == 0) {
       Translation2d outwardW = position.minus(center);
       double outN = outwardW.getNorm();
       if (outN < EPS) outwardW = new Translation2d(1.0, 0.0);
       outN = Math.max(EPS, outwardW.getNorm());
       Translation2d outwardWU = outwardW.div(outN);
 
-      Translation2d toGoal = target.minus(position);
-      double gN = Math.max(EPS, toGoal.getNorm());
-      Translation2d toGoalU = toGoal.div(gN);
-
       Translation2d tCCW = new Translation2d(-outwardWU.getY(), outwardWU.getX());
       Translation2d tCW = new Translation2d(outwardWU.getY(), -outwardWU.getX());
 
-      Translation2d chosenT =
-          chooseTangentPolyWithWalls(position, target, outwardWU, tCW, tCCW, polyExpForTug);
-
-      double d = Math.max(0.12, edgeDist);
-      double w = smooth01(1.0 - (d / engageR));
-
-      double swirlMag = (strength * 6.8) / (0.30 + d * d);
-      double slideMag = (strength * 3.6) / (0.35 + d * d);
-      double pushOutMag = (strength * 2.1) / (0.55 + d * d);
-
-      double along = dot(chosenT, toGoalU);
-      double boost = (along < 0.12) ? 1.45 : 1.0;
-
-      Translation2d swirl = chosenT.times(swirlMag * w * boost);
-      Translation2d slide = chosenT.times(slideMag * w);
-      Translation2d pushOut = outwardWU.times(pushOutMag * w);
-
-      Translation2d add = swirl.plus(slide).plus(pushOut);
-
-      if (occludes || occludesExpForTug) {
-        escapeWorld = escapeWorld.plus(add);
-      } else {
-        Translation2d sumTry = primaryWorld.plus(add);
-        if (sumTry.getNorm() < 1e-6 || along < 0.03) escapeWorld = escapeWorld.plus(add);
-      }
-
-      if (commitDir == 0 && (occludes || occludesExpForTug || nearObstacle)) {
-        int dir = (chosenT == tCW) ? -1 : 1;
-        setCommitDir(dir, false, null);
-      }
+      chooseTangentPolyWithWalls(position, target, outwardWU, tCW, tCCW, polyExpForTug);
     }
 
     Translation2d[] c = poly;
@@ -1536,7 +1540,6 @@ public class RectangleObstacle extends Obstacle {
 
     Translation2d sum =
         primaryWorld
-            // .plus(escapeWorld)
             .plus(cornerBoost)
             .plus(tearVec)
             .plus(handoff)
@@ -1722,7 +1725,7 @@ public class RectangleObstacle extends Obstacle {
     return RectangleGeometry.expandedCorners(center, halfX, halfY, rot, pad);
   }
 
-  private static double scoreCandidatePolyWithWalls(
+  private double scoreCandidatePolyWithWalls(
       Translation2d pos,
       Translation2d goal,
       Translation2d cand,
@@ -1750,8 +1753,8 @@ public class RectangleObstacle extends Obstacle {
 
     double x = cand.getX();
     double y = cand.getY();
-    double dxW = Math.min(x, Constants.FIELD_LENGTH - x);
-    double dyW = Math.min(y, Constants.FIELD_WIDTH - y);
+    double dxW = Math.min(x, fieldLengthMeters - x);
+    double dyW = Math.min(y, fieldWidthMeters - y);
     double wall = Math.min(dxW, dyW);
     double wallPenalty = (wall < 0.70) ? (1.05 * (0.70 - wall) / 0.70) : 0.0;
 

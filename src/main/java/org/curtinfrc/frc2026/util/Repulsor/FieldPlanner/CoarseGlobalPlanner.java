@@ -4,6 +4,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -53,8 +54,8 @@ public final class CoarseGlobalPlanner {
       Translation2d start,
       Pose2d goal,
       List<? extends Obstacle> obstacles,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters,
+      double robotLengthMeters,
+      double robotWidthMeters,
       double fieldLengthMeters,
       double fieldWidthMeters) {
     long startNanos = System.nanoTime();
@@ -69,8 +70,8 @@ public final class CoarseGlobalPlanner {
     ClearanceField clearanceField =
         buildClearanceField(
             obstacles,
-            robotHalfLengthMeters,
-            robotHalfWidthMeters,
+            robotLengthMeters,
+            robotWidthMeters,
             fieldLengthMeters,
             fieldWidthMeters,
             nx,
@@ -80,8 +81,8 @@ public final class CoarseGlobalPlanner {
     if (!isFree(
         s,
         obstacles,
-        robotHalfLengthMeters,
-        robotHalfWidthMeters,
+        robotLengthMeters,
+        robotWidthMeters,
         fieldLengthMeters,
         fieldWidthMeters,
         nx,
@@ -94,8 +95,8 @@ public final class CoarseGlobalPlanner {
         !isFree(
             g,
             obstacles,
-            robotHalfLengthMeters,
-            robotHalfWidthMeters,
+            robotLengthMeters,
+            robotWidthMeters,
             fieldLengthMeters,
             fieldWidthMeters,
             nx,
@@ -114,6 +115,9 @@ public final class CoarseGlobalPlanner {
       best[i] = Double.POSITIVE_INFINITY;
       parent[i] = -1;
     }
+    int[] expansionOrder = new int[n];
+    double[] liveObstacleCostCache = new double[n];
+    Arrays.fill(liveObstacleCostCache, Double.NaN);
 
     PriorityQueue<Entry> open = new PriorityQueue<>((a, b) -> Double.compare(a.f, b.f));
     int startIdx = index(s, ny);
@@ -127,9 +131,6 @@ public final class CoarseGlobalPlanner {
     boolean exhaustedBudget = false;
     long maxRuntimeNanos = (long) (config.maxRuntimeSeconds() * 1_000_000_000.0);
     long searchStartNanos = System.nanoTime();
-    int bestPartialIdx = -1;
-    double bestPartialScore = Double.POSITIVE_INFINITY;
-    double directGoalDistance = start.getDistance(goal.getTranslation());
 
     while (!open.isEmpty()) {
       if (System.nanoTime() - searchStartNanos > maxRuntimeNanos) {
@@ -145,28 +146,7 @@ public final class CoarseGlobalPlanner {
       int curIdx = index(cur.node, ny);
       if (closed[curIdx]) continue;
       closed[curIdx] = true;
-      expanded++;
-      PartialRouteCandidate partialCandidate =
-          partialRouteCandidate(
-              cur.node,
-              curIdx,
-              startIdx,
-              parent,
-              best,
-              goal.getTranslation(),
-              directGoalDistance,
-              fieldLengthMeters,
-              fieldWidthMeters,
-              nx,
-              ny,
-              clearanceField,
-              obstacles,
-              robotHalfLengthMeters,
-              robotHalfWidthMeters);
-      if (partialCandidate.usable() && partialCandidate.score() < bestPartialScore) {
-        bestPartialScore = partialCandidate.score();
-        bestPartialIdx = curIdx;
-      }
+      expansionOrder[expanded++] = curIdx;
       if (curIdx == goalIdx) break;
 
       for (int dx = -1; dx <= 1; dx++) {
@@ -179,8 +159,8 @@ public final class CoarseGlobalPlanner {
           if (!isFree(
               next,
               obstacles,
-              robotHalfLengthMeters,
-              robotHalfWidthMeters,
+              robotLengthMeters,
+              robotWidthMeters,
               fieldLengthMeters,
               fieldWidthMeters,
               nx,
@@ -191,8 +171,8 @@ public final class CoarseGlobalPlanner {
               cur.node,
               next,
               obstacles,
-              robotHalfLengthMeters,
-              robotHalfWidthMeters,
+              robotLengthMeters,
+              robotWidthMeters,
               fieldLengthMeters,
               fieldWidthMeters,
               nx,
@@ -206,13 +186,14 @@ public final class CoarseGlobalPlanner {
                   cur.node,
                   next,
                   obstacles,
-                  robotHalfLengthMeters,
-                  robotHalfWidthMeters,
+                  robotLengthMeters,
+                  robotWidthMeters,
                   fieldLengthMeters,
                   fieldWidthMeters,
                   nx,
                   ny,
-                  clearanceField);
+                  clearanceField,
+                  liveObstacleCostCache);
           double tentative = best[curIdx] + edgeCost.total();
           if (tentative < best[nextIdx]) {
             best[nextIdx] = tentative;
@@ -225,6 +206,35 @@ public final class CoarseGlobalPlanner {
     }
 
     if (parent[goalIdx] < 0 && goalIdx != startIdx) {
+      double directGoalDistance = start.getDistance(goal.getTranslation());
+      int bestPartialIdx = -1;
+      double bestPartialScore = Double.POSITIVE_INFINITY;
+      if (config.partialRouteFallbackEnabled()) {
+        for (int i = 0; i < expanded; i++) {
+          int nodeIdx = expansionOrder[i];
+          PartialRouteCandidate partialCandidate =
+              partialRouteCandidate(
+                  new Node(nodeIdx / ny, nodeIdx % ny),
+                  nodeIdx,
+                  startIdx,
+                  parent,
+                  best,
+                  goal.getTranslation(),
+                  directGoalDistance,
+                  fieldLengthMeters,
+                  fieldWidthMeters,
+                  nx,
+                  ny,
+                  clearanceField,
+                  obstacles,
+                  robotLengthMeters,
+                  robotWidthMeters);
+          if (partialCandidate.usable() && partialCandidate.score() < bestPartialScore) {
+            bestPartialScore = partialCandidate.score();
+            bestPartialIdx = nodeIdx;
+          }
+        }
+      }
       Optional<Pose2d> partialWaypoint =
           partialRouteWaypoint(
               bestPartialIdx,
@@ -232,8 +242,8 @@ public final class CoarseGlobalPlanner {
               parent,
               ny,
               obstacles,
-              robotHalfLengthMeters,
-              robotHalfWidthMeters,
+              robotLengthMeters,
+              robotWidthMeters,
               fieldLengthMeters,
               fieldWidthMeters,
               nx,
@@ -277,8 +287,8 @@ public final class CoarseGlobalPlanner {
         smoothPath(
             path,
             obstacles,
-            robotHalfLengthMeters,
-            robotHalfWidthMeters,
+            robotLengthMeters,
+            robotWidthMeters,
             fieldLengthMeters,
             fieldWidthMeters,
             nx,
@@ -288,21 +298,22 @@ public final class CoarseGlobalPlanner {
         routeCost(
             path,
             obstacles,
-            robotHalfLengthMeters,
-            robotHalfWidthMeters,
+            robotLengthMeters,
+            robotWidthMeters,
             fieldLengthMeters,
             fieldWidthMeters,
             nx,
             ny,
-            clearanceField);
+            clearanceField,
+            liveObstacleCostCache);
 
     LookaheadSelection selection =
         chooseLookahead(
             smoothedPath,
             clearanceField,
             obstacles,
-            robotHalfLengthMeters,
-            robotHalfWidthMeters,
+            robotLengthMeters,
+            robotWidthMeters,
             fieldLengthMeters,
             fieldWidthMeters,
             nx,
@@ -346,8 +357,8 @@ public final class CoarseGlobalPlanner {
       int[] parent,
       int ny,
       List<? extends Obstacle> obstacles,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters,
+      double robotLengthMeters,
+      double robotWidthMeters,
       double fieldLengthMeters,
       double fieldWidthMeters,
       int nx,
@@ -368,31 +379,34 @@ public final class CoarseGlobalPlanner {
         smoothPath(
             path,
             obstacles,
-            robotHalfLengthMeters,
-            robotHalfWidthMeters,
+            robotLengthMeters,
+            robotWidthMeters,
             fieldLengthMeters,
             fieldWidthMeters,
             nx,
             ny);
     CoarseRouteClearanceMetrics routeClearanceMetrics = routeClearance(path, clearanceField);
+    double[] partialLiveObstacleCostCache = new double[nx * ny];
+    Arrays.fill(partialLiveObstacleCostCache, Double.NaN);
     CoarseRouteCostBreakdown routeCost =
         routeCost(
             path,
             obstacles,
-            robotHalfLengthMeters,
-            robotHalfWidthMeters,
+            robotLengthMeters,
+            robotWidthMeters,
             fieldLengthMeters,
             fieldWidthMeters,
             nx,
             ny,
-            clearanceField);
+            clearanceField,
+            partialLiveObstacleCostCache);
     LookaheadSelection selection =
         chooseLookahead(
             smoothedPath,
             clearanceField,
             obstacles,
-            robotHalfLengthMeters,
-            robotHalfWidthMeters,
+            robotLengthMeters,
+            robotWidthMeters,
             fieldLengthMeters,
             fieldWidthMeters,
             nx,
@@ -435,8 +449,8 @@ public final class CoarseGlobalPlanner {
       int ny,
       ClearanceField clearanceField,
       List<? extends Obstacle> obstacles,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters) {
+      double robotLengthMeters,
+      double robotWidthMeters) {
     if (!config.partialRouteFallbackEnabled()
         || node == null
         || nodeIdx == startIdx
@@ -463,8 +477,8 @@ public final class CoarseGlobalPlanner {
         point,
         goal,
         obstacles,
-        robotHalfLengthMeters,
-        robotHalfWidthMeters,
+        robotLengthMeters,
+        robotWidthMeters,
         fieldLengthMeters,
         fieldWidthMeters,
         nx,
@@ -482,8 +496,8 @@ public final class CoarseGlobalPlanner {
       Translation2d point,
       Translation2d goal,
       List<? extends Obstacle> obstacles,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters,
+      double robotLengthMeters,
+      double robotWidthMeters,
       double fieldLengthMeters,
       double fieldWidthMeters,
       int nx,
@@ -498,8 +512,8 @@ public final class CoarseGlobalPlanner {
         if (!isFree(
             next,
             obstacles,
-            robotHalfLengthMeters,
-            robotHalfWidthMeters,
+            robotLengthMeters,
+            robotWidthMeters,
             fieldLengthMeters,
             fieldWidthMeters,
             nx,
@@ -510,8 +524,8 @@ public final class CoarseGlobalPlanner {
             node,
             next,
             obstacles,
-            robotHalfLengthMeters,
-            robotHalfWidthMeters,
+            robotLengthMeters,
+            robotWidthMeters,
             fieldLengthMeters,
             fieldWidthMeters,
             nx,
@@ -584,13 +598,14 @@ public final class CoarseGlobalPlanner {
   private CoarseRouteCostBreakdown routeCost(
       List<Node> path,
       List<? extends Obstacle> obstacles,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters,
+      double robotLengthMeters,
+      double robotWidthMeters,
       double fieldLengthMeters,
       double fieldWidthMeters,
       int nx,
       int ny,
-      ClearanceField clearanceField) {
+      ClearanceField clearanceField,
+      double[] liveObstacleCostCache) {
     if (path == null || path.size() < 2) return CoarseRouteCostBreakdown.empty();
     CoarseRouteCostBreakdown total = CoarseRouteCostBreakdown.empty();
     for (int i = 1; i < path.size(); i++) {
@@ -602,13 +617,14 @@ public final class CoarseGlobalPlanner {
                   path.get(i - 1),
                   path.get(i),
                   obstacles,
-                  robotHalfLengthMeters,
-                  robotHalfWidthMeters,
+                  robotLengthMeters,
+                  robotWidthMeters,
                   fieldLengthMeters,
                   fieldWidthMeters,
                   nx,
                   ny,
-                  clearanceField));
+                  clearanceField,
+                  liveObstacleCostCache));
     }
     return total;
   }
@@ -618,22 +634,28 @@ public final class CoarseGlobalPlanner {
       Node current,
       Node next,
       List<? extends Obstacle> obstacles,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters,
+      double robotLengthMeters,
+      double robotWidthMeters,
       double fieldLengthMeters,
       double fieldWidthMeters,
       int nx,
       int ny,
-      ClearanceField clearanceField) {
+      ClearanceField clearanceField,
+      double[] liveObstacleCostCache) {
     CoarseRouteCostConfig weights = config.routeCostConfig();
     double step = Math.hypot(next.x - current.x, next.y - current.y);
     Translation2d point = toPoint(next, fieldLengthMeters, fieldWidthMeters, nx, ny);
     double turnPenalty = turnPenalty(previousIdx, current, next, ny);
     double distanceCost = weights.distanceWeight() * step;
+    int nextIdx = index(next, ny);
+    double liveObstacleCost = liveObstacleCostCache[nextIdx];
+    if (Double.isNaN(liveObstacleCost)) {
+      liveObstacleCost = obstacleProximityCost(point, obstacles);
+      liveObstacleCostCache[nextIdx] = liveObstacleCost;
+    }
     double obstacleCost =
         weights.obstacleClearanceWeight()
-            * (clearanceField.obstacleProximityCost(next)
-                + obstacleProximityCost(point, obstacles));
+            * (clearanceField.obstacleProximityCost(next) + liveObstacleCost);
     double wallCost = weights.wallClearanceWeight() * clearanceField.wallProximityCost(next);
     double turnCost = weights.turnWeight() * turnPenalty;
     double corridorCost = weights.corridorPreferenceWeight() * corridorPreferenceCost(point);
@@ -677,8 +699,8 @@ public final class CoarseGlobalPlanner {
   private List<Node> smoothPath(
       List<Node> path,
       List<? extends Obstacle> obstacles,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters,
+      double robotLengthMeters,
+      double robotWidthMeters,
       double fieldLengthMeters,
       double fieldWidthMeters,
       int nx,
@@ -694,8 +716,8 @@ public final class CoarseGlobalPlanner {
             path.get(i),
             path.get(j),
             obstacles,
-            robotHalfLengthMeters,
-            robotHalfWidthMeters,
+            robotLengthMeters,
+            robotWidthMeters,
             fieldLengthMeters,
             fieldWidthMeters,
             nx,
@@ -714,8 +736,8 @@ public final class CoarseGlobalPlanner {
       List<Node> path,
       ClearanceField clearanceField,
       List<? extends Obstacle> obstacles,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters,
+      double robotLengthMeters,
+      double robotWidthMeters,
       double fieldLength,
       double fieldWidth,
       int nx,
@@ -732,8 +754,8 @@ public final class CoarseGlobalPlanner {
             base,
             path,
             obstacles,
-            robotHalfLengthMeters,
-            robotHalfWidthMeters,
+            robotLengthMeters,
+            robotWidthMeters,
             fieldLength,
             fieldWidth,
             nx,
@@ -783,8 +805,8 @@ public final class CoarseGlobalPlanner {
       LookaheadSelection base,
       List<Node> path,
       List<? extends Obstacle> obstacles,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters,
+      double robotLengthMeters,
+      double robotWidthMeters,
       double fieldLength,
       double fieldWidth,
       int nx,
@@ -794,7 +816,7 @@ public final class CoarseGlobalPlanner {
     if (previousWaypoint.getDistance(base.point()) > WAYPOINT_HYSTERESIS_METERS) return base;
     if (start.getDistance(previousWaypoint) < config.waypointLookaheadMeters() * 0.35) return base;
     if (!pointInsideField(
-        previousWaypoint, fieldLength, fieldWidth, robotHalfLengthMeters, robotHalfWidthMeters)) {
+        previousWaypoint, fieldLength, fieldWidth, robotLengthMeters, robotWidthMeters)) {
       return base;
     }
     Node previousNode = nearestNode(previousWaypoint, nx, ny, fieldLength, fieldWidth);
@@ -802,8 +824,8 @@ public final class CoarseGlobalPlanner {
         nearestNode(start, nx, ny, fieldLength, fieldWidth),
         previousNode,
         obstacles,
-        robotHalfLengthMeters,
-        robotHalfWidthMeters,
+        robotLengthMeters,
+        robotWidthMeters,
         fieldLength,
         fieldWidth,
         nx,
@@ -853,8 +875,8 @@ public final class CoarseGlobalPlanner {
       Node a,
       Node b,
       List<? extends Obstacle> obstacles,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters,
+      double robotLengthMeters,
+      double robotWidthMeters,
       double fieldLengthMeters,
       double fieldWidthMeters,
       int nx,
@@ -863,8 +885,8 @@ public final class CoarseGlobalPlanner {
         a,
         b,
         obstacles,
-        robotHalfLengthMeters,
-        robotHalfWidthMeters,
+        robotLengthMeters,
+        robotWidthMeters,
         fieldLengthMeters,
         fieldWidthMeters,
         nx,
@@ -875,8 +897,8 @@ public final class CoarseGlobalPlanner {
       Node a,
       Node b,
       List<? extends Obstacle> obstacles,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters,
+      double robotLengthMeters,
+      double robotWidthMeters,
       double fieldLengthMeters,
       double fieldWidthMeters,
       int nx,
@@ -891,9 +913,9 @@ public final class CoarseGlobalPlanner {
           new Translation2d(
               pa.getX() + (pb.getX() - pa.getX()) * t, pa.getY() + (pb.getY() - pa.getY()) * t);
       if (!pointInsideField(
-          p, fieldLengthMeters, fieldWidthMeters, robotHalfLengthMeters, robotHalfWidthMeters))
+          p, fieldLengthMeters, fieldWidthMeters, robotLengthMeters, robotWidthMeters))
         return false;
-      if (rectIntersects(p, yaw, obstacles, robotHalfLengthMeters, robotHalfWidthMeters)) {
+      if (rectIntersects(p, yaw, obstacles, robotLengthMeters, robotWidthMeters)) {
         return false;
       }
     }
@@ -903,29 +925,31 @@ public final class CoarseGlobalPlanner {
   private boolean isFree(
       Node node,
       List<? extends Obstacle> obstacles,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters,
+      double robotLengthMeters,
+      double robotWidthMeters,
       double fieldLengthMeters,
       double fieldWidthMeters,
       int nx,
       int ny) {
     Translation2d p = toPoint(node, fieldLengthMeters, fieldWidthMeters, nx, ny);
     if (!pointInsideField(
-        p, fieldLengthMeters, fieldWidthMeters, robotHalfLengthMeters, robotHalfWidthMeters)) {
+        p, fieldLengthMeters, fieldWidthMeters, robotLengthMeters, robotWidthMeters)) {
       return false;
     }
     return !rectIntersects(
-        p, Rotation2d.kZero, obstacles, robotHalfLengthMeters, robotHalfWidthMeters);
+        p, Rotation2d.kZero, obstacles, robotLengthMeters, robotWidthMeters);
   }
 
   private boolean pointInsideField(
       Translation2d p,
       double fieldLengthMeters,
       double fieldWidthMeters,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters) {
-    double marginX = Math.max(0.0, robotHalfLengthMeters + config.clearanceBufferMeters());
-    double marginY = Math.max(0.0, robotHalfWidthMeters + config.clearanceBufferMeters());
+      double robotLengthMeters,
+      double robotWidthMeters) {
+    double halfLength = 0.5 * robotLengthMeters;
+    double halfWidth = 0.5 * robotWidthMeters;
+    double marginX = Math.max(0.0, halfLength + config.clearanceBufferMeters());
+    double marginY = Math.max(0.0, halfWidth + config.clearanceBufferMeters());
     if (p.getX() < marginX || p.getX() > fieldLengthMeters - marginX) return false;
     return !(p.getY() < marginY) && !(p.getY() > fieldWidthMeters - marginY);
   }
@@ -934,14 +958,14 @@ public final class CoarseGlobalPlanner {
       Translation2d center,
       Rotation2d yaw,
       List<? extends Obstacle> obstacles,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters) {
+      double robotLengthMeters,
+      double robotWidthMeters) {
     Translation2d[] rect =
         FieldPlanner.robotRect(
             center,
             yaw,
-            robotHalfLengthMeters + config.clearanceBufferMeters(),
-            robotHalfWidthMeters + config.clearanceBufferMeters());
+            robotLengthMeters + 2.0 * config.clearanceBufferMeters(),
+            robotWidthMeters + 2.0 * config.clearanceBufferMeters());
     for (Obstacle obstacle : obstacles) if (obstacle.intersectsRectangle(rect)) return true;
     return false;
   }
@@ -964,8 +988,8 @@ public final class CoarseGlobalPlanner {
 
   private ClearanceField buildClearanceField(
       List<? extends Obstacle> obstacles,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters,
+      double robotLengthMeters,
+      double robotWidthMeters,
       double fieldLengthMeters,
       double fieldWidthMeters,
       int nx,
@@ -979,14 +1003,14 @@ public final class CoarseGlobalPlanner {
         int idx = index(node, ny);
         obstacleClearance[idx] =
             nearestObstacleClearanceMeters(
-                point, obstacles, robotHalfLengthMeters, robotHalfWidthMeters);
+                point, obstacles, robotLengthMeters, robotWidthMeters);
         wallClearance[idx] =
             wallClearanceMeters(
                 point,
                 fieldLengthMeters,
                 fieldWidthMeters,
-                robotHalfLengthMeters,
-                robotHalfWidthMeters);
+                robotLengthMeters,
+                robotWidthMeters);
       }
     }
     return new ClearanceField(obstacleClearance, wallClearance, ny);
@@ -995,13 +1019,13 @@ public final class CoarseGlobalPlanner {
   private double nearestObstacleClearanceMeters(
       Translation2d point,
       List<? extends Obstacle> obstacles,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters) {
+      double robotLengthMeters,
+      double robotWidthMeters) {
     if (point == null || obstacles == null || obstacles.isEmpty()) return Double.POSITIVE_INFINITY;
     double best = Double.POSITIVE_INFINITY;
     for (Obstacle obstacle : obstacles) {
       double clearance =
-          obstacleClearanceMeters(point, obstacle, robotHalfLengthMeters, robotHalfWidthMeters);
+          obstacleClearanceMeters(point, obstacle, robotLengthMeters, robotWidthMeters);
       if (Double.isFinite(clearance)) best = Math.min(best, clearance);
     }
     return best;
@@ -1010,17 +1034,17 @@ public final class CoarseGlobalPlanner {
   private double obstacleClearanceMeters(
       Translation2d point,
       Obstacle obstacle,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters) {
+      double robotLengthMeters,
+      double robotWidthMeters) {
     if (obstacle instanceof PredictedDynamicObstacleEnvelope prediction) {
       return prediction.clearanceMeters(
           point,
-          robotHalfLengthMeters + config.clearanceBufferMeters(),
-          robotHalfWidthMeters + config.clearanceBufferMeters());
+          0.5 * robotLengthMeters + config.clearanceBufferMeters(),
+          0.5 * robotWidthMeters + config.clearanceBufferMeters());
     }
     if (obstacle instanceof RectangleObstacle rectangle) {
       return rectangleClearanceMeters(
-          point, rectangle, robotHalfLengthMeters, robotHalfWidthMeters);
+          point, rectangle, robotLengthMeters, robotWidthMeters);
     }
     return Double.POSITIVE_INFINITY;
   }
@@ -1028,16 +1052,18 @@ public final class CoarseGlobalPlanner {
   private double rectangleClearanceMeters(
       Translation2d point,
       RectangleObstacle rectangle,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters) {
+      double robotLengthMeters,
+      double robotWidthMeters) {
     double dx = point.getX() - rectangle.center.getX();
     double dy = point.getY() - rectangle.center.getY();
     double cos = rectangle.rot.getCos();
     double sin = rectangle.rot.getSin();
     double localX = dx * cos + dy * sin;
     double localY = -dx * sin + dy * cos;
-    double inflatedHalfX = rectangle.halfX + robotHalfLengthMeters + config.clearanceBufferMeters();
-    double inflatedHalfY = rectangle.halfY + robotHalfWidthMeters + config.clearanceBufferMeters();
+    double inflatedHalfX =
+        rectangle.halfX + 0.5 * robotLengthMeters + config.clearanceBufferMeters();
+    double inflatedHalfY =
+        rectangle.halfY + 0.5 * robotWidthMeters + config.clearanceBufferMeters();
     double outsideX = Math.abs(localX) - inflatedHalfX;
     double outsideY = Math.abs(localY) - inflatedHalfY;
     double positiveX = Math.max(0.0, outsideX);
@@ -1052,11 +1078,13 @@ public final class CoarseGlobalPlanner {
       Translation2d point,
       double fieldLengthMeters,
       double fieldWidthMeters,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters) {
+      double robotLengthMeters,
+      double robotWidthMeters) {
     if (point == null) return 0.0;
-    double marginX = Math.max(0.0, robotHalfLengthMeters + config.clearanceBufferMeters());
-    double marginY = Math.max(0.0, robotHalfWidthMeters + config.clearanceBufferMeters());
+    double halfLength = 0.5 * robotLengthMeters;
+    double halfWidth = 0.5 * robotWidthMeters;
+    double marginX = Math.max(0.0, halfLength + config.clearanceBufferMeters());
+    double marginY = Math.max(0.0, halfWidth + config.clearanceBufferMeters());
     double clearanceX =
         Math.min(point.getX() - marginX, fieldLengthMeters - marginX - point.getX());
     double clearanceY = Math.min(point.getY() - marginY, fieldWidthMeters - marginY - point.getY());
@@ -1085,11 +1113,13 @@ public final class CoarseGlobalPlanner {
       Translation2d point,
       double fieldLengthMeters,
       double fieldWidthMeters,
-      double robotHalfLengthMeters,
-      double robotHalfWidthMeters) {
+      double robotLengthMeters,
+      double robotWidthMeters) {
     if (point == null) return 0.0;
-    double marginX = Math.max(0.0, robotHalfLengthMeters + config.clearanceBufferMeters());
-    double marginY = Math.max(0.0, robotHalfWidthMeters + config.clearanceBufferMeters());
+    double halfLength = 0.5 * robotLengthMeters;
+    double halfWidth = 0.5 * robotWidthMeters;
+    double marginX = Math.max(0.0, halfLength + config.clearanceBufferMeters());
+    double marginY = Math.max(0.0, halfWidth + config.clearanceBufferMeters());
     double clearanceX =
         Math.min(point.getX() - marginX, fieldLengthMeters - marginX - point.getX());
     double clearanceY = Math.min(point.getY() - marginY, fieldWidthMeters - marginY - point.getY());
